@@ -16,8 +16,8 @@
 hstx_dvi_row_t row[4];
 
 int main(void) {
+    // Initialize the HSTX DVI row FIFO. This also initializes the HSTX DVI once the FIFO is full.
     hstx_dvi_row_fifo_init1(pio0, &row[0]);
-    hstx_dvi_start(hstx_dvi_row_fifo_get);
 
 
     // Fill the FIFO with some data
