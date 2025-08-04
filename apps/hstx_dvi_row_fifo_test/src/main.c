@@ -12,17 +12,25 @@
 #include "hstx_dvi_core.h"
 #include "hstx_dvi_row_fifo.h"
 
-hstx_dvi_row_t row;
-
-hstx_dvi_row_t* __scratch_x("") hstx_dvi_get_pixel_row(uint32_t row_index) {
-    return (hstx_dvi_row_t*)&row;
-}
+#define HSTX_DVI_ROW_COUNT 4
+hstx_dvi_row_t row[4];
 
 int main(void) {
+    hstx_dvi_row_fifo_init1(pio0, &row[0]);
+    hstx_dvi_start(hstx_dvi_row_fifo_get);
 
-    hstx_dvi_start(hstx_dvi_get_pixel_row);
 
-    while (1)
-        __wfi();
+    // Fill the FIFO with some data
+    for (uint32_t i = 0; i < HSTX_DVI_ROW_COUNT; ++i) {
+        hstx_dvi_row_t* r = &row[i];
+        for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; ++j) {
+            r->b[j] = (i * HSTX_DVI_BYTES_PER_ROW + j) % 256;
+        }
+    }
+    
+    uint32_t k = 0;
+    while (1) {
+        hstx_dvi_row_t* r = &row[k++ % HSTX_DVI_ROW_COUNT];
+        hstx_dvi_row_fifo_put_blocking(r);
+    }
 }
-
