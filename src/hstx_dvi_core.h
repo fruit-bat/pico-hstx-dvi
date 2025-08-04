@@ -19,15 +19,18 @@ extern "C" {
 #define MODE_V_BACK_PORCH    33
 #define MODE_V_ACTIVE_LINES  480
 
+#define MODE_BYTES_PER_PIXEL 1
+#define HSTX_DVI_BYTES_PER_ROW (MODE_BYTES_PER_PIXEL * MODE_H_ACTIVE_PIXELS)
+
 void hstx_dvi_start(void);
 
 typedef union {
-	uint8_t b[MODE_H_ACTIVE_PIXELS];
-    uint16_t s[(MODE_H_ACTIVE_PIXELS + 1) >> 1];
-    uint32_t w[(MODE_H_ACTIVE_PIXELS + 3) >> 2];    
-} hstx_dvi_row __attribute__((aligned(4)));;
+	uint8_t b[HSTX_DVI_BYTES_PER_ROW];
+    uint16_t s[(HSTX_DVI_BYTES_PER_ROW + 1) >> 1];
+    uint32_t w[(HSTX_DVI_BYTES_PER_ROW + 3) >> 2];    
+} hstx_dvi_row_t __attribute__((aligned(4)));;
 
-hstx_dvi_row* hstx_dvi_get_pixel_row(uint row_index);
+hstx_dvi_row_t* hstx_dvi_get_pixel_row(uint32_t row_index);
 
 #ifdef __cplusplus
 } 
