@@ -1,0 +1,21 @@
+
+add_executable(hstx_dvi_hello_world
+  ${CMAKE_CURRENT_LIST_DIR}/src/main.c
+)
+
+target_compile_definitions(hstx_dvi_hello_world PRIVATE
+)
+
+target_include_directories(hstx_dvi_hello_world PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/images
+        )
+
+target_link_libraries(hstx_dvi_hello_world
+  pico_stdlib
+  pico_multicore
+  hardware_dma
+  pico_sync
+)
+
+# create map/bin/hex file etc.
+pico_add_extra_outputs(hstx_dvi_hello_world)
