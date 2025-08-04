@@ -15,6 +15,7 @@ target_link_libraries(hstx_dvi_hello_world
   pico_multicore
   hardware_dma
   pico_sync
+  pico_hstx_dvi
 )
 
 # create map/bin/hex file etc.

@@ -24,7 +24,7 @@ include(pico_sdk_import.cmake)
 # We also need PICO EXTRAS
 include(pico_extras_import.cmake)
 
-project(hstx_dvi C CXX ASM)
+project(pico_hstx_dvi C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
