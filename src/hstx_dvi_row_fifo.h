@@ -7,6 +7,7 @@ extern "C" {
 #include "hstx_dvi_core.h"
 #include "hardware/pio.h"
 
+#define HSTX_DVI_ROW_FIFO_SIZE 8
 
 void hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row);
 void hstx_dvi_row_fifo_init1(PIO pio, hstx_dvi_row_t* underflow_row);
