@@ -1,0 +1,4 @@
+.program fifo_passthrough
+pull        ; Pull a word from the TX FIFO
+push        ; Push it to the RX FIFO
+jmp 0       ; Loop forever

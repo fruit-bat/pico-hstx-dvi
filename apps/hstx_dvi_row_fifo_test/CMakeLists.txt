@@ -14,6 +14,7 @@ target_link_libraries(hstx_dvi_row_fifo_test
   pico_stdlib
   pico_multicore
   hardware_dma
+  hardware_pio
   pico_sync
   pico_hstx_dvi
 )
