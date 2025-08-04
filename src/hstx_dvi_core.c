@@ -138,18 +138,6 @@ void __scratch_x("") dma_irq_handler() {
     }
 }
 
-// ----------------------------------------------------------------------------
-// Main program
-
-static __force_inline uint16_t colour_rgb565(uint8_t r, uint8_t g, uint8_t b) {
-    return ((uint16_t)r & 0xf8) >> 3 | ((uint16_t)g & 0xfc) << 3 | ((uint16_t)b & 0xf8) << 8;
-}
-
-static __force_inline uint8_t colour_rgb332(uint8_t r, uint8_t g, uint8_t b) {
-    return (r & 0xc0) >> 6 | (g & 0xe0) >> 3 | (b & 0xe0) >> 0;
-}
-
-void scroll_framebuffer(void);
 
 void hstx_dvi_start(void) {
     set_sys_clock_khz(264000, true);
