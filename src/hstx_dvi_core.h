@@ -22,15 +22,15 @@ extern "C" {
 #define MODE_BYTES_PER_PIXEL 1
 #define HSTX_DVI_BYTES_PER_ROW (MODE_BYTES_PER_PIXEL * MODE_H_ACTIVE_PIXELS)
 
-void hstx_dvi_start(void);
-
 typedef union {
-	uint8_t b[HSTX_DVI_BYTES_PER_ROW];
+    uint8_t b[HSTX_DVI_BYTES_PER_ROW];
     uint16_t s[(HSTX_DVI_BYTES_PER_ROW + 1) >> 1];
     uint32_t w[(HSTX_DVI_BYTES_PER_ROW + 3) >> 2];    
 } hstx_dvi_row_t __attribute__((aligned(4)));;
 
-hstx_dvi_row_t* hstx_dvi_get_pixel_row(uint32_t row_index);
+typedef hstx_dvi_row_t* (*hstx_dvi_pixel_row_fetcher)(uint32_t row_index);
+
+void hstx_dvi_start(hstx_dvi_pixel_row_fetcher row_fetcher);
 
 #ifdef __cplusplus
 } 

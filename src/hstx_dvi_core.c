@@ -98,18 +98,20 @@ static uint32_t vactive_line[] = {
 #define DMACH_PONG 1
 
 // First we ping. Then we pong. Then... we ping again.
-static bool dma_pong = false;
+static __scratch_x("") bool dma_pong = false;
 
 // A ping and a pong are cued up initially, so the first time we enter this
 // handler it is to cue up the second ping after the first ping has completed.
 // This is the third scanline overall (-> =2 because zero-based).
-static uint v_scanline = 2;
+static __scratch_x("") uint v_scanline = 2;
 
 // During the vertical active period, we take two IRQs per scanline: one to
 // post the command list, and another to post the pixels.
-static bool vactive_cmdlist_posted = false;
+static __scratch_x("") bool vactive_cmdlist_posted = false;
 
-void __scratch_x("") dma_irq_handler() {
+static hstx_dvi_pixel_row_fetcher _row_fetcher;
+
+void __scratch_x("A") dma_irq_handler() {
     // dma_pong indicates the channel that just finished, which is the one
     // we're about to reload.
     uint ch_num = dma_pong ? DMACH_PONG : DMACH_PING;
@@ -128,7 +130,7 @@ void __scratch_x("") dma_irq_handler() {
         ch->transfer_count = count_of(vactive_line);
         vactive_cmdlist_posted = true;
     } else {
-        ch->read_addr = (uintptr_t)&hstx_dvi_get_pixel_row(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES))->w; 
+        ch->read_addr = (uintptr_t)&_row_fetcher(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES))->w; 
         ch->transfer_count = MODE_H_ACTIVE_PIXELS / sizeof(uint32_t);
         vactive_cmdlist_posted = false;
     }
@@ -139,7 +141,10 @@ void __scratch_x("") dma_irq_handler() {
 }
 
 
-void hstx_dvi_start(void) {
+void hstx_dvi_start(hstx_dvi_pixel_row_fetcher row_fetcher) {
+
+    _row_fetcher = row_fetcher;
+
     set_sys_clock_khz(264000, true);
 
     clock_configure_int_divider(

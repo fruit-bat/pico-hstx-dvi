@@ -19,7 +19,7 @@ hstx_dvi_row_t* __scratch_x("") hstx_dvi_get_pixel_row(uint32_t row_index) {
 
 int main(void) {
 
-    hstx_dvi_start();
+    hstx_dvi_start(hstx_dvi_get_pixel_row);
 
     while (1)
         __wfi();
