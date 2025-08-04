@@ -128,7 +128,7 @@ void __scratch_x("") dma_irq_handler() {
         ch->transfer_count = count_of(vactive_line);
         vactive_cmdlist_posted = true;
     } else {
-        ch->read_addr = hstx_dvi_get_pixel_row(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES)); 
+        ch->read_addr = (uintptr_t)&hstx_dvi_get_pixel_row(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES))->w; 
         ch->transfer_count = MODE_H_ACTIVE_PIXELS / sizeof(uint32_t);
         vactive_cmdlist_posted = false;
     }
