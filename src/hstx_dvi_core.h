@@ -21,7 +21,7 @@ extern "C" {
 
 void hstx_dvi_start(void);
 
-uintptr_t get_pixel_row(uint row_index);
+uintptr_t hstx_dvi_get_pixel_row(uint row_index);
 
 #ifdef __cplusplus
 } 
