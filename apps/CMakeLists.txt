@@ -41,4 +41,6 @@ get_filename_component(PICO_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-hstx-dvi")
 
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")
+add_subdirectory(hstx_dvi_row_fifo_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_row_fifo_test")
+
 

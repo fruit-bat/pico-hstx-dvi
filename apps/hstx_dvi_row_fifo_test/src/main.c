@@ -1,0 +1,28 @@
+// Copyright (c) 2024 Raspberry Pi (Trading) Ltd.
+
+// Generate DVI output using the command expander and TMDS encoder in HSTX.
+
+// This example requires an external digital video connector connected to
+// GPIOs 12 through 19 (the HSTX-capable GPIOs) with appropriate
+// current-limiting resistors, e.g. 270 ohms. The pinout used in this example
+// matches the Pico DVI Sock board, which can be soldered onto a Pico 2:
+// https://github.com/Wren6991/Pico-DVI-Sock
+
+#include "pico/sem.h"
+#include "hstx_dvi_core.h"
+#include "hstx_dvi_row_fifo.h"
+
+hstx_dvi_row_t row;
+
+hstx_dvi_row_t* __scratch_x("") hstx_dvi_get_pixel_row(uint32_t row_index) {
+    return (hstx_dvi_row_t*)&row;
+}
+
+int main(void) {
+
+    hstx_dvi_start(hstx_dvi_get_pixel_row);
+
+    while (1)
+        __wfi();
+}
+
