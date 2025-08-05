@@ -21,3 +21,6 @@ target_link_libraries(hstx_dvi_row_fifo_test
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(hstx_dvi_row_fifo_test)
+
+pico_enable_stdio_usb(hstx_dvi_row_fifo_test 1)
+pico_enable_stdio_uart(hstx_dvi_row_fifo_test 0)

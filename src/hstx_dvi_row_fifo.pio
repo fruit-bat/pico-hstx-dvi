@@ -1,4 +1,6 @@
 .program fifo_passthrough
-pull        ; Pull a word from the TX FIFO
-push        ; Push it to the RX FIFO
-jmp 0       ; Loop forever
+.wrap_target
+    pull block       ; Pull a word from the TX FIFO
+    mov isr, osr
+    push block       ; Push it to the RX FIFO
+.wrap

@@ -19,10 +19,11 @@ hstx_dvi_row_t* __scratch_x("") hstx_dvi_row_fifo_get(uint32_t row_index) {
 
 void fifo_passthrough_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_config c = fifo_passthrough_program_get_default_config(offset);
-    sm_config_set_in_shift(&c, true, true, 32);  // Auto-push 32-bit to RX
-    sm_config_set_out_shift(&c, true, true, 32); // Auto-pull 32-bit from TX
-
+    sm_config_set_in_shift(&c, true, false, 32);  // Auto-push 32-bit to RX
+    sm_config_set_out_shift(&c, true, false, 32); // Auto-pull 32-bit from TX
+    sm_config_set_clkdiv(&c, 1.0f);
     pio_sm_init(pio, sm, offset, &c);
+
     pio_sm_set_enabled(pio, sm, true);
 }
 
