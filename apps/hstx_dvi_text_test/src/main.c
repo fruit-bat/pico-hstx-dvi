@@ -24,18 +24,18 @@
 
 static hstx_dvi_row_t _underflow_row;
 
-static uint16_t _screen[MODE_V_ACTIVE_LINES >> 8][MODE_H_ACTIVE_PIXELS >> 8];
+static uint16_t _screen[MODE_V_ACTIVE_LINES >> 3][MODE_H_ACTIVE_PIXELS >> 3];
 
-static const char* kubla = "In Xanadu did Kubla Khan \
-A stately pleasure-dome decree: \
-Where Alph, the sacred river, ran \
-Through caverns measureless to man \
-   Down to a sunless sea. \
-So twice five miles of fertile ground \
-With walls and towers were girdled round; \
-And there were gardens bright with sinuous rills, \
-Where blossomed many an incense-bearing tree; \
-And here were forests ancient as the hills, \
+static const char* kubla = "In Xanadu did Kubla Khan \n\
+A stately pleasure-dome decree: \n\
+Where Alph, the sacred river, ran \n\
+Through caverns measureless to man \n\
+   Down to a sunless sea. \n\
+So twice five miles of fertile ground \n\
+With walls and towers were girdled round; \n\
+And there were gardens bright with sinuous rills, \n\
+Where blossomed many an incense-bearing tree; \n\
+And here were forests ancient as the hills, \n\
 Enfolding sunny spots of greenery."; 
 
 int main(void)
@@ -66,11 +66,23 @@ int main(void)
     }
 
     {
-        memset(_screen, 42, sizeof(_screen));
+        memset(_screen, 32, sizeof(_screen));
         uint32_t i = 0;
-        uint8_t *p = (uint8_t*)kubla;
-        while (*p) {
-            _screen[0][i++] = (*p++);
+        uint32_t j = 0;
+        char *p = (char*)kubla;
+        char c;
+        while ((c = *p++)) {
+            switch(c) {
+                case '\n':
+                    i = 0;
+                    j = j < (MODE_V_ACTIVE_LINES >> 3) ? j + 1 : 0;
+                    break;
+                case '\r':
+                    break;
+                default:
+                    _screen[j][i++] = (uint16_t)c & 0xff;
+                    break;
+            }
         }
     }
 
@@ -80,12 +92,12 @@ int main(void)
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
         for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; j += FONT_CHAR_WIDTH)
         {
-            const char c = _screen[k >> 3][j >> 3];
-            const uint32_t d = c & 0xff;
+            const uint16_t s = _screen[k >> 3][j >> 3];
+            const uint32_t d = ((uint32_t)s) & 0xff;
             const uint32_t e = (d < 32 ? 32 : d) - FONT_FIRST_ASCII;
             const uint8_t f = font_8x8[(k & 7) + (e << 3)];
             for (uint32_t i = 0; i < 8; ++i) {
-                r->b[j + i] = f & (1 << i) ? 200 : 0;
+                r->b[j + i] = f & (1 << (7-i)) ? 200 : 0;
             }
         }
         hstx_dvi_row_fifo_put_blocking(r);
