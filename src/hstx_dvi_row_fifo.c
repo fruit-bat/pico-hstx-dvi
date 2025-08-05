@@ -5,11 +5,10 @@
 
 static PIO _pio = pio0;
 static uint _sm = 0;
-static hstx_dvi_row_t* _underflow_row;
 
 hstx_dvi_row_t* __scratch_x("") hstx_dvi_row_fifo_get(uint32_t row_index) {
     // Wait for data to be available in the RX FIFO
-    if (pio_sm_is_rx_fifo_empty(_pio, _sm)) return _underflow_row;
+    if (pio_sm_is_rx_fifo_empty(_pio, _sm)) return NULL;
     // Read data from the RX FIFO
     uint32_t value = pio_sm_get_blocking(_pio, _sm);    
 
@@ -30,12 +29,11 @@ void fifo_passthrough_program_init(PIO pio, uint sm, uint offset) {
 void hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row) {
     _pio = pio;
     _sm = sm;
-    _underflow_row = underflow_row;
 
     // Load the PIO program
     uint offset = pio_add_program(pio, &fifo_passthrough_program);
     fifo_passthrough_program_init(pio, sm, offset);
-    hstx_dvi_init(hstx_dvi_row_fifo_get);
+    hstx_dvi_init(hstx_dvi_row_fifo_get, underflow_row);
 }
 
 void hstx_dvi_row_fifo_init1(PIO pio, hstx_dvi_row_t* underflow_row) {

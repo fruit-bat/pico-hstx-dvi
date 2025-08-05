@@ -110,8 +110,11 @@ static uint v_scanline = 2;
 static  bool vactive_cmdlist_posted = false;
 
 static hstx_dvi_pixel_row_fetcher _row_fetcher;
+static hstx_dvi_row_t* _underflow_row;
 
 static void __scratch_x("") dma_irq_handler() {
+
+    static uint32_t _skipline = 0;
     // dma_pong indicates the channel that just finished, which is the one
     // we're about to reload.
     uint ch_num = dma_pong ? DMACH_PONG : DMACH_PING;
@@ -130,7 +133,18 @@ static void __scratch_x("") dma_irq_handler() {
         ch->transfer_count = count_of(vactive_line);
         vactive_cmdlist_posted = true;
     } else {
-        ch->read_addr = (uintptr_t)&_row_fetcher(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES))->w; 
+        const hstx_dvi_row_t* row = _row_fetcher(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES));
+        if (!row) {
+            // If we miss a line drop a whole frame
+            _skipline = MODE_H_ACTIVE_PIXELS;
+            ch->read_addr = (uintptr_t)&_underflow_row->w; 
+        }
+        if (_skipline) {
+            --_skipline;
+        }
+        else {
+            ch->read_addr = (uintptr_t)&row->w; 
+        }
         ch->transfer_count = MODE_H_ACTIVE_PIXELS / sizeof(uint32_t);
         vactive_cmdlist_posted = false;
     }
@@ -141,17 +155,18 @@ static void __scratch_x("") dma_irq_handler() {
 }
 
 
-void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
+void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row) {
 
     _row_fetcher = row_fetcher;
+    _underflow_row = underflow_row;
 
-    set_sys_clock_khz(264000, true);
+    set_sys_clock_khz(252000, true);
 
     clock_configure_int_divider(
         clk_hstx,
         0,
         CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS,
-        264000000,
+        252000000,
         2
     );
 

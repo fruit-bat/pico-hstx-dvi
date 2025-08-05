@@ -30,7 +30,7 @@ typedef union {
 
 typedef hstx_dvi_row_t* (*hstx_dvi_pixel_row_fetcher)(uint32_t row_index);
 
-void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher);
+void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row);
 void hstx_dvi_start();
 
 #ifdef __cplusplus

@@ -13,13 +13,15 @@
 #include "mountains_640x480_rgb332.h"
 #define framebuf mountains_640x480
 
+hstx_dvi_row_t _underflow_row;
+
 hstx_dvi_row_t* __scratch_x("") hstx_dvi_get_pixel_row(uint32_t row_index) {
     return (hstx_dvi_row_t*)&framebuf[row_index * MODE_H_ACTIVE_PIXELS];
 }
 
 int main(void) {
 
-    hstx_dvi_init(hstx_dvi_get_pixel_row);
+    hstx_dvi_init(hstx_dvi_get_pixel_row, &_underflow_row);
     hstx_dvi_start();
 
     while (1)
