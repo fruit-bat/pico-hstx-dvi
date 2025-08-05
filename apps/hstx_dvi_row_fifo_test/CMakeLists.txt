@@ -6,10 +6,6 @@ add_executable(hstx_dvi_row_fifo_test
 target_compile_definitions(hstx_dvi_row_fifo_test PRIVATE
 )
 
-target_include_directories(hstx_dvi_row_fifo_test PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/images
-        )
-
 target_link_libraries(hstx_dvi_row_fifo_test
   pico_stdlib
   pico_multicore
