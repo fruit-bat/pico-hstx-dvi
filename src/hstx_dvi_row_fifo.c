@@ -35,6 +35,7 @@ void hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row) {
     // Load the PIO program
     uint offset = pio_add_program(pio, &fifo_passthrough_program);
     fifo_passthrough_program_init(pio, sm, offset);
+    hstx_dvi_init(hstx_dvi_row_fifo_get);
 }
 
 void hstx_dvi_row_fifo_init1(PIO pio, hstx_dvi_row_t* underflow_row) {
@@ -47,7 +48,7 @@ void __not_in_flash_func(hstx_dvi_row_fifo_put_blocking)(hstx_dvi_row_t* row){
     static bool initialized = false;
 
     if (!initialized && pio_sm_is_tx_fifo_full(_pio, _sm)) {
-        hstx_dvi_start(hstx_dvi_row_fifo_get);
+        hstx_dvi_start();
         initialized = true;
     }
 

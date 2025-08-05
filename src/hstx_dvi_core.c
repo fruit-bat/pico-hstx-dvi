@@ -141,7 +141,7 @@ static void __scratch_x("") dma_irq_handler() {
 }
 
 
-void hstx_dvi_start(hstx_dvi_pixel_row_fetcher row_fetcher) {
+void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
 
     _row_fetcher = row_fetcher;
 
@@ -246,6 +246,9 @@ void hstx_dvi_start(hstx_dvi_pixel_row_fetcher row_fetcher) {
     irq_set_enabled(DMA_IRQ_0, true);
 
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
+}
 
+void hstx_dvi_start() {
+    // Start the DMA channels, which will start the HSTX output.
     dma_channel_start(DMACH_PING);
 }
