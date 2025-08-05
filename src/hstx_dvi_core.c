@@ -111,10 +111,11 @@ static  bool vactive_cmdlist_posted = false;
 
 static hstx_dvi_pixel_row_fetcher _row_fetcher;
 static hstx_dvi_row_t* _underflow_row;
+// TODO I have no idea why I have to add 8 to the active lines here, but it seems to work.
+static uint32_t _skipline = MODE_V_ACTIVE_LINES + 8;
 
 static void __scratch_x("") dma_irq_handler() {
 
-    static uint32_t _skipline = 0;
     // dma_pong indicates the channel that just finished, which is the one
     // we're about to reload.
     uint ch_num = dma_pong ? DMACH_PONG : DMACH_PING;
@@ -133,17 +134,20 @@ static void __scratch_x("") dma_irq_handler() {
         ch->transfer_count = count_of(vactive_line);
         vactive_cmdlist_posted = true;
     } else {
-        const hstx_dvi_row_t* row = _row_fetcher(v_scanline - (MODE_V_TOTAL_LINES - MODE_V_ACTIVE_LINES));
-        if (!row) {
-            // If we miss a line drop a whole frame
-            _skipline = MODE_H_ACTIVE_PIXELS;
-            ch->read_addr = (uintptr_t)&_underflow_row->w; 
-        }
         if (_skipline) {
+            ch->read_addr = (uintptr_t)&_underflow_row->w; 
             --_skipline;
         }
         else {
-            ch->read_addr = (uintptr_t)&row->w; 
+            const hstx_dvi_row_t* row = _row_fetcher(v_scanline - (MODE_V_FRONT_PORCH + MODE_V_SYNC_WIDTH + MODE_V_BACK_PORCH));
+            if (row) {
+                ch->read_addr = (uintptr_t)&row->w; 
+            }
+            else {
+                // If we miss a line drop a whole frame
+                _skipline = MODE_V_ACTIVE_LINES - 1;
+                ch->read_addr = (uintptr_t)&_underflow_row->w; 
+            }
         }
         ch->transfer_count = MODE_H_ACTIVE_PIXELS / sizeof(uint32_t);
         vactive_cmdlist_posted = false;

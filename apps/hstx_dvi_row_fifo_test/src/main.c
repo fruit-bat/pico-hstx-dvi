@@ -28,6 +28,11 @@ int main(void)
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
+    for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; ++j)
+    {
+        _underflow_row.b[j] = 200;
+    }
+
     // Initialize the HSTX DVI row FIFO. This also initializes the HSTX DVI once the FIFO is full.
     hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
 
@@ -52,6 +57,7 @@ int main(void)
     }
 
     uint32_t k = 0;
+    uint32_t f = 200;
     while (1)
     {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
@@ -61,6 +67,11 @@ int main(void)
         }
         hstx_dvi_row_fifo_put_blocking(r);
         k++;
+        // Test we can recover from a FIFO underflow
+        if (k == 470 && f > 0) {
+            f--;
+            sleep_ms(10);
+        }
         if (k >= MODE_V_ACTIVE_LINES) k = 0;
     }
 }

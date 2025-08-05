@@ -62,13 +62,13 @@ int main(void)
 
     for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; ++j)
     {
-        _underflow_row.b[j] = 100;
+        _underflow_row.b[j] = 200;
     }
 
     {
         memset(_screen, 32, sizeof(_screen));
         uint32_t i = 0;
-        uint32_t j = 0;
+        uint32_t j = 5;
         char *p = (char*)kubla;
         char c;
         while ((c = *p++)) {
@@ -84,6 +84,10 @@ int main(void)
                     break;
             }
         }
+        _screen[0][0] = '0';
+        _screen[0][79] = '1';
+        _screen[59][0] = '2';
+        _screen[59][79] = '3';
     }
 
     uint32_t k = 0;
