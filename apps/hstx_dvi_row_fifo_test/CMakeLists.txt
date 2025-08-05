@@ -3,7 +3,9 @@ add_executable(hstx_dvi_row_fifo_test
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
 )
 
+# Not fast enough to use 16 bits per pixel
 target_compile_definitions(hstx_dvi_row_fifo_test PRIVATE
+  MODE_BYTES_PER_PIXEL=1
 )
 
 target_link_libraries(hstx_dvi_row_fifo_test

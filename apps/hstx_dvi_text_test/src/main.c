@@ -111,7 +111,7 @@ int main(void)
     while (1)
     {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; j += FONT_CHAR_WIDTH)
+        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; j += FONT_CHAR_WIDTH)
         {
             const uint16_t s = _screen[k >> 3][j >> 3];
             const uint32_t d = ((uint32_t)s) & 0xff;
