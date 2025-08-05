@@ -19,7 +19,9 @@ extern "C" {
 #define MODE_V_BACK_PORCH    33
 #define MODE_V_ACTIVE_LINES  480
 
+#ifndef MODE_BYTES_PER_PIXEL
 #define MODE_BYTES_PER_PIXEL 1
+#endif
 #define HSTX_DVI_BYTES_PER_ROW (MODE_BYTES_PER_PIXEL * MODE_H_ACTIVE_PIXELS)
 
 typedef union {
@@ -28,6 +30,25 @@ typedef union {
     uint32_t w[(HSTX_DVI_BYTES_PER_ROW + 3) >> 2];    
 } hstx_dvi_row_t __attribute__((aligned(4)));;
 
+#if MODE_BYTES_PER_PIXEL == 1
+__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, uint32_t i, uint32_t rgb332) {
+    row->b[i] = rgb332;
+}
+__force_inline uint8_t hstx_dvi_row_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return (r & 0xc0) >> 6 | (g & 0xe0) >> 3 | (b & 0xe0) >> 0;
+}
+typedef uint8_t hstx_dvi_pixel_t; 
+#elif MODE_BYTES_PER_PIXEL == 2
+__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, uint32_t i, uint32_t rgb565) {
+    row->s[i] = rgb565;
+}
+__force_inline uint16_t hstx_dvi_row_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return ((uint16_t)r & 0xf8) >> 3 | ((uint16_t)g & 0xfc) << 3 | ((uint16_t)b & 0xf8) << 8;
+}
+typedef uint16_t hstx_dvi_pixel_t; 
+#else
+    #error "Unsupported MODE_BYTES_PER_PIXEL value"
+#endif
 typedef hstx_dvi_row_t* (*hstx_dvi_pixel_row_fetcher)(uint32_t row_index);
 
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row);

@@ -149,7 +149,7 @@ static void __scratch_x("") dma_irq_handler() {
                 ch->read_addr = (uintptr_t)&_underflow_row->w; 
             }
         }
-        ch->transfer_count = MODE_H_ACTIVE_PIXELS / sizeof(uint32_t);
+        ch->transfer_count = (MODE_BYTES_PER_PIXEL * MODE_H_ACTIVE_PIXELS) / sizeof(uint32_t);
         vactive_cmdlist_posted = false;
     }
 
@@ -173,7 +173,7 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* under
         252000000,
         2
     );
-
+#if MODE_BYTES_PER_PIXEL == 1
     // Configure HSTX's TMDS encoder for RGB332
     hstx_ctrl_hw->expand_tmds =
         2  << HSTX_CTRL_EXPAND_TMDS_L2_NBITS_LSB |
@@ -190,6 +190,26 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* under
         8 << HSTX_CTRL_EXPAND_SHIFT_ENC_SHIFT_LSB |
         1 << HSTX_CTRL_EXPAND_SHIFT_RAW_N_SHIFTS_LSB |
         0 << HSTX_CTRL_EXPAND_SHIFT_RAW_SHIFT_LSB;
+#elif MODE_BYTES_PER_PIXEL == 2
+    // Configure HSTX's TMDS encoder for RGB565 
+    // THIS IS ACTUALLY RGB555, but the encoder is set up for RGB565
+    hstx_ctrl_hw->expand_tmds =
+        29 << HSTX_CTRL_EXPAND_TMDS_L0_ROT_LSB   |
+        4  << HSTX_CTRL_EXPAND_TMDS_L0_NBITS_LSB |
+        2 << HSTX_CTRL_EXPAND_TMDS_L1_ROT_LSB   |
+        4  << HSTX_CTRL_EXPAND_TMDS_L1_NBITS_LSB |
+        7 << HSTX_CTRL_EXPAND_TMDS_L2_ROT_LSB   |
+        4  << HSTX_CTRL_EXPAND_TMDS_L2_NBITS_LSB ;
+    // Pixels (TMDS) come in 2 16-bit chunks. Control symbols (RAW) are an
+    // entire 32-bit word.
+    hstx_ctrl_hw->expand_shift =
+        2 << HSTX_CTRL_EXPAND_SHIFT_ENC_N_SHIFTS_LSB |
+        16 << HSTX_CTRL_EXPAND_SHIFT_ENC_SHIFT_LSB |
+        1 << HSTX_CTRL_EXPAND_SHIFT_RAW_N_SHIFTS_LSB |
+        0 << HSTX_CTRL_EXPAND_SHIFT_RAW_SHIFT_LSB; 
+#else
+    #error "Unsupported MODE_BYTES_PER_PIXEL value"
+#endif
 
     // Serial output config: clock period of 5 cycles, pop from command
     // expander every 5 cycles, shift the output shiftreg by 2 every cycle.

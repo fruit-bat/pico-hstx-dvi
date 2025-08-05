@@ -4,6 +4,7 @@ add_executable(hstx_dvi_hello_world
 )
 
 target_compile_definitions(hstx_dvi_hello_world PRIVATE
+  MODE_BYTES_PER_PIXEL=2
 )
 
 target_include_directories(hstx_dvi_hello_world PRIVATE
