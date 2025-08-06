@@ -73,7 +73,7 @@ int main(void)
         // Test we can recover from a FIFO underflow
         if (k == 470 && f > 0) {
             f--;
-        //    sleep_ms(10);
+            sleep_ms(10);
         }
         if (k >= MODE_V_ACTIVE_LINES) k = 0;
     }

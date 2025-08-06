@@ -35,6 +35,9 @@ typedef uint8_t hstx_dvi_pixel_t;
 __force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i, const uint32_t rgb332) {
     row->b[i] = rgb332;
 }
+__force_inline void hstx_dvi_row_set_pixel_pair(hstx_dvi_row_t* row, const uint32_t i, const uint32_t p1, const uint32_t p2) {
+    row->s[i] = (p2 << 8) | p1;
+}
 __force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
     return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
 }
