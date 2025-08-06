@@ -1,11 +1,11 @@
 #pragma once
 
+//#include <sys/types.h>
+#include "pico/stdlib.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <sys/types.h>
-#include "pico/stdlib.h"
 
 #define MODE_H_SYNC_POLARITY 0
 #define MODE_H_FRONT_PORCH   16

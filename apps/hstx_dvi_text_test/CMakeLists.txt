@@ -14,6 +14,7 @@ target_link_libraries(hstx_dvi_text_test
   hardware_pio
   pico_sync
   pico_hstx_dvi
+  pico_hstx_dvi_grid
 )
 
 # create map/bin/hex file etc.

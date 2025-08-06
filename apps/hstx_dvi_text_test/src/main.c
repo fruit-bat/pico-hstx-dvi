@@ -11,24 +11,13 @@
 #include "hstx_dvi_core.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
+#include "hstx_dvi_grid.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
 
-#include "font_inv.h"
-#define FONT_CHAR_WIDTH 8
-#define FONT_CHAR_HEIGHT 8
-#define FONT_N_CHARS 95
-#define FONT_FIRST_ASCII 32
-
-#define CHAR_ROWS (MODE_V_ACTIVE_LINES / FONT_CHAR_HEIGHT)
-#define CHAR_COLS (MODE_H_ACTIVE_PIXELS / FONT_CHAR_WIDTH)
-
 static hstx_dvi_row_t _underflow_row;
-
-static u_int16_t _screen[CHAR_ROWS][CHAR_COLS];
-static hstx_dvi_pixel_t _pallet[256];
 
 static const char* kubla = "In Xanadu did Kubla Khan \n\
 A stately pleasure-dome decree: \n\
@@ -42,46 +31,14 @@ Where blossomed many an incense-bearing tree; \n\
 And here were forests ancient as the hills, \n\
 Enfolding sunny spots of greenery."; 
 
-static inline void set_char(uint32_t y, uint32_t x, char c, uint8_t ci) {
-    if (x < CHAR_COLS && y < CHAR_ROWS) {
-        _screen[y][x] = ((uint16_t)c & 0xff) | ((uint16_t)ci << 8);
-    }
-}
-
-static void __not_in_flash_func(pattern)() {
-    uint32_t k = 0;
-    while (1)
-    {
-        hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        for (uint32_t j = 0; j < CHAR_COLS; j++)
-        {
-            const uint16_t s = _screen[k >> 3][j];
-            const uint32_t d = ((uint32_t)s) & 0xff;
-            const uint32_t e = (d < 32 ? 32 : d) - FONT_FIRST_ASCII;
-            const hstx_dvi_pixel_t fgr = _pallet[(s >> 8) & 0xff];
-            const hstx_dvi_pixel_t bgr = _pallet[0];
-            uint8_t f = font_8x8[(k & 7) + (e << 3)];
-            for (uint32_t i = 0; i < 2; ++i) {
-                uint32_t p1 = f & (1 << 7) ? fgr : bgr;
-                uint32_t p2 = f & (1 << 6) ? fgr : bgr;
-                uint32_t p3 = f & (1 << 5) ? fgr : bgr;
-                uint32_t p4 = f & (1 << 4) ? fgr : bgr;
-                hstx_dvi_row_set_pixel_quad(
-                    r, 
-                    (j<<1) + i, 
-                    p1,p2,p3,p4);
-                f <<= 4;
-            }
-        }
-        hstx_dvi_row_fifo_put_blocking(r);
-        k++;
-        if (k >= MODE_V_ACTIVE_LINES) k = 0;
+void __not_in_flash_func(render_loop)() {
+    while(1) {
+        hstx_dvi_grid_render_frame();
     }
 }
 
 int main(void)
 {
-
     // Initialize stdio and GPIO 25 for the onboard LED
     stdio_init_all();
     gpio_init(25);
@@ -106,37 +63,20 @@ int main(void)
         _underflow_row.b[j] = 200;
     }
 
-    _pallet[0] = hstx_dvi_row_pixel_rgb(0,0,0);
-    _pallet[1] = hstx_dvi_row_pixel_rgb(255,0,0);
-    _pallet[2] = hstx_dvi_row_pixel_rgb(0,255,0);
-    _pallet[3] = hstx_dvi_row_pixel_rgb(0,0,255);
-    _pallet[4] = hstx_dvi_row_pixel_rgb(255,255,0);
-    _pallet[5] = hstx_dvi_row_pixel_rgb(255,0,255);
+    hstx_dvi_grid_init();
 
-    {
-        memset(_screen, 32, sizeof(_screen));
-        uint32_t i = 0;
-        uint32_t j = 5;
-        char *p = (char*)kubla;
-        char c;
-        while ((c = *p++)) {
-            switch(c) {
-                case '\n':
-                    i = 0;
-                    j = j < (MODE_V_ACTIVE_LINES >> 3) ? j + 1 : 0;
-                    break;
-                case '\r':
-                    break;
-                default:
-                    set_char(j, i++, c, 5);
-                    break;
-            }
-        }
-        set_char(0, 0, '0', 1);
-        set_char(0, 79, '1', 2);
-        set_char(59, 0, '2', 3);
-        set_char(59, 79, '3', 4);
-    }
+    hstx_dvi_grid_set_pallet(0, hstx_dvi_row_pixel_rgb(0,0,0));
+    hstx_dvi_grid_set_pallet(1, hstx_dvi_row_pixel_rgb(255,0,0));
+    hstx_dvi_grid_set_pallet(2, hstx_dvi_row_pixel_rgb(0,255,0));
+    hstx_dvi_grid_set_pallet(3, hstx_dvi_row_pixel_rgb(0,0,255));
+    hstx_dvi_grid_set_pallet(4, hstx_dvi_row_pixel_rgb(255,255,0));
+    hstx_dvi_grid_set_pallet(5, hstx_dvi_row_pixel_rgb(255,0,255));
 
-    pattern();
+    hstx_dvi_grid_write_str(5, 0, kubla, 5, 3);
+    hstx_dvi_grid_write_ch(0, 0, '0', 1, 0);
+    hstx_dvi_grid_write_ch(0, 79, '1', 2, 0);
+    hstx_dvi_grid_write_ch(59, 0, '2', 3, 0);
+    hstx_dvi_grid_write_ch(59, 79, '3', 4, 0);
+
+    render_loop();
 }
