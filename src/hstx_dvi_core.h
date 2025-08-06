@@ -39,13 +39,13 @@ __force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const ui
     return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
 }
 #elif MODE_BYTES_PER_PIXEL == 2
-__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, uint32_t i, uint32_t rgb565) {
+typedef uint16_t hstx_dvi_pixel_t; 
+__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i, const uint32_t rgb565) {
     row->s[i] = rgb565;
 }
-__force_inline uint16_t hstx_dvi_row_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) {
-    return ((uint16_t)r & 0xf8) >> 3 | ((uint16_t)g & 0xfc) << 3 | ((uint16_t)b & 0xf8) << 8;
+__force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
+    return ((uint32_t)r & 0xf8) << 8 | ((uint32_t)g & 0xfc) << 3 | ((uint32_t)b & 0xf8) >> 3;
 }
-typedef uint16_t hstx_dvi_pixel_t; 
 #else
     #error "Unsupported MODE_BYTES_PER_PIXEL value"
 #endif
