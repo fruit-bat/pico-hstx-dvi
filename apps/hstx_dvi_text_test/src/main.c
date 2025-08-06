@@ -16,6 +16,7 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
+#include "pico/multicore.h"
 
 static hstx_dvi_row_t _underflow_row;
 
@@ -79,5 +80,14 @@ int main(void)
     hstx_dvi_grid_write_ch(59, 79, '3', 4, 0);
     hstx_dvi_grid_write_ch(20, 10, '4', 0, 4);
 
-    render_loop();
+    multicore_launch_core1(render_loop);
+
+    char buffer[64];
+    uint32_t k = 0;
+    while(1) {
+        sleep_ms(100);
+        sprintf(buffer, "HSTX DVI Text Test %ld", k++);
+        hstx_dvi_grid_write_str(30, 0, buffer, 5, 0);
+    }
 }
+
