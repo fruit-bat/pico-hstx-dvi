@@ -31,13 +31,13 @@ typedef union {
 } hstx_dvi_row_t __attribute__((aligned(4)));;
 
 #if MODE_BYTES_PER_PIXEL == 1
-__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, uint32_t i, uint32_t rgb332) {
+typedef uint8_t hstx_dvi_pixel_t; 
+__force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i, const uint32_t rgb332) {
     row->b[i] = rgb332;
 }
-__force_inline uint8_t hstx_dvi_row_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) {
-    return (r & 0xc0) >> 6 | (g & 0xe0) >> 3 | (b & 0xe0) >> 0;
+__force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
+    return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
 }
-typedef uint8_t hstx_dvi_pixel_t; 
 #elif MODE_BYTES_PER_PIXEL == 2
 __force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, uint32_t i, uint32_t rgb565) {
     row->s[i] = rgb565;
