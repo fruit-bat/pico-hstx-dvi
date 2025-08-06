@@ -48,6 +48,29 @@ static inline void set_char(uint32_t y, uint32_t x, char c, uint8_t ci) {
     }
 }
 
+static void __not_in_flash_func(pattern)() {
+    uint32_t k = 0;
+    while (1)
+    {
+        hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
+        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; j += FONT_CHAR_WIDTH)
+        {
+            const uint16_t s = _screen[k >> 3][j >> 3];
+            const uint32_t d = ((uint32_t)s) & 0xff;
+            const uint32_t e = (d < 32 ? 32 : d) - FONT_FIRST_ASCII;
+            const uint8_t f = font_8x8[(k & 7) + (e << 3)];
+            const hstx_dvi_pixel_t fgr = _pallet[(s >> 8) & 0xff];
+            const hstx_dvi_pixel_t bgr = _pallet[0];
+            for (uint32_t i = 0; i < 8; ++i) {
+                hstx_dvi_row_set_pixel(r, j + i, f & (1 << (7-i)) ? fgr : bgr);
+            }
+        }
+        hstx_dvi_row_fifo_put_blocking(r);
+        k++;
+        if (k >= MODE_V_ACTIVE_LINES) k = 0;
+    }
+}
+
 int main(void)
 {
 
@@ -107,24 +130,5 @@ int main(void)
         set_char(59, 79, '3', 4);
     }
 
-    uint32_t k = 0;
-    while (1)
-    {
-        hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; j += FONT_CHAR_WIDTH)
-        {
-            const uint16_t s = _screen[k >> 3][j >> 3];
-            const uint32_t d = ((uint32_t)s) & 0xff;
-            const uint32_t e = (d < 32 ? 32 : d) - FONT_FIRST_ASCII;
-            const uint8_t f = font_8x8[(k & 7) + (e << 3)];
-            const hstx_dvi_pixel_t fgr = _pallet[(s >> 8) & 0xff];
-            const hstx_dvi_pixel_t bgr = _pallet[0];
-            for (uint32_t i = 0; i < 8; ++i) {
-                hstx_dvi_row_set_pixel(r, j + i, f & (1 << (7-i)) ? fgr : bgr);
-            }
-        }
-        hstx_dvi_row_fifo_put_blocking(r);
-        k++;
-        if (k >= MODE_V_ACTIVE_LINES) k = 0;
-    }
+    pattern();
 }

@@ -56,16 +56,24 @@ int main(void)
     while (1)
     {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
+        const u_int32_t k1 = k & 0xff;
+        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS >> 1; ++j)
         {
-            hstx_dvi_row_set_pixel(r, j, hstx_dvi_row_pixel_rgb(k&0xff,j&0xff,(k+j)&0xff));
+            // hstx_dvi_row_set_pixel(r, j, hstx_dvi_row_pixel_rgb(k&0xff,j&0xff,(k+j)&0xff));
+            const u_int32_t j1 = j << 1;
+            const u_int32_t j2 = j1 + 1;
+            hstx_dvi_row_set_pixel_pair(
+                r, j,
+                hstx_dvi_row_pixel_rgb(k1,j1&0xff,(k+j1)&0xff),
+                hstx_dvi_row_pixel_rgb(k1,j2&0xff,(k+j2)&0xff)    
+            );
         }
         hstx_dvi_row_fifo_put_blocking(r);
         k++;
         // Test we can recover from a FIFO underflow
         if (k == 470 && f > 0) {
             f--;
-            sleep_ms(10);
+        //    sleep_ms(10);
         }
         if (k >= MODE_V_ACTIVE_LINES) k = 0;
     }
