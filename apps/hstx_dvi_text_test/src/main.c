@@ -53,16 +53,24 @@ static void __not_in_flash_func(pattern)() {
     while (1)
     {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; j += FONT_CHAR_WIDTH)
+        for (uint32_t j = 0; j < CHAR_COLS; j++)
         {
-            const uint16_t s = _screen[k >> 3][j >> 3];
+            const uint16_t s = _screen[k >> 3][j];
             const uint32_t d = ((uint32_t)s) & 0xff;
             const uint32_t e = (d < 32 ? 32 : d) - FONT_FIRST_ASCII;
-            const uint8_t f = font_8x8[(k & 7) + (e << 3)];
             const hstx_dvi_pixel_t fgr = _pallet[(s >> 8) & 0xff];
             const hstx_dvi_pixel_t bgr = _pallet[0];
-            for (uint32_t i = 0; i < 8; ++i) {
-                hstx_dvi_row_set_pixel(r, j + i, f & (1 << (7-i)) ? fgr : bgr);
+            uint8_t f = font_8x8[(k & 7) + (e << 3)];
+            for (uint32_t i = 0; i < 2; ++i) {
+                uint32_t p1 = f & (1 << 7) ? fgr : bgr;
+                uint32_t p2 = f & (1 << 6) ? fgr : bgr;
+                uint32_t p3 = f & (1 << 5) ? fgr : bgr;
+                uint32_t p4 = f & (1 << 4) ? fgr : bgr;
+                hstx_dvi_row_set_pixel_quad(
+                    r, 
+                    (j<<1) + i, 
+                    p1,p2,p3,p4);
+                f <<= 4;
             }
         }
         hstx_dvi_row_fifo_put_blocking(r);
