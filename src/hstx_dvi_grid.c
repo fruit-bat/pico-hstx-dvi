@@ -62,7 +62,7 @@ static inline hstx_dvi_pixel_t get_bg_color(const uint32_t s) {
 }
 
 void __not_in_flash_func(hstx_dvi_grid_clear)() {
-    const uint32_t s = enc_char(' ', 0, 1);
+    const uint32_t s = enc_char(' ', 1, 0);
     for (uint32_t j = 0; j < CHAR_COLS; ++j) {
         for (uint32_t i = 0; i < CHAR_ROWS; ++i) {
             set_char(i, j, s);
@@ -88,7 +88,7 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)() {
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
-            const uint16_t s = _screen[k >> 3][j];
+            const uint32_t s = _screen[k >> 3][j];
             const uint32_t e = decode_char(s);
             const hstx_dvi_pixel_t fgr = get_fg_color(s);
             const hstx_dvi_pixel_t bgr = get_bg_color(s);

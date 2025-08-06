@@ -72,11 +72,12 @@ int main(void)
     hstx_dvi_grid_set_pallet(4, hstx_dvi_row_pixel_rgb(255,255,0));
     hstx_dvi_grid_set_pallet(5, hstx_dvi_row_pixel_rgb(255,0,255));
 
-    hstx_dvi_grid_write_str(5, 0, kubla, 5, 3);
+    hstx_dvi_grid_write_str(5, 0, kubla, 5, 0);
     hstx_dvi_grid_write_ch(0, 0, '0', 1, 0);
     hstx_dvi_grid_write_ch(0, 79, '1', 2, 0);
     hstx_dvi_grid_write_ch(59, 0, '2', 3, 0);
     hstx_dvi_grid_write_ch(59, 79, '3', 4, 0);
+    hstx_dvi_grid_write_ch(20, 10, '4', 0, 4);
 
     render_loop();
 }
