@@ -4,7 +4,7 @@ add_executable(hstx_dvi_tmt_test
 )
 
 target_compile_definitions(hstx_dvi_tmt_test PRIVATE
-  MODE_BYTES_PER_PIXEL=2
+  MODE_BYTES_PER_PIXEL=1
 )
 
 target_link_libraries(hstx_dvi_tmt_test
