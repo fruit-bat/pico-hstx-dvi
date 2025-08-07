@@ -64,19 +64,14 @@ int main(void)
 
     hstx_dvi_grid_init();
 
-    hstx_dvi_grid_set_pallet(0, hstx_dvi_row_pixel_rgb(0,0,0));
-    hstx_dvi_grid_set_pallet(1, hstx_dvi_row_pixel_rgb(255,0,0));
-    hstx_dvi_grid_set_pallet(2, hstx_dvi_row_pixel_rgb(0,255,0));
-    hstx_dvi_grid_set_pallet(3, hstx_dvi_row_pixel_rgb(0,0,255));
-    hstx_dvi_grid_set_pallet(4, hstx_dvi_row_pixel_rgb(255,255,0));
-    hstx_dvi_grid_set_pallet(5, hstx_dvi_row_pixel_rgb(255,0,255));
-    hstx_dvi_grid_set_pallet(6, hstx_dvi_row_pixel_rgb(200,255,200));
-
-    hstx_dvi_grid_write_ch(0, 0, '0', 1, 0);
-    hstx_dvi_grid_write_ch(0, 79, '1', 2, 0);
-    hstx_dvi_grid_write_ch(59, 0, '2', 3, 0);
-    hstx_dvi_grid_write_ch(59, 79, '3', 4, 0);
-    hstx_dvi_grid_write_ch(20, 10, '4', 0, 4);
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_row_pixel_rgb(0,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_row_pixel_rgb(255,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_GREEN, hstx_dvi_row_pixel_rgb(0,255,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_YELLOW, hstx_dvi_row_pixel_rgb(255,255, 0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLUE, hstx_dvi_row_pixel_rgb(0,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_MAGENTA, hstx_dvi_row_pixel_rgb(255,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_CYAN, hstx_dvi_row_pixel_rgb(0,255,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_WHITE, hstx_dvi_row_pixel_rgb(255,255,255));
 
     multicore_launch_core1(render_loop);
 
@@ -87,7 +82,7 @@ int main(void)
      * could be a pointer to a wide string that has the desired
      * characters to be displayed when in ACS mode.
      */
-    TMT *vt = tmt_open(60, 80, callback, NULL, NULL);
+    TMT *vt = tmt_open(30, 80, callback, NULL, NULL);
     if (!vt) {
         hstx_dvi_grid_write_str(5, 0, "Failed to start TMT", 5, 0);
     }
@@ -101,7 +96,7 @@ int main(void)
         * libtmt will determine the length dynamically using strlen.
         */
        tmt_write(vt, "\033[1mhello, world (in bold!)\033[0m", 0);
-    } 
+    }
 
     while(1)
         __wfi();
@@ -127,12 +122,23 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
             for (size_t r = 0; r < s->nline; r++){
                 if (s->lines[r]->dirty){
                     for (size_t c = 0; c < s->ncol; c++){
+                        const tmt_color_t fg = s->lines[r]->chars[c].a.fg;
+                        const tmt_color_t bg = s->lines[r]->chars[c].a.bg;
+                        const hstx_dvi_pixel_t fgci = fg == TMT_COLOR_DEFAULT ? TMT_COLOR_GREEN : fg;
+                        const hstx_dvi_pixel_t bgci = bg == TMT_COLOR_DEFAULT ? TMT_COLOR_BLACK : bg;
 
-                        hstx_dvi_grid_write_ch(r, c, s->lines[r]->chars[c].c, 6, 0);
+                        hstx_dvi_grid_write_ch(
+                            r, 
+                            c, 
+                            s->lines[r]->chars[c].c, 
+                            fgci, 
+                            bgci);
 
-                        printf("contents of %zd,%zd: %lc (%s bold)\n", r, c,
-                               s->lines[r]->chars[c].c,
-                               s->lines[r]->chars[c].a.bold? "is" : "is not");
+                        printf("contents of %zd,%zd,%zd,%zd: '%lc' (%s bold)\n",
+                            r, c,
+                            fgci,bgci,
+                            s->lines[r]->chars[c].c,
+                            s->lines[r]->chars[c].a.bold? "is" : "is not");
                     }
                 }
             }
