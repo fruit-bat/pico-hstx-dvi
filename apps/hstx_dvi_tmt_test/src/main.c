@@ -98,8 +98,10 @@ int main(void)
        tmt_write(vt, "\033[1mhello, world (in bold!)\033[0m", 0);
     }
 
-    while(1)
-        __wfi();
+    while(1) {
+        const int ch = getchar();
+        tmt_write(vt, (const char *)&ch, 1);
+    }
 }
 
 void
