@@ -33,8 +33,8 @@ And here were forests ancient as the hills, \n\
 Enfolding sunny spots of greenery."; 
 
 void __not_in_flash_func(render_loop)() {
-    while(1) {
-        hstx_dvi_grid_render_frame();
+    for(uint32_t frame_index = 0; true; ++frame_index) {
+        hstx_dvi_grid_render_frame(frame_index);
     }
 }
 
@@ -73,12 +73,14 @@ int main(void)
     hstx_dvi_grid_set_pallet(4, hstx_dvi_row_pixel_rgb(255,255,0));
     hstx_dvi_grid_set_pallet(5, hstx_dvi_row_pixel_rgb(255,0,255));
 
-    hstx_dvi_grid_write_str(5, 0, kubla, 5, 0);
-    hstx_dvi_grid_write_ch(0, 0, '0', 1, 0);
-    hstx_dvi_grid_write_ch(0, 79, '1', 2, 0);
-    hstx_dvi_grid_write_ch(59, 0, '2', 3, 0);
-    hstx_dvi_grid_write_ch(59, 79, '3', 4, 0);
-    hstx_dvi_grid_write_ch(20, 10, '4', 0, 4);
+    hstx_dvi_grid_write_str(5, 0, kubla, 5, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
+    hstx_dvi_grid_write_ch(0, 0, '0', 1, 0, 0);
+    hstx_dvi_grid_write_ch(0, 79, '1', 2, 0, 0);
+    hstx_dvi_grid_write_ch(59, 0, '2', 3, 0, 0);
+    hstx_dvi_grid_write_ch(59, 79, '3', 0, 4, 0);
+    hstx_dvi_grid_write_ch(20, 10, '4', 4, 0, HSTX_DVI_GRID_ATTRS_BLINK);
+    hstx_dvi_grid_write_ch(20, 11, '5', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE | HSTX_DVI_GRID_ATTRS_BLINK);
+    hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
 
     multicore_launch_core1(render_loop);
 
@@ -87,7 +89,7 @@ int main(void)
     while(1) {
         sleep_ms(100);
         sprintf(buffer, "HSTX DVI Text Test %ld", k++);
-        hstx_dvi_grid_write_str(30, 0, buffer, 5, 0);
+        hstx_dvi_grid_write_str(30, 0, buffer, 5, 0, 0);
     }
 }
 

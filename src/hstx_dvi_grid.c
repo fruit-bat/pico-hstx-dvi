@@ -23,9 +23,10 @@ static hstx_dvi_pixel_t _pallet[256];
 static inline uint32_t enc_char(
     const uint32_t c, 
     const uint32_t fgci,
-    const uint32_t bgci
+    const uint32_t bgci,
+    const uint32_t attr
 ){
-    return (c & 0xff) | (fgci << 8) | (bgci << 16);
+    return (c & 0xff) | (fgci << 8) | (bgci << 16) | (attr << 24);
 }
 
 static inline void set_char(
@@ -41,10 +42,11 @@ static inline void set_char_full(
     const uint32_t x,
     const uint32_t c, 
     const uint32_t fgci,
-    const uint32_t bgci
+    const uint32_t bgci,
+    const uint32_t attr
 ) {
     if (x < CHAR_COLS && y < CHAR_ROWS) {
-        set_char(y, x, enc_char(c, fgci, bgci));
+        set_char(y, x, enc_char(c, fgci, bgci, attr));
     }
 }
 
@@ -61,8 +63,12 @@ static inline hstx_dvi_pixel_t get_bg_color(const uint32_t s) {
     return _pallet[(s >> 16) & 0xff];
 }
 
+static inline uint32_t decode_attr(const uint32_t s) {
+    return s >> 24;
+}
+
 void __not_in_flash_func(hstx_dvi_grid_clear)() {
-    const uint32_t s = enc_char(' ', 1, 0);
+    const uint32_t s = enc_char(' ', 1, 0, 0);
     for (uint32_t j = 0; j < CHAR_COLS; ++j) {
         for (uint32_t i = 0; i < CHAR_ROWS; ++i) {
             set_char(i, j, s);
@@ -84,13 +90,25 @@ void __not_in_flash_func(hstx_dvi_grid_init)() {
     hstx_dvi_grid_clear();
 }
 
-void __not_in_flash_func(hstx_dvi_grid_render_frame)() {
+void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
+    const bool blink = (frame_index & 63) < 32; // Blink every second for 32 frames
+    hstx_dvi_pixel_t fgbg[2];
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
             const uint32_t s = _screen[k >> 3][j];
             const uint32_t e = decode_char(s);
-            const hstx_dvi_pixel_t fgbg[2] = {get_fg_color(s), get_bg_color(s)};
+            const uint32_t attr = decode_attr(s);
+            const bool rev1 = (attr & HSTX_DVI_GRID_ATTRS_BLINK) && blink;
+            const bool rev2 = (attr & HSTX_DVI_GRID_ATTRS_REVERSE);
+            if (rev1 != rev2) {
+                fgbg[0] = get_fg_color(s);
+                fgbg[1] = get_bg_color(s);
+            }
+            else {
+                fgbg[0] = get_bg_color(s);
+                fgbg[1] = get_fg_color(s);
+            }
             uint8_t f = font_8x8[(k & 7) + (e << 3)];
             for (uint32_t i = 0; i < 2; ++i) {
                 const uint32_t p1 = fgbg[(f >> 7) & 1];
@@ -113,9 +131,10 @@ void __not_in_flash_func(hstx_dvi_grid_write_ch)(
     const uint32_t x,
     const char c,
     const uint8_t fgi,
-    const uint8_t bgi
+    const uint8_t bgi,
+    const uint8_t attr
 ) {
-    set_char_full(y, x, c, fgi, bgi);
+    set_char_full(y, x, c, fgi, bgi, attr);
 }
 
 void __not_in_flash_func(hstx_dvi_grid_write_str)(
@@ -123,7 +142,8 @@ void __not_in_flash_func(hstx_dvi_grid_write_str)(
     const uint32_t x,
     const char *s,
     const uint8_t fgi,
-    const uint8_t bgi
+    const uint8_t bgi,
+    const uint8_t attr
 ) {
     uint32_t j = y;
     uint32_t i = x;
@@ -138,7 +158,7 @@ void __not_in_flash_func(hstx_dvi_grid_write_str)(
             case '\r':
                 break;
             default:
-                set_char_full(j, i++, c, fgi, bgi);
+                set_char_full(j, i++, c, fgi, bgi, attr);
                 break;
         }
     }
