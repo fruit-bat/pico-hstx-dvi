@@ -9,6 +9,7 @@ It may be better to render directly from the libtmt screen memory.
 
 I needed to pack the control bits to make this fit in memory:
 ```c
+typedef struct TMTATTRS TMTATTRS;
 struct TMTATTRS{
     unsigned int bold      : 1;
     unsigned int dim       : 1;
@@ -19,7 +20,13 @@ struct TMTATTRS{
     unsigned int           : 2; // padding to align to next byte
     uint8_t fg        ;
     uint8_t bg        ;
-};
+} __attribute__((packed));
+
+typedef struct TMTCHAR TMTCHAR;
+struct TMTCHAR{
+    uint8_t c;
+    TMTATTRS a;
+} __attribute__((packed));
 ```
 
 Also, tmt_open seemed to be missing:
