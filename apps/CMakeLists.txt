@@ -51,5 +51,6 @@ add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")
 add_subdirectory(hstx_dvi_row_fifo_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_row_fifo_test")
 add_subdirectory(hstx_dvi_text_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_text_test")
+add_subdirectory(hstx_dvi_tmt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_tmt_test")
 
 
