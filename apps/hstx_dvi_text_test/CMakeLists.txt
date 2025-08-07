@@ -15,7 +15,6 @@ target_link_libraries(hstx_dvi_text_test
   pico_sync
   pico_hstx_dvi
   pico_hstx_dvi_grid
-pico_hstx_dvi_tmt
 )
 
 # create map/bin/hex file etc.
