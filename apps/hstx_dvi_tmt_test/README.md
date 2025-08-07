@@ -1,11 +1,11 @@
 
 
-Attempt to integrate libtmt
+Attempt to integrate [libtmt](https://github.com/deadpixi/libtmt)
 
-tmt allocates screen space and so does the grid renderer.
-Possible it may work better the renderer operates directly from the libtmt screen.
+Terminal working at 80 by 60 characters.
 
-Now working with an 80x60 terminal
+Currently, both tmt and this library allocate screen space, which is wastefull on memory.
+It may be better to render directly from the libtmt screen memory.
 
 I needed to pack the control bits to make this fit in memory:
 ```c
