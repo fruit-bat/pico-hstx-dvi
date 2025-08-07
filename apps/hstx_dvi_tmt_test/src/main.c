@@ -82,7 +82,7 @@ int main(void)
      * could be a pointer to a wide string that has the desired
      * characters to be displayed when in ACS mode.
      */
-    TMT *vt = tmt_open(30, 80, callback, NULL, NULL);
+    TMT *vt = tmt_open(60, 80, callback, NULL, NULL);
     if (!vt) {
         hstx_dvi_grid_write_str(5, 0, "Failed to start TMT", 5, 0);
     }

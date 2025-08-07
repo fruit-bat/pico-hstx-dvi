@@ -82,14 +82,15 @@ typedef enum{
 
 typedef struct TMTATTRS TMTATTRS;
 struct TMTATTRS{
-    bool bold;
-    bool dim;
-    bool underline;
-    bool blink;
-    bool reverse;
-    bool invisible;
-    tmt_color_t fg;
-    tmt_color_t bg;
+    unsigned int bold      : 1;
+    unsigned int dim       : 1;
+    unsigned int underline : 1;
+    unsigned int blink     : 1;
+    unsigned int reverse   : 1;
+    unsigned int invisible : 1;
+    unsigned int           : 2; // padding to align to next byte
+    uint8_t fg        ;
+    uint8_t bg        ;
 };
 
 typedef struct TMTCHAR TMTCHAR;
