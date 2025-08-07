@@ -90,14 +90,13 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)() {
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
             const uint32_t s = _screen[k >> 3][j];
             const uint32_t e = decode_char(s);
-            const hstx_dvi_pixel_t fgr = get_fg_color(s);
-            const hstx_dvi_pixel_t bgr = get_bg_color(s);
+            const hstx_dvi_pixel_t fgbg[2] = {get_fg_color(s), get_bg_color(s)};
             uint8_t f = font_8x8[(k & 7) + (e << 3)];
             for (uint32_t i = 0; i < 2; ++i) {
-                uint32_t p1 = f & (1 << 7) ? fgr : bgr;
-                uint32_t p2 = f & (1 << 6) ? fgr : bgr;
-                uint32_t p3 = f & (1 << 5) ? fgr : bgr;
-                uint32_t p4 = f & (1 << 4) ? fgr : bgr;
+                uint32_t p1 = fgbg[(f >> 7) & 1];
+                uint32_t p2 = fgbg[(f >> 6) & 1];
+                uint32_t p3 = fgbg[(f >> 5) & 1];
+                uint32_t p4 = fgbg[(f >> 4) & 1];
                 hstx_dvi_row_set_pixel_quad(
                     r, 
                     (j<<1) + i, 
