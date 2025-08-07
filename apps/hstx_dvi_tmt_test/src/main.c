@@ -136,11 +136,11 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
                             fgci, 
                             bgci);
 
-                        printf("contents of %zd,%zd,%zd,%zd: '%lc' (%s bold)\n",
-                            r, c,
-                            fgci,bgci,
-                            s->lines[r]->chars[c].c,
-                            s->lines[r]->chars[c].a.bold? "is" : "is not");
+                        // printf("contents of %zd,%zd,%zd,%zd: '%lc' (%s bold)\n",
+                        //     r, c,
+                        //     fgci,bgci,
+                        //     s->lines[r]->chars[c].c,
+                        //     s->lines[r]->chars[c].a.bold? "is" : "is not");
                     }
                 }
             }

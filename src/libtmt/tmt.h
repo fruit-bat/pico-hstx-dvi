@@ -91,13 +91,13 @@ struct TMTATTRS{
     unsigned int           : 2; // padding to align to next byte
     uint8_t fg        ;
     uint8_t bg        ;
-};
+} __attribute__((packed));
 
 typedef struct TMTCHAR TMTCHAR;
 struct TMTCHAR{
-    wchar_t c;
+    uint8_t c;
     TMTATTRS a;
-};
+} __attribute__((packed));
 
 typedef struct TMTPOINT TMTPOINT;
 struct TMTPOINT{
