@@ -52,3 +52,5 @@ tmt_open(size_t nline, size_t ncol, TMTCALLBACK cb, void *p,
     return vt;
 }
 ```
+
+I think bright colour and 256 colour support is missing; see https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
