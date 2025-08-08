@@ -25,8 +25,8 @@
 static hstx_dvi_row_t _underflow_row;
 
 void __not_in_flash_func(render_loop)() {
-    while(1) {
-        hstx_dvi_grid_render_frame();
+    for(uint32_t frame_index = 0; true; ++frame_index) {
+        hstx_dvi_grid_render_frame(frame_index);
     }
 }
 
@@ -84,11 +84,9 @@ int main(void)
      */
     TMT *vt = tmt_open(60, 80, callback, NULL, NULL);
     if (!vt) {
-        hstx_dvi_grid_write_str(5, 0, "Failed to start TMT", 5, 0);
+        hstx_dvi_grid_write_str(5, 0, "Failed to start TMT", 5, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
     }
     else {
-        hstx_dvi_grid_write_str(5, 0, "Started TMT", 5, 0);
-
         /* Write some text to the terminal, using escape sequences to
         * use a bold rendition.
         *
@@ -128,13 +126,32 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
                         const tmt_color_t bg = s->lines[r]->chars[c].a.bg;
                         const hstx_dvi_pixel_t fgci = fg == TMT_COLOR_DEFAULT ? TMT_COLOR_GREEN : fg;
                         const hstx_dvi_pixel_t bgci = bg == TMT_COLOR_DEFAULT ? TMT_COLOR_BLACK : bg;
-
+                        hstx_dvi_grid_attr_t attr = HSTX_DVI_GRID_ATTRS_NORMAL;
+                        if (s->lines[r]->chars[c].a.bold) {
+                            attr |= HSTX_DVI_GRID_ATTRS_BOLD;
+                        }
+                        if (s->lines[r]->chars[c].a.dim) {
+                            attr |= HSTX_DVI_GRID_ATTRS_DIM;
+                        }
+                        if (s->lines[r]->chars[c].a.underline) {
+                            attr |= HSTX_DVI_GRID_ATTRS_UNDERLINE;
+                        }
+                        if (s->lines[r]->chars[c].a.blink) {
+                            attr |= HSTX_DVI_GRID_ATTRS_BLINK;
+                        }
+                        if (s->lines[r]->chars[c].a.reverse) {
+                            attr |= HSTX_DVI_GRID_ATTRS_REVERSE;
+                        }
+                        if (s->lines[r]->chars[c].a.invisible) {
+                            attr |= HSTX_DVI_GRID_ATTRS_INVISIBLE;
+                        }
                         hstx_dvi_grid_write_ch(
                             r, 
                             c, 
                             s->lines[r]->chars[c].c, 
                             fgci, 
-                            bgci);
+                            bgci,
+                            attr);
 
                         // printf("contents of %zd,%zd,%zd,%zd: '%lc' (%s bold)\n",
                         //     r, c,

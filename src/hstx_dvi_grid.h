@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+typedef uint8_t hstx_dvi_grid_attr_t;
 #define HSTX_DVI_GRID_ATTRS_NORMAL    (0x00)
 #define HSTX_DVI_GRID_ATTRS_BOLD      (0x01)
 #define HSTX_DVI_GRID_ATTRS_DIM       (0x02)
