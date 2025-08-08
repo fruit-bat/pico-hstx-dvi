@@ -130,3 +130,42 @@ static inline void render_row_n_p1(
 	}
 }
 
+static inline void render_row_text_8_p1(
+	const TextGrid8_t *tg,
+	const Pallet1_t p1,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+    uint8_t* font_8x8
+) {
+	uint8_t * const s = tg->s + __mul_instruction((row >> 3), tg->w);
+	const uint32_t k = row & 7;
+	const uint32_t w = tg->w;
+	const uint32_t v = w >> 2;
+
+	for(uint32_t i = 0; i < v; ++i) {
+		const uint32_t q = i << 2;
+		const uint8_t d1 = font_8x8[k + ((s[q] -  32) << 3)];
+		const uint8_t d2 = font_8x8[k + ((s[q+1] -  32) << 3)];
+		const uint8_t d3 = font_8x8[k + ((s[q+2] -  32) << 3)];
+		const uint8_t d4 = font_8x8[k + ((s[q+3] -  32) << 3)];
+		const uint32_t g = (((uint32_t)d1) << 24) | (((uint32_t)d2) << 16) | (((uint32_t)d3) << 8) | d4;
+		render_row_n_p1(
+			g,
+			p1,
+			r,
+			x + (i << 5),
+			32
+		);
+	}
+	for(uint32_t i = w & -4; i < w; ++i) {
+		const uint8_t d = font_8x8[k + ((s[i] -  32) << 3)];
+		render_row_n_p1(
+			d,
+			p1,
+			r,
+			x + (i << 3),
+			8
+		);
+	}
+}
