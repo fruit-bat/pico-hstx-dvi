@@ -6,7 +6,7 @@
 static PIO _pio = pio0;
 static uint _sm = 0;
 
-hstx_dvi_row_t* __scratch_x("") hstx_dvi_row_fifo_get(uint32_t row_index) {
+hstx_dvi_row_t* HSTX_DVI_MEM_LOC(hstx_dvi_row_fifo_get)(uint32_t row_index) {
     // Wait for data to be available in the RX FIFO
     if (pio_sm_is_rx_fifo_empty(_pio, _sm)) return 0;
 
@@ -23,7 +23,7 @@ void fifo_passthrough_program_init(PIO pio, uint sm, uint offset) {
     pio_sm_set_enabled(pio, sm, true);
 }
 
-void hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row) {
+hstx_dvi_pixel_row_fetcher hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row) {
     _pio = pio;
     _sm = sm;
 
@@ -31,23 +31,25 @@ void hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row_t* underflow_row) {
     uint offset = pio_add_program(pio, &fifo_passthrough_program);
     fifo_passthrough_program_init(pio, sm, offset);
 
-    hstx_dvi_init(hstx_dvi_row_fifo_get, underflow_row);
+    sleep_ms(100); // Allow time for the PIO program to initialize
 
+    for(int i = 0; i < 8; i++) {
+        // Write the underflow row to the RX FIFO
+        pio_sm_put_blocking(pio, sm, (uint32_t)underflow_row);
+    }
+
+    return hstx_dvi_row_fifo_get;
 }
 
-void hstx_dvi_row_fifo_init1(PIO pio, hstx_dvi_row_t* underflow_row) {
+hstx_dvi_pixel_row_fetcher hstx_dvi_row_fifo_init1(PIO pio, hstx_dvi_row_t* underflow_row) {
     uint sm = pio_claim_unused_sm(pio, true);
-    hstx_dvi_row_fifo_init(pio, sm, underflow_row);
+    return hstx_dvi_row_fifo_init(pio, sm, underflow_row);
 }
 
 void __not_in_flash_func(hstx_dvi_row_fifo_put_blocking)(hstx_dvi_row_t* row){
-
-    static bool initialized = false;
-
-    if (!initialized && pio_sm_is_tx_fifo_full(_pio, _sm)) {
-        initialized = true;
-        hstx_dvi_start();
-    }
-
     pio_sm_put_blocking(_pio, _sm, (uint32_t)row);
+}
+
+hstx_dvi_pixel_row_fetcher hstx_dvi_row_fifo_get_row_fetcher() {
+    return hstx_dvi_row_fifo_get;
 }

@@ -33,6 +33,9 @@ And here were forests ancient as the hills, \n\
 Enfolding sunny spots of greenery."; 
 
 void __not_in_flash_func(render_loop)() {
+
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_grid_render_frame(frame_index);
     }
@@ -45,24 +48,18 @@ int main(void)
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
+    
+    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
+    {
+        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
+    }
 
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
-    // Initialize the HSTX DVI row FIFO. This also initializes the HSTX DVI once the FIFO is full.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
-
     sleep_ms(2000); // Allow time for initialization
 
-    for (uint32_t j = 0; j < 1; ++j)
-    {
-        printf("HSTX DVI Text Test\n");
-    }
-
-    for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; ++j)
-    {
-        _underflow_row.b[j] = 200;
-    }
+    printf("HSTX DVI Text Test\n");
 
     hstx_dvi_grid_init();
 
@@ -85,9 +82,12 @@ int main(void)
     hstx_dvi_grid_write_str(22, 0, "Normal", 4, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
     hstx_dvi_grid_write_str(23, 0, "Dim", 4, 0, HSTX_DVI_GRID_ATTRS_DIM);
     hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
+    
+    // Initialize the HSTX DVI row FIFO.
+    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
 
     multicore_launch_core1(render_loop);
-
+   
     char buffer[64];
     uint32_t k = 0;
     while(1) {

@@ -14,6 +14,7 @@
 #include "hardware/irq.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
+#include "pico/sem.h"
 #include "hardware/structs/clocks.h"
 #include "hardware/structs/bus_ctrl.h"
 #include "hardware/structs/hstx_ctrl.h"
@@ -112,10 +113,12 @@ static  bool vactive_cmdlist_posted = false;
 
 static hstx_dvi_pixel_row_fetcher _row_fetcher;
 static hstx_dvi_row_t* _underflow_row;
-// TODO I have no idea why I have to add 8 to the active lines here, but it seems to work.
-static uint32_t _skipline = MODE_V_ACTIVE_LINES + 8;
+static uint32_t _skipline = MODE_V_ACTIVE_LINES;
 
-static void __scratch_x("") dma_irq_handler() {
+// Add a semaphore for synchronization
+static struct semaphore _dvi_sem;
+
+static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
 
     // dma_pong indicates the channel that just finished, which is the one
     // we're about to reload.
@@ -159,6 +162,10 @@ static void __scratch_x("") dma_irq_handler() {
     }
 }
 
+void hstx_dvi_init_semi() {
+    // Initialize the semaphore with a count of 1 (binary semaphore)
+    sem_init(&_dvi_sem, 0, 1);
+}
 
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row) {
 
@@ -288,9 +295,17 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* under
     irq_set_enabled(DMA_IRQ_0, true);
 
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
+
+    // Wait on the semaphore before handling DMA IRQ
+    //sem_acquire_blocking(&_dvi_sem);
+
+    // Start the DMA channels, which will start the HSTX output.
+    dma_channel_start(DMACH_PING);
 }
 
 void hstx_dvi_start() {
+    // Release the semaphore to allow DMA IRQ to proceed
+    //sem_release(&_dvi_sem);   
     // Start the DMA channels, which will start the HSTX output.
-    dma_channel_start(DMACH_PING);
+//    dma_channel_start(DMACH_PING);
 }

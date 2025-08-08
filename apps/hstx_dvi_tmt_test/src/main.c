@@ -25,6 +25,9 @@
 static hstx_dvi_row_t _underflow_row;
 
 void __not_in_flash_func(render_loop)() {
+
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_grid_render_frame(frame_index);
     }
@@ -47,8 +50,16 @@ int main(void)
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
-    // Initialize the HSTX DVI row FIFO. This also initializes the HSTX DVI once the FIFO is full.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+    hstx_dvi_grid_init();
+
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_pixel_rgb(0,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_pixel_rgb(255,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_GREEN, hstx_dvi_pixel_rgb(0,255,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_YELLOW, hstx_dvi_pixel_rgb(255,255, 0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLUE, hstx_dvi_pixel_rgb(0,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_MAGENTA, hstx_dvi_pixel_rgb(255,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_CYAN, hstx_dvi_pixel_rgb(0,255,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_WHITE, hstx_dvi_pixel_rgb(255,255,255));
 
     sleep_ms(2000); // Allow time for initialization
 
@@ -61,17 +72,8 @@ int main(void)
     {
         _underflow_row.b[j] = 200;
     }
-
-    hstx_dvi_grid_init();
-
-    hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_pixel_rgb(0,0,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_pixel_rgb(255,0,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_GREEN, hstx_dvi_pixel_rgb(0,255,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_YELLOW, hstx_dvi_pixel_rgb(255,255, 0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_BLUE, hstx_dvi_pixel_rgb(0,0,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_MAGENTA, hstx_dvi_pixel_rgb(255,0,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_CYAN, hstx_dvi_pixel_rgb(0,255,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_WHITE, hstx_dvi_pixel_rgb(255,255,255));
+    // Initialize the HSTX DVI row FIFO.
+    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
 
     multicore_launch_core1(render_loop);
 

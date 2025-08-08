@@ -87,7 +87,10 @@ __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
 typedef hstx_dvi_row_t* (*hstx_dvi_pixel_row_fetcher)(uint32_t row_index);
 
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row);
-void hstx_dvi_start();
+
+//#define HSTX_DVI_MEM_LOC(A) __scratch_x("") A
+#define HSTX_DVI_MEM_LOC(A) __scratch_y("") A
+//#define HSTX_DVI_MEM_LOC(A) __not_in_flash_func(A)
 
 #ifdef __cplusplus
 } 
