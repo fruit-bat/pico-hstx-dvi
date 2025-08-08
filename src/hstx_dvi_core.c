@@ -115,9 +115,6 @@ static hstx_dvi_pixel_row_fetcher _row_fetcher;
 static hstx_dvi_row_t* _underflow_row;
 static uint32_t _skipline = MODE_V_ACTIVE_LINES;
 
-// Add a semaphore for synchronization
-static struct semaphore _dvi_sem;
-
 static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
 
     // dma_pong indicates the channel that just finished, which is the one
@@ -160,11 +157,6 @@ static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
     if (!vactive_cmdlist_posted) {
         v_scanline = (v_scanline + 1) % MODE_V_TOTAL_LINES;
     }
-}
-
-void hstx_dvi_init_semi() {
-    // Initialize the semaphore with a count of 1 (binary semaphore)
-    sem_init(&_dvi_sem, 0, 1);
 }
 
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row) {
@@ -296,16 +288,24 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* under
 
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
 
-    // Wait on the semaphore before handling DMA IRQ
-    //sem_acquire_blocking(&_dvi_sem);
-
     // Start the DMA channels, which will start the HSTX output.
     dma_channel_start(DMACH_PING);
 }
 
-void hstx_dvi_start() {
-    // Release the semaphore to allow DMA IRQ to proceed
-    //sem_release(&_dvi_sem);   
-    // Start the DMA channels, which will start the HSTX output.
-//    dma_channel_start(DMACH_PING);
+void hstx_dvi_fill_row(hstx_dvi_row_t* r, hstx_dvi_pixel_t p) {
+    uint32_t *x = (uint32_t*)r;
+#if MODE_BYTES_PER_PIXEL == 1
+    const uint32_t w = hstx_dvi_row_enc_pixel_quad(p, p, p, p);
+    for (int i = 0; i < MODE_H_ACTIVE_PIXELS >> 2; ++i) {
+        *x++ = w;
+    }
+#elif MODE_BYTES_PER_PIXEL == 2
+    const uint32_t w = hstx_dvi_row_enc_pixel_pair(p, p);
+    for (int i = 0; i < MODE_H_ACTIVE_PIXELS >> 1; ++i) {
+        *x++ = w;
+    }   
+#else
+    #error "Unsupported MODE_BYTES_PER_PIXEL value"
+#endif
 }
+

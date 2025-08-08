@@ -38,6 +38,13 @@ __force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i
 __force_inline void hstx_dvi_row_set_pixel_pair(hstx_dvi_row_t* row, const uint32_t i, const uint32_t p1, const uint32_t p2) {
     row->s[i] = (p2 << 8) | p1;
 }
+__force_inline uint32_t hstx_dvi_row_enc_pixel_quad(
+    const uint32_t p1, 
+    const uint32_t p2,
+    const uint32_t p3, 
+    const uint32_t p4) {
+    return (p4 << 24) | (p3 << 16) | (p2 << 8) | p1;
+}
 __force_inline void hstx_dvi_row_set_pixel_quad(
     hstx_dvi_row_t* row, 
     const uint32_t i, 
@@ -46,7 +53,7 @@ __force_inline void hstx_dvi_row_set_pixel_quad(
     const uint32_t p3, 
     const uint32_t p4
 ) {
-    row->w[i] = (p4 << 24) | (p3 << 16) | (p2 << 8) | p1;
+    row->w[i] = hstx_dvi_row_enc_pixel_quad(p1, p2, p3, p4);
 }
 __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
     return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
@@ -60,8 +67,14 @@ typedef uint16_t hstx_dvi_pixel_t;
 __force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i, const uint32_t rgb565) {
     row->s[i] = rgb565;
 }
+__force_inline uint32_t hstx_dvi_row_enc_pixel_pair(
+    const uint32_t p1, 
+    const uint32_t p2
+) {
+    return (p2 << 16) | p1;
+}
 __force_inline void hstx_dvi_row_set_pixel_pair(hstx_dvi_row_t* row, const uint32_t i, const uint32_t p1, const uint32_t p2) {
-    row->w[i] = (p2 << 16) | p1;
+    row->w[i] = hstx_dvi_row_enc_pixel_pair(p1, p2);
 }
 __force_inline void hstx_dvi_row_set_pixel_quad(
     hstx_dvi_row_t* row, 
@@ -87,6 +100,8 @@ __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
 typedef hstx_dvi_row_t* (*hstx_dvi_pixel_row_fetcher)(uint32_t row_index);
 
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row);
+
+void hstx_dvi_fill_row(hstx_dvi_row_t* row, hstx_dvi_pixel_t pixel);
 
 //#define HSTX_DVI_MEM_LOC(A) __scratch_x("") A
 #define HSTX_DVI_MEM_LOC(A) __scratch_y("") A
