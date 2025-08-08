@@ -84,8 +84,8 @@ void __not_in_flash_func(hstx_dvi_grid_set_pallet)(
 }
 
 void __not_in_flash_func(hstx_dvi_grid_init)() {
-    _pallet[0] = hstx_dvi_row_pixel_rgb(0,0,0);
-    _pallet[1] = hstx_dvi_row_pixel_rgb(255,255,255);
+    _pallet[0] = hstx_dvi_pixel_rgb(0,0,0);
+    _pallet[1] = hstx_dvi_pixel_rgb(255,255,255);
 
     hstx_dvi_grid_clear();
 }
@@ -96,7 +96,8 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
-            const uint32_t s = _screen[k >> 3][j];
+            const uint32_t y = k >> 3;
+            const uint32_t s = _screen[y][j];
             const uint32_t e = decode_char(s);
             const uint32_t attr = decode_attr(s);
             const bool rev1 = (attr & HSTX_DVI_GRID_ATTRS_BLINK) && blink;
@@ -109,17 +110,37 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
                 fgbg[0] = get_bg_color(s);
                 fgbg[1] = get_fg_color(s);
             }
-            uint8_t f = font_8x8[(k & 7) + (e << 3)];
-            for (uint32_t i = 0; i < 2; ++i) {
-                const uint32_t p1 = fgbg[(f >> 7) & 1];
-                const uint32_t p2 = fgbg[(f >> 6) & 1];
-                const uint32_t p3 = fgbg[(f >> 5) & 1];
-                const uint32_t p4 = fgbg[(f >> 4) & 1];
+            if (attr & HSTX_DVI_GRID_ATTRS_DIM) {
+                fgbg[0] = hstx_dvi_pixel_dim(fgbg[0]);
+                fgbg[1] = hstx_dvi_pixel_dim(fgbg[1]);
+            }
+            if (attr & HSTX_DVI_GRID_ATTRS_INVISIBLE) {
+                fgbg[1] = fgbg[0];
+            }
+            if ((y == (FONT_CHAR_HEIGHT-1)) && (attr & HSTX_DVI_GRID_ATTRS_UNDERLINE)) {
+                // Underline is rendered as a solid line at the bottom of the
+                // character cell, so we need to set the last row of pixels.
+                const uint32_t p1 = fgbg[1];
+                for (uint32_t i = 0; i < 2; ++i) {
                 hstx_dvi_row_set_pixel_quad(
                     r, 
                     (j<<1) + i, 
-                    p1,p2,p3,p4);
-                f <<= 4;
+                    p1,p1,p1,p1);
+                }
+            }
+            else {
+                uint8_t f = font_8x8[(k & 7) + (e << 3)];
+                for (uint32_t i = 0; i < 2; ++i) {
+                    const uint32_t p1 = fgbg[(f >> 7) & 1];
+                    const uint32_t p2 = fgbg[(f >> 6) & 1];
+                    const uint32_t p3 = fgbg[(f >> 5) & 1];
+                    const uint32_t p4 = fgbg[(f >> 4) & 1];
+                    hstx_dvi_row_set_pixel_quad(
+                        r, 
+                        (j<<1) + i, 
+                        p1,p2,p3,p4);
+                    f <<= 4;
+                }
             }
         }
         hstx_dvi_row_fifo_put_blocking(r);

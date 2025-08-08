@@ -30,7 +30,7 @@ int main(void)
 
     for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
     {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_row_pixel_rgb(0,255,0));
+        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
     }
 
     // Initialize the HSTX DVI row FIFO. This also initializes the HSTX DVI once the FIFO is full.
@@ -59,13 +59,13 @@ int main(void)
         const u_int32_t k1 = k & 0xff;
         for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS >> 1; ++j)
         {
-            // hstx_dvi_row_set_pixel(r, j, hstx_dvi_row_pixel_rgb(k&0xff,j&0xff,(k+j)&0xff));
+            // hstx_dvi_row_set_pixel(r, j, hstx_dvi_pixel_rgb(k&0xff,j&0xff,(k+j)&0xff));
             const u_int32_t j1 = j << 1;
             const u_int32_t j2 = j1 + 1;
             hstx_dvi_row_set_pixel_pair(
                 r, j,
-                hstx_dvi_row_pixel_rgb(k1,j1&0xff,(k+j1)&0xff),
-                hstx_dvi_row_pixel_rgb(k1,j2&0xff,(k+j2)&0xff)    
+                hstx_dvi_pixel_rgb(k1,j1&0xff,(k+j1)&0xff),
+                hstx_dvi_pixel_rgb(k1,j2&0xff,(k+j2)&0xff)    
             );
         }
         hstx_dvi_row_fifo_put_blocking(r);

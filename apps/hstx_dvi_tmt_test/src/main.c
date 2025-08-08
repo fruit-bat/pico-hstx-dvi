@@ -64,14 +64,14 @@ int main(void)
 
     hstx_dvi_grid_init();
 
-    hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_row_pixel_rgb(0,0,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_row_pixel_rgb(255,0,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_GREEN, hstx_dvi_row_pixel_rgb(0,255,0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_YELLOW, hstx_dvi_row_pixel_rgb(255,255, 0));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_BLUE, hstx_dvi_row_pixel_rgb(0,0,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_MAGENTA, hstx_dvi_row_pixel_rgb(255,0,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_CYAN, hstx_dvi_row_pixel_rgb(0,255,255));
-    hstx_dvi_grid_set_pallet(TMT_COLOR_WHITE, hstx_dvi_row_pixel_rgb(255,255,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_pixel_rgb(0,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_pixel_rgb(255,0,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_GREEN, hstx_dvi_pixel_rgb(0,255,0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_YELLOW, hstx_dvi_pixel_rgb(255,255, 0));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_BLUE, hstx_dvi_pixel_rgb(0,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_MAGENTA, hstx_dvi_pixel_rgb(255,0,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_CYAN, hstx_dvi_pixel_rgb(0,255,255));
+    hstx_dvi_grid_set_pallet(TMT_COLOR_WHITE, hstx_dvi_pixel_rgb(255,255,255));
 
     multicore_launch_core1(render_loop);
 

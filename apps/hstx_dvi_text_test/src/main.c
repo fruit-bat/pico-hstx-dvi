@@ -66,12 +66,12 @@ int main(void)
 
     hstx_dvi_grid_init();
 
-    hstx_dvi_grid_set_pallet(0, hstx_dvi_row_pixel_rgb(0,0,0));
-    hstx_dvi_grid_set_pallet(1, hstx_dvi_row_pixel_rgb(255,0,0));
-    hstx_dvi_grid_set_pallet(2, hstx_dvi_row_pixel_rgb(0,255,0));
-    hstx_dvi_grid_set_pallet(3, hstx_dvi_row_pixel_rgb(0,0,255));
-    hstx_dvi_grid_set_pallet(4, hstx_dvi_row_pixel_rgb(255,255,0));
-    hstx_dvi_grid_set_pallet(5, hstx_dvi_row_pixel_rgb(255,0,255));
+    hstx_dvi_grid_set_pallet(0, hstx_dvi_pixel_rgb(0,0,0));
+    hstx_dvi_grid_set_pallet(1, hstx_dvi_pixel_rgb(255,0,0));
+    hstx_dvi_grid_set_pallet(2, hstx_dvi_pixel_rgb(0,255,0));
+    hstx_dvi_grid_set_pallet(3, hstx_dvi_pixel_rgb(0,0,255));
+    hstx_dvi_grid_set_pallet(4, hstx_dvi_pixel_rgb(255,255,0));
+    hstx_dvi_grid_set_pallet(5, hstx_dvi_pixel_rgb(255,0,255));
 
     hstx_dvi_grid_write_str(5, 0, kubla, 5, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
     hstx_dvi_grid_write_ch(0, 0, '0', 1, 0, 0);
@@ -81,6 +81,10 @@ int main(void)
     hstx_dvi_grid_write_ch(20, 10, '4', 4, 0, HSTX_DVI_GRID_ATTRS_BLINK);
     hstx_dvi_grid_write_ch(20, 11, '5', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE | HSTX_DVI_GRID_ATTRS_BLINK);
     hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
+    hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
+    hstx_dvi_grid_write_str(22, 0, "Normal", 4, 0, 0);
+    hstx_dvi_grid_write_str(23, 0, "Dim", 4, 0, HSTX_DVI_GRID_ATTRS_DIM);
+    hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
 
     multicore_launch_core1(render_loop);
 

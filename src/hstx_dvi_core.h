@@ -48,9 +48,13 @@ __force_inline void hstx_dvi_row_set_pixel_quad(
 ) {
     row->w[i] = (p4 << 24) | (p3 << 16) | (p2 << 8) | p1;
 }
-__force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
+__force_inline hstx_dvi_pixel_t hstx_dvi_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
     return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
 }
+__force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
+    return ((p & 0b11000000) >> 2) | ((p & 0b00011000) >> 1)| ((p & 0b00000010) >> 1);
+}
+
 #elif MODE_BYTES_PER_PIXEL == 2
 typedef uint16_t hstx_dvi_pixel_t; 
 __force_inline void hstx_dvi_row_set_pixel(hstx_dvi_row_t* row, const uint32_t i, const uint32_t rgb565) {
@@ -71,8 +75,11 @@ __force_inline void hstx_dvi_row_set_pixel_quad(
     hstx_dvi_row_set_pixel_pair(row, j, p1, p2);
     hstx_dvi_row_set_pixel_pair(row, j + 1, p3, p4);
 }
-__force_inline hstx_dvi_pixel_t hstx_dvi_row_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
+__force_inline hstx_dvi_pixel_t hstx_dvi_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
     return ((uint32_t)r & 0xf8) << 8 | ((uint32_t)g & 0xfc) << 3 | ((uint32_t)b & 0xf8) >> 3;
+}
+__force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
+    return ((p & 0b1111000000000000) >> 2) | ((p & 0b0000011111000000) >> 1)| ((p & 0b0000000000011110) >> 1);
 }
 #else
     #error "Unsupported MODE_BYTES_PER_PIXEL value"
