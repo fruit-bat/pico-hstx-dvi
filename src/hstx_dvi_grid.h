@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+#define HSTX_DVI_GRID_ATTRS_NORMAL    (0x00)
 #define HSTX_DVI_GRID_ATTRS_BOLD      (0x01)
 #define HSTX_DVI_GRID_ATTRS_DIM       (0x02)
 #define HSTX_DVI_GRID_ATTRS_UNDERLINE (0x04)

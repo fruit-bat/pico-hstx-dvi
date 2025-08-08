@@ -13,6 +13,7 @@
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/clocks.h"
+#include "hardware/vreg.h"
 #include "hardware/structs/clocks.h"
 #include "hardware/structs/bus_ctrl.h"
 #include "hardware/structs/hstx_ctrl.h"
@@ -164,6 +165,10 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* under
     _row_fetcher = row_fetcher;
     _underflow_row = underflow_row;
 
+    // Set core voltage to 1.2V
+    vreg_set_voltage(VREG_VOLTAGE_1_20);
+
+    // Set the system clock to 252 MHz
     set_sys_clock_khz(252000, true);
 
     clock_configure_int_divider(
