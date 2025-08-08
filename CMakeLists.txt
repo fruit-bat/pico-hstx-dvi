@@ -4,6 +4,7 @@ target_sources(pico_hstx_dvi INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_core.c
   ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_row_fifo.c
   ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_row_buf.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_sprite.c
 )
 
 add_library(pico_hstx_dvi_grid INTERFACE)
