@@ -169,3 +169,63 @@ static inline void render_row_text_8_p1(
 		);
 	}
 }
+
+
+static inline void render_Tile16x16p1(
+	const Tile16x16p2_t * const t,
+	const Pallet1_t p,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	uint32_t d = t->d[row];
+	render_sprite_row_n_p1(
+		d,
+		p,
+		r,
+		x,
+		spriteId,
+		16
+	);
+}
+
+static inline void render_Tile16x8p1(
+	const Tile16x8p2_t * const t,
+	const Pallet1_t p,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	uint32_t d = t->d[row];
+	render_sprite_row_n_p1(
+		d,
+		p,
+		r,
+		x,
+		spriteId,
+		16
+	);
+}
+
+static inline void render_Tile32x16p1(
+	const Tile32x16p2_t * const t,
+	const Pallet1_t p,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	uint32_t d = t->d[row];
+	render_sprite_row_n_p1(
+		d,
+		p,
+		r,
+		x,
+		spriteId,
+		32
+	);
+}
+
+
