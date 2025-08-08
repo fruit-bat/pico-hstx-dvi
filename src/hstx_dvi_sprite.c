@@ -55,7 +55,7 @@ static inline void render_pixel(
 
 static inline void render_sprite_row_n_p1(
 	uint32_t d,
-	const Pallet1_t p1,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const SpriteId spriteId,
@@ -94,7 +94,7 @@ static inline void render_sprite_row_n_p1(
 
 static inline void render_row_n_p1(
 	uint32_t d,
-	const Pallet1_t p1,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const uint32_t w
@@ -132,7 +132,7 @@ static inline void render_row_n_p1(
 
 static inline void render_row_text_8_p1(
 	const TextGrid8_t *tg,
-	const Pallet1_t p1,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const int32_t row,
@@ -173,7 +173,7 @@ static inline void render_row_text_8_p1(
 
 static inline void render_Tile16x16p1(
 	const Tile16x16p2_t * const t,
-	const Pallet1_t p,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const int32_t row,
@@ -182,7 +182,7 @@ static inline void render_Tile16x16p1(
 	uint32_t d = t->d[row];
 	render_sprite_row_n_p1(
 		d,
-		p,
+		p1,
 		r,
 		x,
 		spriteId,
@@ -192,7 +192,7 @@ static inline void render_Tile16x16p1(
 
 static inline void render_Tile16x8p1(
 	const Tile16x8p2_t * const t,
-	const Pallet1_t p,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const int32_t row,
@@ -201,7 +201,7 @@ static inline void render_Tile16x8p1(
 	uint32_t d = t->d[row];
 	render_sprite_row_n_p1(
 		d,
-		p,
+		p1,
 		r,
 		x,
 		spriteId,
@@ -211,7 +211,7 @@ static inline void render_Tile16x8p1(
 
 static inline void render_Tile32x16p1(
 	const Tile32x16p2_t * const t,
-	const Pallet1_t p,
+	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
 	const int32_t row,
@@ -220,12 +220,100 @@ static inline void render_Tile32x16p1(
 	uint32_t d = t->d[row];
 	render_sprite_row_n_p1(
 		d,
-		p,
+		p1,
 		r,
 		x,
 		spriteId,
 		32
 	);
+}
+
+
+void __not_in_flash_func(sprite_renderer_sprite_16x8_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_Tile16x8p1(
+		d1,
+		d2,
+		r,
+		x,
+		row,
+		spriteId
+	);
+}
+
+void __not_in_flash_func(sprite_renderer_sprite_16x16_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_Tile16x16p1(
+		d1,
+		d2,
+		r,
+		x,
+		row,
+		spriteId
+	);
+}
+
+void __not_in_flash_func(sprite_renderer_sprite_32x16_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_Tile32x16p1(
+		d1,
+		d2,
+		r,
+		x,
+		row,
+		spriteId
+	);
+}
+
+void __not_in_flash_func(text_renderer_8x8_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_row_text_8_p1(
+		(TextGrid8_t *)d1,
+		d2,
+		r,
+		x,
+		row
+	);
+}
+
+void __not_in_flash_func(render_Tile16x16p2)(
+	Tile16x16p2_t *t,
+	const Pallet2_t p2,
+	hstx_dvi_row_t* r,
+	int32_t x,
+	int32_t row
+) {
+    const hstx_dvi_pixel_t bg = p2[0];
+    const hstx_dvi_pixel_t fg = p2[1];
+	uint16_t d = t->d[row];
+	for(int32_t i = 0; i < 16; i++) {
+		render_pixel(r, d & (1<<15) ? fg : bg, x + i);
+		d <<= 1;
+	}
 }
 
 
