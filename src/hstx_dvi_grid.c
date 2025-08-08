@@ -96,8 +96,7 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
-            const uint32_t y = k >> 3;
-            const uint32_t s = _screen[y][j];
+            const uint32_t s = _screen[k>>3][j];
             const uint32_t e = decode_char(s);
             const uint32_t attr = decode_attr(s);
             const bool rev1 = (attr & HSTX_DVI_GRID_ATTRS_BLINK) && blink;
@@ -117,7 +116,7 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
             if (attr & HSTX_DVI_GRID_ATTRS_INVISIBLE) {
                 fgbg[1] = fgbg[0];
             }
-            if ((y == (FONT_CHAR_HEIGHT-1)) && (attr & HSTX_DVI_GRID_ATTRS_UNDERLINE)) {
+            if (((k & 7) == (FONT_CHAR_HEIGHT-1)) && (attr & HSTX_DVI_GRID_ATTRS_UNDERLINE)) {
                 // Underline is rendered as a solid line at the bottom of the
                 // character cell, so we need to set the last row of pixels.
                 const uint32_t p1 = fgbg[1];
