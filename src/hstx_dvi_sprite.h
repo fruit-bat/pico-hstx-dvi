@@ -35,10 +35,8 @@ typedef uint8_t SpriteCollisionMask;
 typedef void (*SpriteRenderer)(
 	const void* d1,
 	const void* d2,
-	uint32_t * const dr,
-	uint32_t * const dg,
-	uint32_t * const db,
-	const int32_t tdmsI,
+	hstx_dvi_row_t* r,
+	const int32_t y,
 	const int32_t row,
 	const SpriteId spriteId
 );
@@ -103,6 +101,8 @@ typedef union {
 void clear_sprite_id_row();
 
 void clear_sprite_collisions();
+
+void hstx_dvi_grid_render_frame(uint32_t frame_index);
 
 #ifdef __cplusplus
 } 

@@ -1,4 +1,7 @@
 #include "hstx_dvi_sprite.h"
+#include "hstx_dvi_core.h"
+#include "hstx_dvi_row_fifo.h"
+#include "hstx_dvi_row_buf.h"
 
 Sprite _sprites[MAX_SPRITES];
 
@@ -316,4 +319,35 @@ void __not_in_flash_func(render_Tile16x16p2)(
 	}
 }
 
+void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
+		
+	clear_sprite_collisions();
+	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
+		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
+		clear_sprite_id_row();
+
+		// Render a blank row
+		// TODO optionally render a tiled background
+		render_row_mono(
+			r,
+			0);
+
+		for (uint32_t i = 0; i < MAX_SPRITES; ++i)
+		{
+			const Sprite *sprite = &_sprites[i];
+			const uint32_t k = y - sprite->y;
+			if ((sprite-> f & SF_ENABLE) && k < sprite->h)
+			{
+				(sprite->r)(
+					sprite->d1,
+					sprite->d2,
+					r,
+					sprite->x,
+					k,
+					i);
+			}
+		}
+		hstx_dvi_row_fifo_put_blocking(r);
+	}
+}
 
