@@ -26,6 +26,7 @@ typedef struct {
 typedef struct {
 	uint16_t w;
 	uint8_t *s;
+	uint8_t *font;
 } TextGrid8_t;
 
 typedef uint8_t SpriteId;

@@ -135,13 +135,13 @@ static inline void render_row_text_8_p1(
 	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
-	const int32_t row,
-    uint8_t* font_8x8
+	const int32_t row
 ) {
 	uint8_t * const s = tg->s + __mul_instruction((row >> 3), tg->w);
 	const uint32_t k = row & 7;
 	const uint32_t w = tg->w;
 	const uint32_t v = w >> 2;
+    uint8_t* font_8x8 = tg->font;
 
 	for(uint32_t i = 0; i < v; ++i) {
 		const uint32_t q = i << 2;
