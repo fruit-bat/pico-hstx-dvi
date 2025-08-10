@@ -121,10 +121,10 @@ void __not_in_flash_func(hstx_dvi_grid_render_frame)(uint32_t frame_index) {
                 // character cell, so we need to set the last row of pixels.
                 const uint32_t p1 = fgbg[1];
                 for (uint32_t i = 0; i < 2; ++i) {
-                hstx_dvi_row_set_pixel_quad(
-                    r, 
-                    (j<<1) + i, 
-                    p1,p1,p1,p1);
+                    hstx_dvi_row_set_pixel_quad(
+                        r, 
+                        (j<<1) + i, 
+                        p1,p1,p1,p1);
                 }
             }
             else {

@@ -55,8 +55,11 @@ __force_inline void hstx_dvi_row_set_pixel_quad(
 ) {
     row->w[i] = hstx_dvi_row_enc_pixel_quad(p1, p2, p3, p4);
 }
+#define HSTX_DVI_PIXEL_RGB(R, G, B) \
+    (((R) & 0b11100000) | (((G) >> 3) & 0b00011100) | (((B) >> 6) & 0b00000011))
+
 __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
-    return (r & 0b11100000) | ((g >> 3) & 0b00011100) | ((b >> 6) & 0b00000011);
+    return HSTX_DVI_PIXEL_RGB(r, g, b);
 }
 __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
     return ((p & 0b11000000) >> 1) | ((p & 0b00011000) >> 1)| ((p & 0b00000010) >> 1);
@@ -88,8 +91,12 @@ __force_inline void hstx_dvi_row_set_pixel_quad(
     hstx_dvi_row_set_pixel_pair(row, j, p1, p2);
     hstx_dvi_row_set_pixel_pair(row, j + 1, p3, p4);
 }
+
+#define HSTX_DVI_PIXEL_RGB(R, G, B) \
+    (((uint32_t)R & 0xf8) << 8 | ((uint32_t)G & 0xfc) << 3 | ((uint32_t)B & 0xf8) >> 3)
+    
 __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_rgb(const uint8_t r, const uint8_t g, const uint8_t b) {
-    return ((uint32_t)r & 0xf8) << 8 | ((uint32_t)g & 0xfc) << 3 | ((uint32_t)b & 0xf8) >> 3;
+    return HSTX_DVI_PIXEL_RGB(r,g,b);
 }
 __force_inline hstx_dvi_pixel_t hstx_dvi_pixel_dim(const hstx_dvi_pixel_t p) {
     return ((p & 0b1111000000000000) >> 1) | ((p & 0b0000011111000000) >> 1)| ((p & 0b0000000000011110) >> 1);

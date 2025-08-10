@@ -305,7 +305,7 @@ void __not_in_flash_func(text_renderer_8x8_p1)(
 
 void __not_in_flash_func(render_Tile16x16p2)(
 	Tile16x16p2_t *t,
-	const Pallet2_t p2,
+	const hstx_dvi_pixel_t* p2,
 	hstx_dvi_row_t* r,
 	int32_t x,
 	int32_t row

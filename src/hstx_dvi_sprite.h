@@ -7,10 +7,6 @@
 extern "C" {
 #endif
 
-typedef hstx_dvi_pixel_t* Pallet1_t;
-
-typedef hstx_dvi_pixel_t* Pallet2_t;
-
 typedef struct {
 	uint16_t d[16];
 } Tile16x16p2_t;
@@ -58,15 +54,15 @@ extern Sprite _sprites[MAX_SPRITES];
 
 void init_sprites();
 
-void init_sprite(
-	int i,
-	int32_t x,
-	int32_t y,
-	uint32_t w,
-	uint32_t h,
-	uint32_t f,
-	void *d1, 
-	void *d2,
+__force_inline void init_sprite(
+	const int i,
+	const int32_t x,
+	const int32_t y,
+	const uint32_t w,
+	const uint32_t h,
+	const uint32_t f,
+	void * const d1, 
+	void * const d2,
 	SpriteRenderer r
 ) {
 	Sprite *s = &_sprites[i];
@@ -102,7 +98,51 @@ void clear_sprite_id_row();
 
 void clear_sprite_collisions();
 
-void hstx_dvi_grid_render_frame(uint32_t frame_index);
+void sprite_renderer_sprite_16x8_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
+void sprite_renderer_sprite_16x16_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
+void sprite_renderer_sprite_32x16_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
+void text_renderer_8x8_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
+void render_Tile16x16p2(
+	Tile16x16p2_t *t,
+	const hstx_dvi_pixel_t* p2,
+	hstx_dvi_row_t* r,
+	int32_t x,
+	int32_t row
+);
+
+void hstx_dvi_sprite_render_frame(uint32_t frame_index);
 
 #ifdef __cplusplus
 } 
