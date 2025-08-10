@@ -93,6 +93,8 @@ typedef union {
 	uint32_t word[MAX_SPRITES >> 2];
 } SpriteCollisions;
 
+// TODO probably should have accessor functions for these
+extern SpriteCollisions _spriteCollisions;
 
 void clear_sprite_id_row();
 

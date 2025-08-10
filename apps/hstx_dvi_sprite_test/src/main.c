@@ -17,8 +17,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/multicore.h"
+#include "pico/sem.h" 
 
 static hstx_dvi_row_t _underflow_row;
+static struct semaphore _frame_sem;
 
 void __not_in_flash_func(render_loop)() {
 
@@ -26,6 +28,7 @@ void __not_in_flash_func(render_loop)() {
 
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_sprite_render_frame(frame_index);
+        sem_release(&_frame_sem);
     }
 }
 
@@ -184,14 +187,14 @@ static uint32_t gun_index;
 
 static int32_t inv_v = 1;
 void init_game() {
-    // TODO create a setter
+
     hstx_dvi_sprite_set_sprite_collision_mask(0, (SpriteCollisionMask)1);
     hstx_dvi_sprite_set_sprite_collision_mask(1, (SpriteCollisionMask)2);
     hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)8);
 
 	uint32_t si = 0;
-	// init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green[0], sprite_renderer_invader_16x8_p1);
-	// init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
+	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green[0], sprite_renderer_invader_16x8_p1);
+	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
 	init_sprite(si++, 66, 200, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
 
 	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
@@ -230,6 +233,8 @@ int main(void)
         hstx_dvi_row_set_pixel(&_underflow_row, j, HSTX_DVI_PIXEL_RGB(0,255,0));
     }
 
+    sem_init(&_frame_sem, 0, 1);
+
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
@@ -244,15 +249,41 @@ int main(void)
 
     multicore_launch_core1(render_loop);
 
-    
-
 
     init_game();
     printf("Game initialized\n");
 
 
     while(1) {
-        sleep_ms(100);
+        sem_acquire_blocking(&_frame_sem);
+    
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			Sprite *sprite = &_sprites[i];
+			if (_spriteCollisions.m[i]) sprite->d2 = (hstx_dvi_pixel_t*)&pallet1_Red;
+		}
+		_sprites[0].x++; if (_sprites[0].x > MODE_H_ACTIVE_PIXELS + 16) {
+			_sprites[0].x = -16;
+			_sprites[0].d2 = (hstx_dvi_pixel_t*)&pallet1_Blue;
+		}
+		_sprites[1].x--; if (_sprites[1].x < -16) {
+			_sprites[1].x = MODE_H_ACTIVE_PIXELS + 16; 
+			_sprites[1].d2 = (hstx_dvi_pixel_t*)&pallet1_Purple;
+		}
+
+		bool reverse = false;
+		for (uint32_t i = inv_index; i < inv_index + (5*11); ++i)
+		{
+			Sprite *sprite = &_sprites[i];
+			sprite->x += inv_v;
+			if (inv_v > 0) {
+				if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
+			}
+			else {
+				if(sprite->x <= 0) reverse = true;
+			}
+		}
+		if (reverse) inv_v = -inv_v;
     }
 }
 

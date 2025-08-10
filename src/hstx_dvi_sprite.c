@@ -7,7 +7,7 @@ Sprite _sprites[MAX_SPRITES];
 
 static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow; 
-static SpriteCollisions _spriteCollisions;
+SpriteCollisions _spriteCollisions;
 
 void hstx_dvi_sprite_set_sprite_collision_mask(
 	const SpriteId spriteId,
