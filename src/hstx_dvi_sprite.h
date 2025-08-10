@@ -48,7 +48,7 @@ typedef struct Sprite {
 	SpriteRenderer r;
 } Sprite;
 
-#define MAX_SPRITES (1<<6)
+#define MAX_SPRITES (1<<8)
 
 extern Sprite _sprites[MAX_SPRITES];
 

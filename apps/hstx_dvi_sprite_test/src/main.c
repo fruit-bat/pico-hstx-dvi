@@ -182,6 +182,7 @@ Tile32x16p2_t tile32x16p2_base = {
 };
 
 static uint32_t inv_index;
+static uint32_t inv_count = 0;
 static uint32_t mot_index;
 static uint32_t gun_index;
 
@@ -209,11 +210,12 @@ void init_game() {
         (hstx_dvi_pixel_t*)&pallet1_Purple, 
         (hstx_dvi_pixel_t*)&pallet1_Purple};
 
-	for(uint32_t x = 0; x < 11; ++x) {
-		for(uint32_t y = 0; y < 5; ++y) {
-			init_sprite(si, x << 4, 30 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y]], rp[y], sprite_renderer_invader_16x8_p1);
+	for(uint32_t x = 0; x < (11<< 1); ++x) {
+		for(uint32_t y = 0; y < (5 << 1); ++y) {
+			init_sprite(si, x << 4, 30 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y>>1]], rp[y >> 1], sprite_renderer_invader_16x8_p1);
 			hstx_dvi_sprite_set_sprite_collision_mask(si, (SpriteCollisionMask)4);
 			si++;
+            inv_count++;
 		}
 	}
 	//init_sprite(si++, 0, 0, 32*8, 24*8, SF_ENABLE, &_textGrid1, &pallet1_Green, text_renderer_8x8_p1);
@@ -256,6 +258,8 @@ int main(void)
 
     while(1) {
         sem_acquire_blocking(&_frame_sem);
+
+		//continue;
     
 		for (uint32_t i = 0; i < 2; ++i)
 		{
@@ -272,7 +276,7 @@ int main(void)
 		}
 
 		bool reverse = false;
-		for (uint32_t i = inv_index; i < inv_index + (5*11); ++i)
+		for (uint32_t i = inv_index; i < inv_index + inv_count; ++i)
 		{
 			Sprite *sprite = &_sprites[i];
 			sprite->x += inv_v;

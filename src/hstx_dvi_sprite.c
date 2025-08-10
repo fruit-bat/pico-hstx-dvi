@@ -75,6 +75,8 @@ static inline void render_sprite_row_n_p1(
 ) {
 	if (d)
 	{
+		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasks[spriteId];
+		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisions.m[spriteId];
 		const uint32_t bm = 1 << (w-1);
         const hstx_dvi_pixel_t p = p1[0];
 		if (((uint32_t)x) < (MODE_H_ACTIVE_PIXELS - w))
@@ -84,7 +86,18 @@ static inline void render_sprite_row_n_p1(
 				const uint32_t j = (uint32_t)x + i;
 				if (d & bm)
 				{
-					render_sprite_pixel(r, p, spriteId, j);
+					const SpriteId ncid = _spriteIdRow.id[j];
+					if (ncid)
+					{
+						const SpriteId cid = ncid - 1;
+						_spriteCollisions.m[cid] |= spriteCollisionMask;
+						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
+					}
+					else
+					{
+						hstx_dvi_row_set_pixel(r, j, p);
+						_spriteIdRow.id[j] = spriteId + 1;
+					}
 				}
 				d <<= 1;
 			}
@@ -96,7 +109,18 @@ static inline void render_sprite_row_n_p1(
 				const uint32_t j = (uint32_t)x + i;
 				if ((j < MODE_H_ACTIVE_PIXELS) && (d & bm))
 				{
-					render_sprite_pixel(r, p, spriteId, j);
+					const SpriteId ncid = _spriteIdRow.id[j];
+					if (ncid)
+					{
+						const SpriteId cid = ncid - 1;
+						_spriteCollisions.m[cid] |= spriteCollisionMask;
+						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
+					}
+					else
+					{
+						hstx_dvi_row_set_pixel(r, j, p);
+						_spriteIdRow.id[j] = spriteId + 1;
+					}
 				}
 				d <<= 1;
 			}
