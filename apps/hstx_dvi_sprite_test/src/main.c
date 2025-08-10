@@ -50,27 +50,27 @@ void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 
 const hstx_dvi_pixel_t pallet2_BlackGreen[] = {
     HSTX_DVI_PIXEL_RGB(0, 0, 0), // Black
-    HSTX_DVI_PIXEL_RGB(0, 63, 0), // Green
+    HSTX_DVI_PIXEL_RGB(0, 200, 0), // Green
 };
 
 const hstx_dvi_pixel_t pallet1_Green[] = {
-    HSTX_DVI_PIXEL_RGB(0, 63, 0), // Green
+    HSTX_DVI_PIXEL_RGB(0, 200, 0), // Green
 };
 
 const hstx_dvi_pixel_t  pallet1_Red[] = {
-    HSTX_DVI_PIXEL_RGB(63, 0, 0), // Red
+    HSTX_DVI_PIXEL_RGB(200, 0, 0), // Red
 };
 
 const hstx_dvi_pixel_t  pallet1_Blue[] = {
-    HSTX_DVI_PIXEL_RGB(10, 10, 63), // Blue
+    HSTX_DVI_PIXEL_RGB(40, 40, 200), // Blue
 };
 
 const hstx_dvi_pixel_t  pallet1_Purple[] = {
-    HSTX_DVI_PIXEL_RGB(42, 0, 42), // Purple
+    HSTX_DVI_PIXEL_RGB(200, 0, 200), // Purple
 };
 
 const hstx_dvi_pixel_t  pallet1_White[] = {
-    HSTX_DVI_PIXEL_RGB(42, 42, 42), // White
+    HSTX_DVI_PIXEL_RGB(200, 200, 200), // White
 };
 
 Tile16x8p2_t tile16x8p2_invader[] = {
@@ -178,6 +178,45 @@ Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
+static uint32_t inv_index;
+static uint32_t mot_index;
+static uint32_t gun_index;
+
+static int32_t inv_v = 1;
+void init_game() {
+    // TODO create a setter
+    hstx_dvi_sprite_set_sprite_collision_mask(0, (SpriteCollisionMask)1);
+    hstx_dvi_sprite_set_sprite_collision_mask(1, (SpriteCollisionMask)2);
+    hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)8);
+
+	uint32_t si = 0;
+	// init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green[0], sprite_renderer_invader_16x8_p1);
+	// init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
+	init_sprite(si++, 66, 200, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
+
+	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
+	init_sprite(gun_index = si++, 20, MODE_H_ACTIVE_PIXELS - 24, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
+
+	inv_index = si;
+	uint32_t rt[5] = {0, 2, 2, 4, 4};
+	hstx_dvi_pixel_t* rp[5] = {
+        (hstx_dvi_pixel_t*)&pallet1_White, 
+        (hstx_dvi_pixel_t*)&pallet1_Blue, 
+        (hstx_dvi_pixel_t*)&pallet1_Blue, 
+        (hstx_dvi_pixel_t*)&pallet1_Purple, 
+        (hstx_dvi_pixel_t*)&pallet1_Purple};
+
+	for(uint32_t x = 0; x < 11; ++x) {
+		for(uint32_t y = 0; y < 5; ++y) {
+			init_sprite(si, x << 4, 30 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y]], rp[y], sprite_renderer_invader_16x8_p1);
+			hstx_dvi_sprite_set_sprite_collision_mask(si, (SpriteCollisionMask)4);
+			si++;
+		}
+	}
+	//init_sprite(si++, 0, 0, 32*8, 24*8, SF_ENABLE, &_textGrid1, &pallet1_Green, text_renderer_8x8_p1);
+
+}
+
 int main(void)
 {
     // Initialize stdio and GPIO 25 for the onboard LED
@@ -194,6 +233,8 @@ int main(void)
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
+    hstx_dvi_sprite_init_all();
+
     sleep_ms(2000); // Allow time for initialization
 
     printf("HSTX DVI Sprite Test\n");
@@ -206,7 +247,8 @@ int main(void)
     
 
 
-
+    init_game();
+    printf("Game initialized\n");
 
 
     while(1) {

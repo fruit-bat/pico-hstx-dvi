@@ -9,7 +9,16 @@ static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow; 
 static SpriteCollisions _spriteCollisions;
 
-void __not_in_flash_func(init_sprites)() {
+void hstx_dvi_sprite_set_sprite_collision_mask(
+	const SpriteId spriteId,
+	const SpriteCollisionMask mask
+) {
+	if (spriteId < MAX_SPRITES) {
+		_spriteCollisionMasks[spriteId] = mask;
+	}
+}
+
+void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 	for(uint32_t i = 0; i < MAX_SPRITES; ++i) _sprites[i].f = 0;
 }
 
@@ -330,7 +339,7 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
 		// TODO optionally render a tiled background
 		render_row_mono(
 			r,
-			0);
+			hstx_dvi_pixel_rgb(0, 0, 0));
 
 		for (uint32_t i = 0; i < MAX_SPRITES; ++i)
 		{

@@ -52,7 +52,7 @@ typedef struct Sprite {
 
 extern Sprite _sprites[MAX_SPRITES];
 
-void init_sprites();
+void hstx_dvi_sprite_init_all();
 
 __force_inline void init_sprite(
 	const int i,
@@ -143,6 +143,11 @@ void render_Tile16x16p2(
 );
 
 void hstx_dvi_sprite_render_frame(uint32_t frame_index);
+
+void hstx_dvi_sprite_set_sprite_collision_mask(
+	const SpriteId spriteId,
+	const SpriteCollisionMask mask
+);
 
 #ifdef __cplusplus
 } 
