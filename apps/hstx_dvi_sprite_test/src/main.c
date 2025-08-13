@@ -196,10 +196,18 @@ void init_game() {
 	uint32_t si = 0;
 	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green[0], sprite_renderer_invader_16x8_p1);
 	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
-	init_sprite(si++, 66, 200, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
+
+	const uint nb = 6;
+	for(uint i = 0; i < nb; ++i){
+		uint w1 = MODE_H_ACTIVE_PIXELS / nb;
+		uint s = w1 * i;
+		uint p = s + ((w1 - 32) / 2);
+		init_sprite(si++, p, MODE_V_ACTIVE_LINES - 88, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
+
+	}
 
 	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
-	init_sprite(gun_index = si++, 20, MODE_H_ACTIVE_PIXELS - 24, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
+	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
 
 	inv_index = si;
 	uint32_t rt[5] = {0, 2, 2, 4, 4};
@@ -212,7 +220,7 @@ void init_game() {
 
 	for(uint32_t x = 0; x < (11<< 1); ++x) {
 		for(uint32_t y = 0; y < (5 << 1); ++y) {
-			init_sprite(si, x << 4, 30 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y>>1]], rp[y >> 1], sprite_renderer_invader_16x8_p1);
+			init_sprite(si, x << 4, 60 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y>>1]], rp[y >> 1], sprite_renderer_invader_16x8_p1);
 			hstx_dvi_sprite_set_sprite_collision_mask(si, (SpriteCollisionMask)4);
 			si++;
             inv_count++;
