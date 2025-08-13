@@ -4,6 +4,7 @@
 #include "hstx_dvi_row_buf.h"
 #include "pico/sem.h" 
 #include "pico/multicore.h"
+#include <memory.h>
 
 Sprite _sprites[MAX_SPRITES];
 static Sprite _sprites_rdy[MAX_SPRITES];
@@ -21,6 +22,10 @@ void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_sprite_render_frame(frame_index);
+		// If the other core is waiting for the next frame
+		if(!sem_available(&_frame_sem)) {
+			memcpy(_sprites_rdy, _sprites, sizeof(_sprites));
+		}
         sem_release(&_frame_sem);
     }
 }
@@ -47,6 +52,7 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 
 	// Set up the frame semaphore. Released at the end of every frame.
     sem_init(&_frame_sem, 0, 1);
+
 	// Prepare a green underflow row
     for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
     {
@@ -403,7 +409,7 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
 
 		for (uint32_t i = 0; i < MAX_SPRITES; ++i)
 		{
-			const Sprite *sprite = &_sprites[i];
+			const Sprite *sprite = &_sprites_rdy[i];
 			const uint32_t k = y - sprite->y;
 			if ((sprite-> f & SF_ENABLE) && k < sprite->h)
 			{
