@@ -146,10 +146,14 @@ void render_Tile16x16p2(
 
 void hstx_dvi_sprite_render_frame(uint32_t frame_index);
 
+void hstx_dvi_sprite_wait_for_frame();
+
 void hstx_dvi_sprite_set_sprite_collision_mask(
 	const SpriteId spriteId,
 	const SpriteCollisionMask mask
 );
+
+void hstx_dvi_sprite_render_loop();
 
 #ifdef __cplusplus
 } 

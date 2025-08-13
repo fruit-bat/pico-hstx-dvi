@@ -2,12 +2,32 @@
 #include "hstx_dvi_core.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
+#include "pico/sem.h" 
+#include "pico/multicore.h"
 
 Sprite _sprites[MAX_SPRITES];
+static Sprite _sprites_rdy[MAX_SPRITES];
 
 static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow; 
 SpriteCollisions _spriteCollisions;
+
+static hstx_dvi_row_t _underflow_row;
+static struct semaphore _frame_sem;
+
+void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
+
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+
+    for(uint32_t frame_index = 0; true; ++frame_index) {
+        hstx_dvi_sprite_render_frame(frame_index);
+        sem_release(&_frame_sem);
+    }
+}
+
+void __not_in_flash_func(hstx_dvi_sprite_wait_for_frame)(){
+    sem_acquire_blocking(&_frame_sem);
+}
 
 void hstx_dvi_sprite_set_sprite_collision_mask(
 	const SpriteId spriteId,
@@ -19,7 +39,23 @@ void hstx_dvi_sprite_set_sprite_collision_mask(
 }
 
 void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
+    // Initialize the row buffer
+    hstx_dvi_row_buf_init();
+	// Clear down the sprites	
 	for(uint32_t i = 0; i < MAX_SPRITES; ++i) _sprites[i].f = 0;
+	// TODO copy the sprites
+
+	// Set up the frame semaphore. Released at the end of every frame.
+    sem_init(&_frame_sem, 0, 1);
+	// Prepare a green underflow row
+    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
+    {
+        hstx_dvi_row_set_pixel(&_underflow_row, j, HSTX_DVI_PIXEL_RGB(0,255,0));
+	}
+    // Initialize the HSTX DVI row FIFO.
+    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+	// Start the renderer
+	multicore_launch_core1(hstx_dvi_sprite_render_loop);
 }
 
 void __not_in_flash_func(clear_sprite_id_row)() {

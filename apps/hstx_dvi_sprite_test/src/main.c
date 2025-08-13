@@ -16,21 +16,7 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/multicore.h"
 #include "pico/sem.h" 
-
-static hstx_dvi_row_t _underflow_row;
-static struct semaphore _frame_sem;
-
-void __not_in_flash_func(render_loop)() {
-
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
-
-    for(uint32_t frame_index = 0; true; ++frame_index) {
-        hstx_dvi_sprite_render_frame(frame_index);
-        sem_release(&_frame_sem);
-    }
-}
 
 void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 	const void* d1,
@@ -237,16 +223,6 @@ int main(void)
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
-    
-    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
-    {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, HSTX_DVI_PIXEL_RGB(0,255,0));
-    }
-
-    sem_init(&_frame_sem, 0, 1);
-
-    // Initialize the row buffer
-    hstx_dvi_row_buf_init();
 
     hstx_dvi_sprite_init_all();
 
@@ -254,18 +230,11 @@ int main(void)
 
     printf("HSTX DVI Sprite Test\n");
 
-    // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
-
-    multicore_launch_core1(render_loop);
-
-
     init_game();
     printf("Game initialized\n");
 
-
     while(1) {
-        sem_acquire_blocking(&_frame_sem);
+        hstx_dvi_sprite_wait_for_frame();
 
 		//continue;
     
