@@ -47,9 +47,10 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 	// Clear down the sprites	
-	for(uint32_t i = 0; i < MAX_SPRITES; ++i) _sprites[i].f = 0;
-	// TODO copy the sprites
-
+	for(uint32_t i = 0; i < MAX_SPRITES; ++i) {
+		_sprites[i].f = 0;
+		_sprites_rdy[i].f = 0;
+	}
 	// Set up the frame semaphore. Released at the end of every frame.
     sem_init(&_frame_sem, 0, 1);
 

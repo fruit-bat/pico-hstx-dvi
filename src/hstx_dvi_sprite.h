@@ -43,7 +43,7 @@ enum SpriteFlags {
 
 typedef struct Sprite {
 	int32_t x,y;
-	uint32_t w,h,f;
+	uint16_t w,h,f;
 	void *d1, *d2;
 	SpriteRenderer r;
 } Sprite;
