@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/sem.h" 
+#include "font_inv.h"
 
 void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 	const void* d1,
@@ -167,20 +168,36 @@ Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
+// Score 0000
+// 1234567890
+static uint8_t _score_text[16];
+static TextGrid8_t _textGrid1 = {
+	10, 
+	_score_text,
+	(uint8_t*)&font_8x8
+};
+static uint32_t _score = 0;
 static uint32_t inv_index;
 static uint32_t inv_count = 0;
 static uint32_t mot_index;
 static uint32_t gun_index;
 
 static int32_t inv_v = 1;
+
+void write_score() {
+	sprintf((char*)_score_text, "Score %4.4ld", _score);
+}
+
 void init_game() {
+
+	write_score();
 
     hstx_dvi_sprite_set_sprite_collision_mask(0, (SpriteCollisionMask)1);
     hstx_dvi_sprite_set_sprite_collision_mask(1, (SpriteCollisionMask)2);
     hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)8);
 
 	uint32_t si = 0;
-	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green[0], sprite_renderer_invader_16x8_p1);
+	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
 	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
 
 	const uint nb = 6;
@@ -212,7 +229,7 @@ void init_game() {
             inv_count++;
 		}
 	}
-	//init_sprite(si++, 0, 0, 32*8, 24*8, SF_ENABLE, &_textGrid1, &pallet1_Green, text_renderer_8x8_p1);
+	init_sprite(si++, 8, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
 
 }
 
@@ -265,6 +282,8 @@ int main(void)
 			}
 		}
 		if (reverse) inv_v = -inv_v;
+		++_score;
+		write_score();
     }
 }
 
