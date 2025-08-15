@@ -18,6 +18,7 @@
 #include <string.h>
 #include "pico/sem.h" 
 #include "font_inv.h"
+#include "inv_input.h"
 
 void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 	const void* d1,
@@ -229,7 +230,7 @@ void init_game() {
             inv_count++;
 		}
 	}
-	init_sprite(si++, 8, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
+	init_sprite(si++, 16, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
 
 }
 
@@ -241,6 +242,10 @@ int main(void)
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
 
+	// Initialize the gpio input
+	init_inv_input();
+
+	// Initialize the HSTX DVI sprite system
     hstx_dvi_sprite_init_all();
 
     sleep_ms(2000); // Allow time for initialization
@@ -282,7 +287,24 @@ int main(void)
 			}
 		}
 		if (reverse) inv_v = -inv_v;
-		++_score;
+
+		// read the input
+		const uint8_t input = get_inv_input();
+
+		if (is_inv_input_left(input)) {
+			_sprites[gun_index].x -= 2;
+			if (_sprites[gun_index].x < 0) _sprites[gun_index].x = 0;
+		}
+		if (is_inv_input_right(input)) {
+			_sprites[gun_index].x += 2;
+			if (_sprites[gun_index].x + 16 > MODE_H_ACTIVE_PIXELS)
+				_sprites[gun_index].x = MODE_H_ACTIVE_PIXELS - 16;
+		}
+		if (is_inv_input_fire(input)) {
+			// Fire a bullet
+		}
+		
+
 		write_score();
     }
 }
