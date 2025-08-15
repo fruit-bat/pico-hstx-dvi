@@ -153,13 +153,19 @@ void inv_invader_update() {
     {
         SpriteId si = _inv_index + i;
         Sprite *sprite = hstx_dvi_sprite_get(si);
-
-        sprite->x += inv_v;
-        if (inv_v > 0) {
-            if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
-        }
-        else {
-            if(sprite->x <= 0) reverse = true;
+        if (sprite->f & SF_ENABLE) {
+            if (_spriteCollisions.m[si]) {
+                hstx_dvi_sprite_disable_1(sprite); // Disable the invader if it was previously enabled
+            }
+            else {
+                sprite->x += inv_v;
+                if (inv_v > 0) {
+                    if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
+                }
+                else {
+                    if(sprite->x <= 0) reverse = true;
+                }                
+            }
         }
     }
     if (reverse) inv_v = -inv_v;

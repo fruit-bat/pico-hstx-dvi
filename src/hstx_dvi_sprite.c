@@ -397,7 +397,7 @@ void __not_in_flash_func(render_Tile16x16p2)(
 
 void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
 		
-	clear_sprite_collisions();
+	//clear_sprite_collisions();
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
 		clear_sprite_id_row();

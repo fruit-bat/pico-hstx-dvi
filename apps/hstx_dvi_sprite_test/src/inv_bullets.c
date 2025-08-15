@@ -1,11 +1,11 @@
 #include "inv_bullets.h"
 
-#define INV_BULLET_COUNT 4
-#define INV_BULLET_COLLISION_MASK ((SpriteCollisionMask)8)
+#define INV_BULLET_COUNT 1
+#define INV_BULLET_COLLISION_MASK ((SpriteCollisionMask)2)
 
 static SpriteId _sprite_index = 0;
 
-static const hstx_dvi_pixel_t  pallet1_Red[] = {
+static const hstx_dvi_pixel_t pallet1_Red[] = {
     HSTX_DVI_PIXEL_RGB(200, 0, 0), // Red
 };
 
@@ -52,9 +52,15 @@ void inv_bullets_update() {
         SpriteId si = _sprite_index + i;
         Sprite *sprite = hstx_dvi_sprite_get(si);
         if (sprite->f & SF_ENABLE) {
-			sprite->y -= 2; // Move the bullet up
-			if (sprite->y < -8) { // If the bullet goes off screen
-				sprite->f &= ~SF_ENABLE; // Disable the bullet
+			if (_spriteCollisions.m[si] & ~INV_BULLET_COLLISION_MASK) {
+				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
+				_spriteCollisions.m[si] = 0;
+			}
+			else {
+				sprite->y -= 3; // Move the bullet up
+				if (sprite->y < -8) { // If the bullet goes off screen
+					sprite->f &= ~SF_ENABLE; // Disable the bullet
+				}
 			}
 		}
     }

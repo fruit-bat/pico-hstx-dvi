@@ -172,13 +172,8 @@ void init_game() {
 
 	write_score();
 
-    hstx_dvi_sprite_set_sprite_collision_mask(0, (SpriteCollisionMask)1);
-    hstx_dvi_sprite_set_sprite_collision_mask(1, (SpriteCollisionMask)2);
-    hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)8);
 
 	uint32_t si = 0;
-	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
-	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
 
 	const uint nb = 6;
 	for(uint i = 0; i < nb; ++i){
@@ -186,7 +181,7 @@ void init_game() {
 		uint s = w1 * i;
 		uint p = s + ((w1 - 32) / 2);
 		init_sprite(si++, p, MODE_V_ACTIVE_LINES - 88, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
-
+    	hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)1);
 	}
 
 	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
@@ -221,22 +216,6 @@ int main(void)
 
     while(1) {
         hstx_dvi_sprite_wait_for_frame();
-
-		//continue;
-    
-		for (uint32_t i = 0; i < 2; ++i)
-		{
-			Sprite *sprite = &_sprites[i];
-			if (_spriteCollisions.m[i]) sprite->d2 = (hstx_dvi_pixel_t*)&pallet1_Red;
-		}
-		_sprites[0].x++; if (_sprites[0].x > MODE_H_ACTIVE_PIXELS + 16) {
-			_sprites[0].x = -16;
-			_sprites[0].d2 = (hstx_dvi_pixel_t*)&pallet1_Blue;
-		}
-		_sprites[1].x--; if (_sprites[1].x < -16) {
-			_sprites[1].x = MODE_H_ACTIVE_PIXELS + 16; 
-			_sprites[1].d2 = (hstx_dvi_pixel_t*)&pallet1_Purple;
-		}
 
 		inv_invader_update();
 		inv_bullets_update();
