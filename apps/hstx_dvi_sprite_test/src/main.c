@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Raspberry Pi (Trading) Ltd.
+// Copyright (c) 2024 fruit-bat.
 
 // Generate DVI output using the command expander and TMDS encoder in HSTX.
 
@@ -20,6 +20,7 @@
 #include "font_inv.h"
 #include "inv_input.h"
 #include "inv_invaders.h"
+#include "inv_bullets.h"
 
 const hstx_dvi_pixel_t pallet2_BlackGreen[] = {
     HSTX_DVI_PIXEL_RGB(0, 0, 0), // Black
@@ -192,6 +193,7 @@ void init_game() {
 	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
 
 	si = inv_invaders_init(si);
+	si = inv_bullets_init(si);
 
 	init_sprite(si++, 16, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
 }
@@ -237,6 +239,7 @@ int main(void)
 		}
 
 		inv_invader_update();
+		inv_bullets_update();
 
 		// read the input
 		const uint8_t input = get_inv_input();
@@ -252,6 +255,7 @@ int main(void)
 		}
 		if (is_inv_input_fire(input)) {
 			// Fire a bullet
+			inv_bullets_fire(gun_index);
 		}
 
 

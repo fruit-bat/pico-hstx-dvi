@@ -46,7 +46,7 @@ SpriteId inv_bullets_init(SpriteId start) {
     return _sprite_index + INV_BULLET_COUNT;
 }
 
-void inv_bullet_update() {
+void inv_bullets_update() {
     for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i)
     {
         SpriteId si = _sprite_index + i;
@@ -58,4 +58,18 @@ void inv_bullet_update() {
 			}
 		}
     }
+}
+
+void inv_bullets_fire(SpriteId gunSpriteId) {
+	for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i)
+	{
+		SpriteId si = _sprite_index + i;
+		Sprite *sprite = hstx_dvi_sprite_get(si);
+		if (!(sprite->f & SF_ENABLE)) { // If the bullet is not enabled
+			sprite->x = hstx_dvi_sprite_get(gunSpriteId)->x; // Set bullet x to gun x
+			sprite->y = hstx_dvi_sprite_get(gunSpriteId)->y - 8; // Set bullet y above the gun
+			sprite->f |= SF_ENABLE; // Enable the bullet
+			break; // Exit after firing one bullet
+		}
+	}
 }
