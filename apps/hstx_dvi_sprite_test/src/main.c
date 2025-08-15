@@ -19,25 +19,7 @@
 #include "pico/sem.h" 
 #include "font_inv.h"
 #include "inv_input.h"
-
-void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
-	const void* d1,
-	const void* d2,
-	hstx_dvi_row_t* r,
-	const int32_t y,
-	const int32_t row,
-	const SpriteId spriteId
-) {
-	const Tile16x8p2_t *tile16x8p2_invader = (Tile16x8p2_t *)d1;
-	sprite_renderer_sprite_16x8_p1(
-		&tile16x8p2_invader[(y >> 2) & 1],
-		d2,
-		r,
-		y,
-		row,
-		spriteId
-	);
-}
+#include "inv_invaders.h"
 
 const hstx_dvi_pixel_t pallet2_BlackGreen[] = {
     HSTX_DVI_PIXEL_RGB(0, 0, 0), // Black
@@ -178,12 +160,8 @@ static TextGrid8_t _textGrid1 = {
 	(uint8_t*)&font_8x8
 };
 static uint32_t _score = 0;
-static uint32_t inv_index;
-static uint32_t inv_count = 0;
 static uint32_t mot_index;
 static uint32_t gun_index;
-
-static int32_t inv_v = 1;
 
 void write_score() {
 	sprintf((char*)_score_text, "Score %4.4ld", _score);
@@ -198,8 +176,8 @@ void init_game() {
     hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)8);
 
 	uint32_t si = 0;
-	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
-	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_invader_16x8_p1);
+	init_sprite(si++, 50, 15, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
+	init_sprite(si++, 66, 19, 16, 8, SF_ENABLE, &tile16x8p2_invader, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
 
 	const uint nb = 6;
 	for(uint i = 0; i < nb; ++i){
@@ -213,25 +191,9 @@ void init_game() {
 	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
 	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
 
-	inv_index = si;
-	uint32_t rt[5] = {0, 2, 2, 4, 4};
-	hstx_dvi_pixel_t* rp[5] = {
-        (hstx_dvi_pixel_t*)&pallet1_White, 
-        (hstx_dvi_pixel_t*)&pallet1_Blue, 
-        (hstx_dvi_pixel_t*)&pallet1_Blue, 
-        (hstx_dvi_pixel_t*)&pallet1_Purple, 
-        (hstx_dvi_pixel_t*)&pallet1_Purple};
+	si = inv_invaders_init(si);
 
-	for(uint32_t x = 0; x < (11<< 1); ++x) {
-		for(uint32_t y = 0; y < (5 << 1); ++y) {
-			init_sprite(si, x << 4, 60 + (y << 4), 16, 8, SF_ENABLE, &tile16x8p2_invader[rt[y>>1]], rp[y >> 1], sprite_renderer_invader_16x8_p1);
-			hstx_dvi_sprite_set_sprite_collision_mask(si, (SpriteCollisionMask)4);
-			si++;
-            inv_count++;
-		}
-	}
 	init_sprite(si++, 16, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
-
 }
 
 int main(void)
@@ -274,19 +236,7 @@ int main(void)
 			_sprites[1].d2 = (hstx_dvi_pixel_t*)&pallet1_Purple;
 		}
 
-		bool reverse = false;
-		for (uint32_t i = inv_index; i < inv_index + inv_count; ++i)
-		{
-			Sprite *sprite = &_sprites[i];
-			sprite->x += inv_v;
-			if (inv_v > 0) {
-				if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
-			}
-			else {
-				if(sprite->x <= 0) reverse = true;
-			}
-		}
-		if (reverse) inv_v = -inv_v;
+		inv_invader_update();
 
 		// read the input
 		const uint8_t input = get_inv_input();
@@ -303,7 +253,7 @@ int main(void)
 		if (is_inv_input_fire(input)) {
 			// Fire a bullet
 		}
-		
+
 
 		write_score();
     }
