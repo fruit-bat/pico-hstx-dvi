@@ -48,9 +48,13 @@ typedef struct Sprite {
 	SpriteRenderer r;
 } Sprite;
 
-#define MAX_SPRITES (1<<8)
+#define MAX_SPRITES ((1<<8)-1)
 
 extern Sprite _sprites[MAX_SPRITES];
+
+__force_inline Sprite* hstx_dvi_sprite_get(const SpriteId spriteId) {
+	return &_sprites[spriteId];
+}
 
 void hstx_dvi_sprite_init_all();
 
