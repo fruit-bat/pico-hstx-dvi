@@ -139,7 +139,7 @@ SpriteId inv_invaders_init(SpriteId start) {
                 rp[y >> 1], 
                 sprite_renderer_invader_16x8_p1);
 
-			hstx_dvi_sprite_set_sprite_collision_mask(si, (SpriteCollisionMask)4);
+			hstx_dvi_sprite_set_sprite_collision_mask(si, INV_INVADER_COLLISION_MASK);
 			si++;
 		}
 	}
@@ -153,7 +153,7 @@ void inv_invader_update() {
     {
         SpriteId si = _inv_index + i;
         Sprite *sprite = hstx_dvi_sprite_get(si);
-        
+
         sprite->x += inv_v;
         if (inv_v > 0) {
             if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;

@@ -56,6 +56,13 @@ __force_inline Sprite* hstx_dvi_sprite_get(const SpriteId spriteId) {
 	return &_sprites[spriteId];
 }
 
+__force_inline void hstx_dvi_sprite_disable_1(Sprite* sprite) {
+	sprite->f &= ~SF_ENABLE;
+}
+__force_inline void hstx_dvi_sprite_disable(const SpriteId spriteId) {
+	hstx_dvi_sprite_disable_1(&_sprites[spriteId]);
+}
+
 void hstx_dvi_sprite_init_all();
 
 __force_inline void init_sprite(
