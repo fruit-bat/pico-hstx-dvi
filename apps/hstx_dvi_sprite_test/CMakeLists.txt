@@ -4,6 +4,7 @@ add_executable(hstx_dvi_sprite_test
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_input.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_invaders.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_bullets.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_score.c
 )
 
 target_compile_definitions(hstx_dvi_sprite_test PRIVATE

@@ -1,4 +1,6 @@
 #include "inv_invaders.h"
+#include "inv_score.h"
+
 
 #define INV_INVADER_COLS 22
 #define INV_INVADER_ROWS 10
@@ -7,6 +9,15 @@
 
 static SpriteId _inv_index = 0;
 static int32_t inv_v = 1;
+
+const uint8_t _inv_row_score[INV_INVADER_ROWS] = {
+    20,20,10,10,10,10,5,5,5,5
+};
+
+__force_inline static const uint32_t get_score_for_sprite(const uint32_t index) {
+    const uint32_t row = index / INV_INVADER_COLS;
+    return _inv_row_score[row];
+}
 
 static void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 	const void* d1,
@@ -125,8 +136,8 @@ SpriteId inv_invaders_init(SpriteId start) {
         (hstx_dvi_pixel_t*)&pallet1_Purple, 
         (hstx_dvi_pixel_t*)&pallet1_Purple};
 
-	for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
-		for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
+	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
+        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
             // Create the invader sprite
 			init_sprite(
                 si, 
@@ -155,7 +166,9 @@ void inv_invader_update() {
         Sprite *sprite = hstx_dvi_sprite_get(si);
         if (sprite->f & SF_ENABLE) {
             if (_spriteCollisions.m[si]) {
-                hstx_dvi_sprite_disable_1(sprite); // Disable the invader if it was previously enabled
+                hstx_dvi_sprite_disable_1(sprite);
+                const uint32_t score = get_score_for_sprite(si);
+                inv_score_add(score);
             }
             else {
                 sprite->x += inv_v;

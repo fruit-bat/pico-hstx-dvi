@@ -21,6 +21,7 @@
 #include "inv_input.h"
 #include "inv_invaders.h"
 #include "inv_bullets.h"
+#include "inv_score.h"
 
 const hstx_dvi_pixel_t pallet2_BlackGreen[] = {
     HSTX_DVI_PIXEL_RGB(0, 0, 0), // Black
@@ -152,26 +153,10 @@ Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
-// Score 0000
-// 1234567890
-static uint8_t _score_text[16];
-static TextGrid8_t _textGrid1 = {
-	10, 
-	_score_text,
-	(uint8_t*)&font_8x8
-};
-static uint32_t _score = 0;
 static uint32_t mot_index;
 static uint32_t gun_index;
 
-void write_score() {
-	sprintf((char*)_score_text, "Score %4.4ld", _score);
-}
-
 void init_game() {
-
-	write_score();
-
 
 	uint32_t si = 0;
 
@@ -189,8 +174,7 @@ void init_game() {
 
 	si = inv_invaders_init(si);
 	si = inv_bullets_init(si);
-
-	init_sprite(si++, 16, 0, 16*8, 1*8, SF_ENABLE, &_textGrid1, (hstx_dvi_pixel_t*)&pallet1_Green, text_renderer_8x8_p1);
+	si = inv_score_init(si);
 }
 
 int main(void)
@@ -237,8 +221,7 @@ int main(void)
 			inv_bullets_fire(gun_index);
 		}
 
-
-		write_score();
+		inv_score_update();
     }
 }
 
