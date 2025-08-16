@@ -56,7 +56,6 @@ SpriteId inv_base_init(SpriteId start) {
 
 			hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BASE_COLLISION_MASK << i);
 	}
-		
 
     return _sprite_index + INV_BASE_COUNT;
 }
