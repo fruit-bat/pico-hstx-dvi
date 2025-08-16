@@ -1,5 +1,3 @@
-// Copyright (c) 2024 Raspberry Pi (Trading) Ltd.
-
 // Generate DVI output using the command expander and TMDS encoder in HSTX.
 
 // This example requires an external digital video connector connected to
