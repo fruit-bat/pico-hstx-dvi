@@ -2,7 +2,7 @@
 #include "inv_pallet.h"
 #include <memory.h>
 #include "inv_collisions.h"
-
+#include <stdio.h>
 #define INV_BASE_COUNT 4
 
 static SpriteId _sprite_index = 0;
@@ -60,13 +60,48 @@ SpriteId inv_base_init(SpriteId start) {
     return _sprite_index + INV_BASE_COUNT;
 }
 
-void inv_base_update() {
+void __not_in_flash_func(inv_base_update)() {
 }
 
-void inv_base_bomb_hit(SpriteId spriteId) {
+static Tile8x8p2_t tile8x8p2_damage[] = {
+	{{
+		0b00011100,
+		0b00011000,
+		0b00001100,
+		0b00010000,
+		0b00000100,
+		0b00000000,
+		0b00000000,
+		0b00000000,
+	}}
+};
 
+void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMask m) {
+	SpriteCollisionMask t = INV_BASE_COLLISION_MASK;
+	for(uint i = 0; i < INV_BASE_COUNT; ++i) {
+		if (m & t) {
+			SpriteId si = _sprite_index + i;
+			uint32_t* base_image = (uint32_t*)(&tile32x16p2_bases[i]);
+			Tile8x8p2_t *d = &tile8x8p2_damage[0];
+			Sprite *bomb_sprite = hstx_dvi_sprite_get(spriteId);
+			int32_t bomb_x = bomb_sprite->x;
+			int32_t bomb_y = bomb_sprite->y;
+			int32_t base_x = hstx_dvi_sprite_get(si)->x;
+			int32_t base_y = hstx_dvi_sprite_get(si)->y;
+			int32_t dx = bomb_x - base_x;
+			int32_t dy = (bomb_y - base_y); // Adjust for the bombs height
+			for (uint32_t r = 0; r < 8; ++r)
+			{
+				uint32_t d1 = d->d[r];
+				int32_t y = dy + r;
+				if ((y < 0) || (y >= 16)) continue; // Skip
+				base_image[y] &= ~(d1 << (24 -dx));
+			}
+		}
+		t <<= 1;
+	}
 }
 
-void inv_base_bullet_hit(SpriteId spriteId) {
-
+void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId) {
 }
+

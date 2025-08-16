@@ -11,7 +11,7 @@ SpriteId inv_base_init(SpriteId start);
 
 void inv_base_update(void);
 
-void inv_base_hit(SpriteId gunSpriteId);
+void inv_base_bomb_hit(SpriteId spriteId, SpriteCollisionMask m);
 
 #ifdef __cplusplus
 } 

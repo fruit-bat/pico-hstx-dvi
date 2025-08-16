@@ -1,6 +1,7 @@
 #include "inv_bombs.h"
 #include "inv_pallet.h"
 #include "inv_collisions.h"
+#include "inv_base.h"
 
 #define INV_BOMB_COUNT 8
 
@@ -59,7 +60,9 @@ void inv_bombs_update() {
         SpriteId si = _sprite_index + i;
         Sprite *sprite = hstx_dvi_sprite_get(si);
         if (sprite->f & SF_ENABLE) {
-			if (_spriteCollisions.m[si] & ~INV_BOMB_COLLISION_MASK) {
+			SpriteCollisionMask m = _spriteCollisions.m[si];
+			if (m & ~INV_BOMB_COLLISION_MASK) {
+				inv_base_bomb_hit(si, m); // Notify the base of the bomb hit
 				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
 				_spriteCollisions.m[si] = 0;
 			}
