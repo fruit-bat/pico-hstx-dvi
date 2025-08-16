@@ -26,7 +26,7 @@ typedef struct {
 } TextGrid8_t;
 
 typedef uint8_t SpriteId;
-typedef uint8_t SpriteCollisionMask;
+typedef uint32_t SpriteCollisionMask;
 
 typedef void (*SpriteRenderer)(
 	const void* d1,
