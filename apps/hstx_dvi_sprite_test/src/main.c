@@ -23,6 +23,7 @@
 #include "inv_bullets.h"
 #include "inv_score.h"
 #include "inv_pallet.h"
+#include "inv_mot.h"
 
 Tile16x8p2_t tile16x8p2_invader[] = {
 	{{
@@ -129,7 +130,6 @@ Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
-static uint32_t mot_index;
 static uint32_t gun_index;
 
 void init_game() {
@@ -145,12 +145,12 @@ void init_game() {
     	hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)1);
 	}
 
-	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], inv_pallet_red(), sprite_renderer_sprite_16x8_p1);
 	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], inv_pallet_green(), sprite_renderer_sprite_16x8_p1);
 
 	si = inv_invaders_init(si);
 	si = inv_bullets_init(si);
 	si = inv_score_init(si);
+	si = inv_mot_init(si);
 }
 
 int main(void)
@@ -179,6 +179,7 @@ int main(void)
 
 		inv_invader_update();
 		inv_bullets_update();
+		inv_mot_update();
 
 		// read the input
 		const uint8_t input = get_inv_input();
