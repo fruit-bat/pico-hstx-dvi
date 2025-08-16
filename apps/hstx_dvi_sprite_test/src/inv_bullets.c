@@ -1,8 +1,8 @@
 #include "inv_bullets.h"
 #include "inv_pallet.h"
+#include "inv_collisions.h"
 
 #define INV_BULLET_COUNT 1
-#define INV_BULLET_COLLISION_MASK ((SpriteCollisionMask)2)
 
 static SpriteId _sprite_index = 0;
 

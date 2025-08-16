@@ -1,16 +1,17 @@
 #include "inv_invaders.h"
 #include "inv_score.h"
 #include "inv_pallet.h"
+#include "inv_collisions.h"
+#include "inv_bombs.h"
 
 #define INV_INVADER_COLS 22
 #define INV_INVADER_ROWS 10
 #define INV_INVADER_COUNT (INV_INVADER_COLS * INV_INVADER_ROWS)
-#define INV_INVADER_COLLISION_MASK ((SpriteCollisionMask)4)
 
 static SpriteId _inv_index = 0;
 static int32_t inv_v = 1;
 
-const uint8_t _inv_row_score[INV_INVADER_ROWS] = {
+const static uint8_t _inv_row_score[INV_INVADER_ROWS] = {
     20,20,10,10,10,10,5,5,5,5
 };
 
@@ -147,28 +148,49 @@ SpriteId inv_invaders_init(SpriteId start) {
     return si;
 }
 
-void inv_invader_update() {
+void __not_in_flash_func(inv_invader_update)() {
+
+    int32_t inv_lowest[INV_INVADER_COLS];
+    for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
+        inv_lowest[i] = -1;
+    }
+
     bool reverse = false;
-    for (uint32_t i = 0; i < INV_INVADER_COUNT; ++i)
-    {
-        SpriteId si = _inv_index + i;
-        Sprite *sprite = hstx_dvi_sprite_get(si);
-        if (sprite->f & SF_ENABLE) {
-            if (_spriteCollisions.m[si]) {
-                hstx_dvi_sprite_disable_1(sprite);
-                const uint32_t score = get_score_for_sprite(si);
-                inv_score_add(score);
-            }
-            else {
-                sprite->x += inv_v;
-                if (inv_v > 0) {
-                    if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
+    SpriteId si = _inv_index;
+
+	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
+        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
+            Sprite *sprite = hstx_dvi_sprite_get(si);
+            if (sprite->f & SF_ENABLE) {
+                if (_spriteCollisions.m[si]) {
+                    hstx_dvi_sprite_disable_1(sprite);
+                    const uint32_t score = get_score_for_sprite(si);
+                    inv_score_add(score);
                 }
                 else {
-                    if(sprite->x <= 0) reverse = true;
-                }                
+                    sprite->x += inv_v;
+                    if (inv_v > 0) {
+                        if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
+                    }
+                    else {
+                        if(sprite->x <= 0) reverse = true;
+                    }
+
+                    if ((inv_lowest[x] == -1) || (hstx_dvi_sprite_get(inv_lowest[x])->y < sprite->y)) {
+                        inv_lowest[x] = si;
+                    }
+                }
             }
+            ++si;
         }
     }
     if (reverse) inv_v = -inv_v;
+
+    for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
+        int32_t id = inv_lowest[i];
+        if (id != -1)  {
+            inv_bombs_fire((SpriteId)id);
+        }
+    }
+
 }

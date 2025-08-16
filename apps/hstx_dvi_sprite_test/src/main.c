@@ -21,6 +21,7 @@
 #include "inv_input.h"
 #include "inv_invaders.h"
 #include "inv_bullets.h"
+#include "inv_bombs.h"
 #include "inv_score.h"
 #include "inv_pallet.h"
 #include "inv_mot.h"
@@ -36,6 +37,7 @@ void init_game() {
 	si = inv_mot_init(si);
 	si = inv_gun_init(si);
 	si = inv_base_init(si);
+	si = inv_bombs_init(si);
 }
 
 int main(void)
@@ -64,6 +66,7 @@ int main(void)
 
 		inv_invader_update();
 		inv_bullets_update();
+		inv_bombs_update();
 		inv_mot_update();
 		inv_base_update();
 		inv_gun_update();

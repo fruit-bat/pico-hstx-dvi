@@ -3,8 +3,7 @@
 #include "inv_score.h"
 #include "inv_input.h"
 #include "inv_bullets.h"
-
-#define INV_GUN_COLLISION_MASK ((SpriteCollisionMask)16)
+#include "inv_collisions.h"
 
 static SpriteId _sprite_index = 0;
 

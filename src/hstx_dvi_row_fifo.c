@@ -31,12 +31,12 @@ hstx_dvi_pixel_row_fetcher hstx_dvi_row_fifo_init(PIO pio, uint sm, hstx_dvi_row
     uint offset = pio_add_program(pio, &fifo_passthrough_program);
     fifo_passthrough_program_init(pio, sm, offset);
 
-    sleep_ms(100); // Allow time for the PIO program to initialize
+    sleep_ms(200); // Allow time for the PIO program to initialize
 
-    for(int i = 0; i < 8; i++) {
-        // Write the underflow row to the RX FIFO
-        pio_sm_put_blocking(pio, sm, (uint32_t)underflow_row);
-    }
+    // for(int i = 0; i < 8; i++) {
+    //     // Write the underflow row to the RX FIFO
+    //     pio_sm_put_blocking(pio, sm, (uint32_t)underflow_row);
+    // }
 
     return hstx_dvi_row_fifo_get;
 }

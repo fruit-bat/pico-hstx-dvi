@@ -1,9 +1,9 @@
 #include "inv_base.h"
 #include "inv_pallet.h"
 #include <memory.h>
+#include "inv_collisions.h"
 
 #define INV_BASE_COUNT 4
-#define INV_BASE_COLLISION_MASK ((SpriteCollisionMask)0x100)
 
 static SpriteId _sprite_index = 0;
 

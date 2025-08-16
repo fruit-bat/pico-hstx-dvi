@@ -1,8 +1,8 @@
 #include "inv_mot.h"
 #include "inv_pallet.h"
 #include "inv_score.h"
+#include "inv_collisions.h"
 
-#define INV_MOT_COLLISION_MASK ((SpriteCollisionMask)4)
 #define INV_MOT_MAX_X 1000
 #define INV_MOT_MIN_X -1000
 
