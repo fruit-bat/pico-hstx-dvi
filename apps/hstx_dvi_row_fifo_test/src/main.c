@@ -13,32 +13,13 @@
 #include "hstx_dvi_row_buf.h"
 #include "pico/stdio.h"
 #include <stdio.h>
+#include "pico/multicore.h"
 
 hstx_dvi_row_t _underflow_row;
 
-int main(void)
-{
+void __not_in_flash_func(render_loop)() {
 
-    // Initialize stdio and GPIO 25 for the onboard LED
-    stdio_init_all();
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1); // Turn LED on
-
-    // Initialize the row buffer
-    hstx_dvi_row_buf_init();
-
-    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
-    {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
-    }
-
-    // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_init(hstx_dvi_row_fifo_init1(pio0, &_underflow_row), &_underflow_row);
-
-    sleep_ms(2000); // Allow time for initialization
-
-    printf("HSTX DVI Row FIFO Test\n");
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
 
     uint32_t k = 0;
     uint32_t f = 200;
@@ -66,4 +47,31 @@ int main(void)
         }
         if (k >= MODE_V_ACTIVE_LINES) k = 0;
     }
+}
+
+int main(void)
+{
+
+    // Initialize stdio and GPIO 25 for the onboard LED
+    stdio_init_all();
+    gpio_init(25);
+    gpio_set_dir(25, GPIO_OUT);
+    gpio_put(25, 1); // Turn LED on
+
+    // Initialize the row buffer
+    hstx_dvi_row_buf_init();
+
+    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
+    {
+        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
+    }
+
+    sleep_ms(2000); // Allow time for initialization
+
+    printf("HSTX DVI Row FIFO Test\n");
+
+    // Initialize the HSTX DVI row FIFO.
+    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+
+    multicore_launch_core1(render_loop);
 }

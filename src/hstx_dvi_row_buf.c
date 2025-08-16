@@ -2,7 +2,7 @@
 #include "hstx_dvi_row_fifo.h"
 
 // TODO Why do I need to add 8 to this!
-#define ROW_BUF_SIZE (HSTX_DVI_ROW_FIFO_SIZE + 8)
+#define ROW_BUF_SIZE (HSTX_DVI_ROW_FIFO_SIZE + 4)
 static hstx_dvi_row_t row[ROW_BUF_SIZE];
 static uint32_t row_index = 0;
 

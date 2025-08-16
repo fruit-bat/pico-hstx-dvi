@@ -4,6 +4,7 @@ add_executable(hstx_dvi_row_fifo_test
 )
 
 target_compile_definitions(hstx_dvi_row_fifo_test PRIVATE
+  PICO_CORE1_STACK_SIZE=0x400
   MODE_BYTES_PER_PIXEL=2
 )
 
