@@ -44,7 +44,7 @@ SpriteId inv_bombs_init(SpriteId start) {
 			8,  // height
 			0,  // flags
 			&tile8x8p2_bombs[0], 
-			inv_pallet_red(), 
+			inv_pallet_yellow(), 
 			sprite_renderer_sprite_8x8_p1);
 
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BOMB_COLLISION_MASK);

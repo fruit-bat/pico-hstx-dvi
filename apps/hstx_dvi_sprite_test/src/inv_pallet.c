@@ -20,6 +20,10 @@ const hstx_dvi_pixel_t  pallet1_White[] = {
     HSTX_DVI_PIXEL_RGB(200, 200, 200), // White
 };
 
+const hstx_dvi_pixel_t  pallet1_Yellow[] = {
+    HSTX_DVI_PIXEL_RGB(240, 200, 0), // Yellow
+};
+
 hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_green)() {
     return (hstx_dvi_pixel_t*)&pallet1_Green;
 }   
@@ -38,4 +42,8 @@ hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_purple)() {
 
 hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_white)() {
     return (hstx_dvi_pixel_t*)&pallet1_White;
+}
+
+hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_yellow)() {
+    return (hstx_dvi_pixel_t*)&pallet1_Yellow;
 }
