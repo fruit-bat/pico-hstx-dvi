@@ -2,7 +2,7 @@
 #include "inv_pallet.h"
 #include <memory.h>
 
-#define INV_BASE_COUNT 5
+#define INV_BASE_COUNT 4
 #define INV_BASE_COLLISION_MASK ((SpriteCollisionMask)0x100)
 
 static SpriteId _sprite_index = 0;
@@ -29,7 +29,7 @@ static Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
-static Tile32x16p2_t tile32x16p2_baseS[5];
+static Tile32x16p2_t tile32x16p2_bases[INV_BASE_COUNT];
 
 SpriteId inv_base_init(SpriteId start) {
     _sprite_index = start;
@@ -38,7 +38,7 @@ SpriteId inv_base_init(SpriteId start) {
 
 		SpriteId si = _sprite_index + i;
 
-		memcpy(&tile32x16p2_baseS[i], &tile32x16p2_base, sizeof(Tile32x16p2_t));
+		memcpy(&tile32x16p2_bases[i], &tile32x16p2_base, sizeof(Tile32x16p2_t));
 
 		uint w1 = MODE_H_ACTIVE_PIXELS / INV_BASE_COUNT;
 		uint s = w1 * i;
@@ -50,7 +50,7 @@ SpriteId inv_base_init(SpriteId start) {
 			32, 
 			16, 
 			SF_ENABLE, 
-			&tile32x16p2_baseS[i], 
+			&tile32x16p2_bases[i], 
 			inv_pallet_green(), 
 			sprite_renderer_sprite_32x16_p1);
 
@@ -63,6 +63,10 @@ SpriteId inv_base_init(SpriteId start) {
 void inv_base_update() {
 }
 
-void inv_base_hit(SpriteId gunSpriteId) {
+void inv_base_bomb_hit(SpriteId spriteId) {
+
+}
+
+void inv_base_bullet_hit(SpriteId spriteId) {
 
 }

@@ -25,47 +25,17 @@
 #include "inv_pallet.h"
 #include "inv_mot.h"
 #include "inv_gun.h"
-
-Tile32x16p2_t tile32x16p2_base = {
-	{
-	//   0123456789012345 
-		0b00000000011111111111111000000000,
-		0b00000000111111111111111100000000,
-		0b00000001111111111111111110000000,
-		0b00000011111111111111111111000000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111111111111111111100000,
-		0b00000111111100000000111111100000,
-		0b00000111111000000000011111100000,
-		0b00000111110000000000001111100000,
-		0b00000111110000000000001111100000,
-	}
-};
+#include "inv_base.h"
 
 void init_game() {
 
 	uint32_t si = 0;
-
-	const uint nb = 6;
-	for(uint i = 0; i < nb; ++i){
-		uint w1 = MODE_H_ACTIVE_PIXELS / nb;
-		uint s = w1 * i;
-		uint p = s + ((w1 - 32) / 2);
-		init_sprite(si++, p, MODE_V_ACTIVE_LINES - 88, 32, 16, SF_ENABLE, &tile32x16p2_base, inv_pallet_green(), sprite_renderer_sprite_32x16_p1);
-    	hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)1);
-	}
-
 	si = inv_invaders_init(si);
 	si = inv_bullets_init(si);
 	si = inv_score_init(si);
 	si = inv_mot_init(si);
 	si = inv_gun_init(si);
+	si = inv_base_init(si);
 }
 
 int main(void)
@@ -95,6 +65,7 @@ int main(void)
 		inv_invader_update();
 		inv_bullets_update();
 		inv_mot_update();
+		inv_base_update();
 		inv_gun_update();
 		inv_score_update();
     }

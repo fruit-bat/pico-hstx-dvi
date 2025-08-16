@@ -269,6 +269,25 @@ static inline void render_Tile16x16p1(
 	);
 }
 
+static inline void render_Tile8x8p1(
+	const Tile8x8p2_t * const t,
+	const hstx_dvi_pixel_t* p1,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	uint32_t d = t->d[row];
+	render_sprite_row_n_p1(
+		d,
+		p1,
+		r,
+		x,
+		spriteId,
+		8
+	);
+}
+
 static inline void render_Tile16x8p1(
 	const Tile16x8p2_t * const t,
 	const hstx_dvi_pixel_t* p1,
@@ -307,6 +326,23 @@ static inline void render_Tile32x16p1(
 	);
 }
 
+void __not_in_flash_func(sprite_renderer_sprite_8x8_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_Tile8x8p1(
+		d1,
+		d2,
+		r,
+		x,
+		row,
+		spriteId
+	);
+}
 
 void __not_in_flash_func(sprite_renderer_sprite_16x8_p1)(
 	const void* d1,

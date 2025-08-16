@@ -6,16 +6,16 @@
 
 static SpriteId _sprite_index = 0;
 
-static Tile16x8p2_t tile16x8p2_bullets[] = {
+static Tile8x8p2_t tile8x8p2_bullets[] = {
 	{{
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
-		0b0000000010000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
+		0b10000000,
 	}}
 };
 
@@ -30,12 +30,12 @@ SpriteId inv_bullets_init(SpriteId start) {
 			si, 
 			0,  // x
 			0,  // y
-			16, // width
+			8,  // width
 			8,  // height
 			0,  // flags
-			&tile16x8p2_bullets[0], 
+			&tile8x8p2_bullets[0], 
 			inv_pallet_red(), 
-			sprite_renderer_sprite_16x8_p1);
+			sprite_renderer_sprite_8x8_p1);
 
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BULLET_COLLISION_MASK);
 	}
@@ -69,7 +69,7 @@ void inv_bullets_fire(SpriteId gunSpriteId) {
 		SpriteId si = _sprite_index + i;
 		Sprite *sprite = hstx_dvi_sprite_get(si);
 		if (!(sprite->f & SF_ENABLE)) { // If the bullet is not enabled
-			sprite->x = hstx_dvi_sprite_get(gunSpriteId)->x; // Set bullet x to gun x
+			sprite->x = 8 + hstx_dvi_sprite_get(gunSpriteId)->x; // Set bullet x to gun x
 			sprite->y = hstx_dvi_sprite_get(gunSpriteId)->y - 8; // Set bullet y above the gun
 			sprite->f |= SF_ENABLE; // Enable the bullet
 			break; // Exit after firing one bullet

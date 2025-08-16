@@ -8,6 +8,10 @@ extern "C" {
 #endif
 
 typedef struct {
+	uint8_t d[8];
+} Tile8x8p2_t;
+
+typedef struct {
 	uint16_t d[16];
 } Tile16x16p2_t;
 
@@ -110,6 +114,15 @@ extern SpriteCollisions _spriteCollisions;
 void clear_sprite_id_row();
 
 void clear_sprite_collisions();
+
+void sprite_renderer_sprite_8x8_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
 
 void sprite_renderer_sprite_16x8_p1(
 	const void* d1,
