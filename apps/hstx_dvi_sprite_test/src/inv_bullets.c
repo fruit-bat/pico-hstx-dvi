@@ -1,13 +1,10 @@
 #include "inv_bullets.h"
+#include "inv_pallet.h"
 
 #define INV_BULLET_COUNT 1
 #define INV_BULLET_COLLISION_MASK ((SpriteCollisionMask)2)
 
 static SpriteId _sprite_index = 0;
-
-static const hstx_dvi_pixel_t pallet1_Red[] = {
-    HSTX_DVI_PIXEL_RGB(200, 0, 0), // Red
-};
 
 static Tile16x8p2_t tile16x8p2_bullets[] = {
 	{{
@@ -37,7 +34,7 @@ SpriteId inv_bullets_init(SpriteId start) {
 			8,  // height
 			0,  // flags
 			&tile16x8p2_bullets[0], 
-			(hstx_dvi_pixel_t*)pallet1_Red, 
+			inv_pallet_red(), 
 			sprite_renderer_sprite_16x8_p1);
 
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BULLET_COLLISION_MASK);

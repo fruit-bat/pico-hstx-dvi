@@ -22,31 +22,7 @@
 #include "inv_invaders.h"
 #include "inv_bullets.h"
 #include "inv_score.h"
-
-const hstx_dvi_pixel_t pallet2_BlackGreen[] = {
-    HSTX_DVI_PIXEL_RGB(0, 0, 0), // Black
-    HSTX_DVI_PIXEL_RGB(0, 200, 0), // Green
-};
-
-const hstx_dvi_pixel_t pallet1_Green[] = {
-    HSTX_DVI_PIXEL_RGB(0, 200, 0), // Green
-};
-
-const hstx_dvi_pixel_t  pallet1_Red[] = {
-    HSTX_DVI_PIXEL_RGB(200, 0, 0), // Red
-};
-
-const hstx_dvi_pixel_t  pallet1_Blue[] = {
-    HSTX_DVI_PIXEL_RGB(40, 40, 200), // Blue
-};
-
-const hstx_dvi_pixel_t  pallet1_Purple[] = {
-    HSTX_DVI_PIXEL_RGB(200, 0, 200), // Purple
-};
-
-const hstx_dvi_pixel_t  pallet1_White[] = {
-    HSTX_DVI_PIXEL_RGB(200, 200, 200), // White
-};
+#include "inv_pallet.h"
 
 Tile16x8p2_t tile16x8p2_invader[] = {
 	{{
@@ -165,12 +141,12 @@ void init_game() {
 		uint w1 = MODE_H_ACTIVE_PIXELS / nb;
 		uint s = w1 * i;
 		uint p = s + ((w1 - 32) / 2);
-		init_sprite(si++, p, MODE_V_ACTIVE_LINES - 88, 32, 16, SF_ENABLE, &tile32x16p2_base, (hstx_dvi_pixel_t*)&pallet1_Green, sprite_renderer_sprite_32x16_p1);
+		init_sprite(si++, p, MODE_V_ACTIVE_LINES - 88, 32, 16, SF_ENABLE, &tile32x16p2_base, inv_pallet_green(), sprite_renderer_sprite_32x16_p1);
     	hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)1);
 	}
 
-	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], (void * const)&pallet1_Red, sprite_renderer_sprite_16x8_p1);
-	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], (void * const)&pallet1_Green, sprite_renderer_sprite_16x8_p1);
+	init_sprite(mot_index = si++, -1000, 9, 16, 8, SF_ENABLE, &tile16x8p2_invader[6], inv_pallet_red(), sprite_renderer_sprite_16x8_p1);
+	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], inv_pallet_green(), sprite_renderer_sprite_16x8_p1);
 
 	si = inv_invaders_init(si);
 	si = inv_bullets_init(si);

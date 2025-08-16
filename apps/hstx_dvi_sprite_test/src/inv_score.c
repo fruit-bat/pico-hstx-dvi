@@ -3,10 +3,7 @@
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
-
-static const hstx_dvi_pixel_t pallet1_Green[] = {
-    HSTX_DVI_PIXEL_RGB(0, 200, 0), // Green
-};
+#include "inv_pallet.h"
 
 static SpriteId _sprite_index = 0;
 static uint8_t _score_text[16];
@@ -34,7 +31,7 @@ SpriteId inv_score_init(SpriteId start) {
 		1*8, 
 		SF_ENABLE, 
 		&_textGrid1, 
-		(hstx_dvi_pixel_t*)&pallet1_Green, 
+		inv_pallet_green(), 
 		text_renderer_8x8_p1);
 
 	return _sprite_index + 1;

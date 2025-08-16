@@ -1,6 +1,6 @@
 #include "inv_invaders.h"
 #include "inv_score.h"
-
+#include "inv_pallet.h"
 
 #define INV_INVADER_COLS 22
 #define INV_INVADER_ROWS 10
@@ -37,18 +37,6 @@ static void __not_in_flash_func(sprite_renderer_invader_16x8_p1)(
 		spriteId
 	);
 }
-
-static const hstx_dvi_pixel_t  pallet1_Blue[] = {
-    HSTX_DVI_PIXEL_RGB(40, 40, 200), // Blue
-};
-
-static const hstx_dvi_pixel_t  pallet1_Purple[] = {
-    HSTX_DVI_PIXEL_RGB(200, 0, 200), // Purple
-};
-
-static const hstx_dvi_pixel_t  pallet1_White[] = {
-    HSTX_DVI_PIXEL_RGB(200, 200, 200), // White
-};
 
 static Tile16x8p2_t tile16x8p2_invaders[] = {
 	{{
@@ -130,11 +118,12 @@ SpriteId inv_invaders_init(SpriteId start) {
 
 	uint32_t rt[5] = {0, 2, 2, 4, 4};
 	hstx_dvi_pixel_t* rp[5] = {
-        (hstx_dvi_pixel_t*)&pallet1_White, 
-        (hstx_dvi_pixel_t*)&pallet1_Blue, 
-        (hstx_dvi_pixel_t*)&pallet1_Blue, 
-        (hstx_dvi_pixel_t*)&pallet1_Purple, 
-        (hstx_dvi_pixel_t*)&pallet1_Purple};
+        inv_pallet_white(), 
+        inv_pallet_blue(), 
+        inv_pallet_blue(), 
+        inv_pallet_purple(), 
+        inv_pallet_purple()
+    };
 
 	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
         for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
