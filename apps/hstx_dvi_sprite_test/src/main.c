@@ -24,89 +24,7 @@
 #include "inv_score.h"
 #include "inv_pallet.h"
 #include "inv_mot.h"
-
-Tile16x8p2_t tile16x8p2_invader[] = {
-	{{
-		0b0000000110000000,
-		0b0000001111000000,
-		0b0000011111100000,
-		0b0000110110110000,
-		0b0000111111110000,
-		0b0000010000100000,
-		0b0000100000010000,
-		0b0000010000100000,
-	}},
-	{{
-		0b0000000110000000,
-		0b0000001111000000,
-		0b0000011111100000,
-		0b0000110110110000,
-		0b0000111111110000,
-		0b0000001001000000,
-		0b0000010110100000,
-		0b0000101001010000,
-	}},
-	{{
-		0b0000100000100000,
-		0b0000010001000000,
-		0b0000111111100000,
-		0b0001101110110000,
-		0b0011111111111000,
-		0b0101111111110100,
-		0b0101000000010100,
-		0b0000111011100000,
-	}},
-	{{
-		0b0000100000100000,
-		0b0000010001000000,
-		0b0100111111100100,
-		0b0101101110110100,
-		0b0111111111111100,
-		0b0011111111111000,
-		0b0001000000010000,
-		0b0010000000001000,
-	}},
-	{{
-		0b0000001111000000,
-		0b0001111111111000,
-		0b0011111111111100,
-		0b0011001111001100,
-		0b0011111111111100,
-		0b0000111001110000,
-		0b0001100110011000,
-		0b0000110000110000,
-	}},
-	{{
-		0b0000001111000000,
-		0b0001111111111000,
-		0b0011111111111100,
-		0b0011001111001100,
-		0b0011111111111100,
-		0b0000111001110000,
-		0b0001100110011000,
-		0b0011000000001100,
-	}},
-	{{
-		0b0000000000000000,
-		0b0000001111000000,
-		0b0001111111111000,
-		0b0011111111111100,
-		0b0110110110110110,
-		0b1111111111111111,
-		0b0011100110011100,
-		0b0001000000001000,
-	}},
-	{{
-		0b0000000010000000,
-		0b0000000111000000,
-		0b0000000111000000,
-		0b0000111111111000,
-		0b0011111111111110,
-		0b0011111111111110,
-		0b0011111111111110,
-		0b0011111111111110,
-	}}
-};
+#include "inv_gun.h"
 
 Tile32x16p2_t tile32x16p2_base = {
 	{
@@ -130,8 +48,6 @@ Tile32x16p2_t tile32x16p2_base = {
 	}
 };
 
-static uint32_t gun_index;
-
 void init_game() {
 
 	uint32_t si = 0;
@@ -145,12 +61,11 @@ void init_game() {
     	hstx_dvi_sprite_set_sprite_collision_mask(2, (SpriteCollisionMask)1);
 	}
 
-	init_sprite(gun_index = si++, 20, MODE_V_ACTIVE_LINES - 64, 16, 8, SF_ENABLE, &tile16x8p2_invader[7], inv_pallet_green(), sprite_renderer_sprite_16x8_p1);
-
 	si = inv_invaders_init(si);
 	si = inv_bullets_init(si);
 	si = inv_score_init(si);
 	si = inv_mot_init(si);
+	si = inv_gun_init(si);
 }
 
 int main(void)
@@ -180,24 +95,7 @@ int main(void)
 		inv_invader_update();
 		inv_bullets_update();
 		inv_mot_update();
-
-		// read the input
-		const uint8_t input = get_inv_input();
-
-		if (is_inv_input_left(input)) {
-			_sprites[gun_index].x -= 2;
-			if (_sprites[gun_index].x < 0) _sprites[gun_index].x = 0;
-		}
-		if (is_inv_input_right(input)) {
-			_sprites[gun_index].x += 2;
-			if (_sprites[gun_index].x + 16 > MODE_H_ACTIVE_PIXELS)
-				_sprites[gun_index].x = MODE_H_ACTIVE_PIXELS - 16;
-		}
-		if (is_inv_input_fire(input)) {
-			// Fire a bullet
-			inv_bullets_fire(gun_index);
-		}
-
+		inv_gun_update();
 		inv_score_update();
     }
 }
