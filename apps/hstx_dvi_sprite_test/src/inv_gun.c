@@ -41,7 +41,7 @@ SpriteId inv_gun_init(SpriteId start) {
     return _sprite_index + 1;
 }
 
-void inv_gun_update() {
+void __not_in_flash_func(inv_gun_update)() {
 	SpriteId si = _sprite_index;
 	Sprite *sprite = hstx_dvi_sprite_get(si);
 	if (sprite->f & SF_ENABLE) {

@@ -40,6 +40,20 @@ void init_game() {
 	si = inv_bombs_init(si);
 }
 
+void __not_in_flash_func(game_loop)() {
+    while(1) {
+        hstx_dvi_sprite_wait_for_frame();
+
+		inv_invader_update();
+		inv_bullets_update();
+		inv_bombs_update();
+		inv_mot_update();
+		inv_base_update();
+		inv_gun_update();
+		inv_score_update();
+    }
+}
+
 int main(void)
 {
     // Initialize stdio and GPIO 25 for the onboard LED
@@ -61,16 +75,6 @@ int main(void)
     init_game();
     printf("Game initialized\n");
 
-    while(1) {
-        hstx_dvi_sprite_wait_for_frame();
-
-		inv_invader_update();
-		inv_bullets_update();
-		inv_bombs_update();
-		inv_mot_update();
-		inv_base_update();
-		inv_gun_update();
-		inv_score_update();
-    }
+	game_loop();
 }
 

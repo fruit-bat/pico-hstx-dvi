@@ -43,7 +43,7 @@ SpriteId inv_bullets_init(SpriteId start) {
     return _sprite_index + INV_BULLET_COUNT;
 }
 
-void inv_bullets_update() {
+void __not_in_flash_func(inv_bullets_update)() {
     for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i)
     {
         SpriteId si = _sprite_index + i;
@@ -63,7 +63,7 @@ void inv_bullets_update() {
     }
 }
 
-void inv_bullets_fire(SpriteId gunSpriteId) {
+void __not_in_flash_func(inv_bullets_fire)(SpriteId gunSpriteId) {
 	for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i)
 	{
 		SpriteId si = _sprite_index + i;

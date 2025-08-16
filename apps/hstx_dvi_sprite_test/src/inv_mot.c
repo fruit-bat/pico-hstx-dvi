@@ -43,7 +43,7 @@ SpriteId inv_mot_init(SpriteId start) {
     return _sprite_index + 1;
 }
 
-void inv_mot_update() {
+void __not_in_flash_func(inv_mot_update)() {
 	SpriteId si = _sprite_index;
 	Sprite *sprite = hstx_dvi_sprite_get(si);
 	if (sprite->f & SF_ENABLE) {

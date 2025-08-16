@@ -54,7 +54,7 @@ SpriteId inv_bombs_init(SpriteId start) {
     return _sprite_index + INV_BOMB_COUNT;
 }
 
-void inv_bombs_update() {
+void __not_in_flash_func(inv_bombs_update)() {
     for (uint32_t i = 0; i < INV_BOMB_COUNT; ++i)
     {
         SpriteId si = _sprite_index + i;
