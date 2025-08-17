@@ -89,7 +89,7 @@ void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMa
 			int32_t base_x = hstx_dvi_sprite_get(si)->x;
 			int32_t base_y = hstx_dvi_sprite_get(si)->y;
 			int32_t dx = bomb_x - base_x;
-			int32_t dy = (bomb_y - base_y);
+			int32_t dy = bomb_y - base_y;
 			for (uint32_t r = 0; r < 8; ++r)
 			{
 				uint32_t d1 = d->d[r];
@@ -115,7 +115,7 @@ void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId, SpriteCollision
 			int32_t base_x = hstx_dvi_sprite_get(si)->x;
 			int32_t base_y = hstx_dvi_sprite_get(si)->y;
 			int32_t dx = bullet_x - base_x - 4;
-			int32_t dy = (bullet_y - base_y);
+			int32_t dy = bullet_y - base_y;
 			for (uint32_t r = 0; r < 8; ++r)
 			{
 				uint32_t d1 = d->d[7-r];
