@@ -16,7 +16,7 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/sem.h" 
+#include "pico/sem.h"
 #include "font_inv.h"
 #include "inv_input.h"
 #include "inv_invaders.h"

@@ -14,6 +14,6 @@ void inv_bombs_update(void);
 void inv_bombs_fire(SpriteId invSpriteId);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

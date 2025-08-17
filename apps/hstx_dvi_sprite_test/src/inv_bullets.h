@@ -14,6 +14,6 @@ void inv_bullets_update(void);
 void inv_bullets_fire(SpriteId gunSpriteId);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

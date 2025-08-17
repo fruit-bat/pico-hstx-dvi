@@ -14,5 +14,5 @@ hstx_dvi_pixel_t* inv_pallet_white();
 hstx_dvi_pixel_t* inv_pallet_yellow();
 
 #ifdef __cplusplus
-} 
+}
 #endif

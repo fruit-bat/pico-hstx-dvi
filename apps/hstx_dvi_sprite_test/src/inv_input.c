@@ -11,7 +11,7 @@ void init_inv_input() {
         gpio_set_dir(gpio, GPIO_IN);
         gpio_pull_up(gpio);
     }
-}   
+}
 
 uint8_t __not_in_flash_func(get_inv_input)() {
     uint32_t all_gpio = gpio_get_all();

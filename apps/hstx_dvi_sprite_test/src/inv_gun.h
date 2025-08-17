@@ -12,6 +12,6 @@ SpriteId inv_gun_init(SpriteId start);
 void inv_gun_update(void);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

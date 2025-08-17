@@ -12,6 +12,6 @@ SpriteId inv_invaders_init(SpriteId start);
 void inv_invader_update(void);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

@@ -20,14 +20,14 @@ bool __force_inline is_inv_input_left(uint8_t input) {
 bool __force_inline is_inv_input_right(uint8_t input) {
     return (input & INV_INP_BIT_R) != 0;
 }
-bool __force_inline is_inv_input_fire(uint8_t input) {  
+bool __force_inline is_inv_input_fire(uint8_t input) {
     return (input & INV_INP_BIT_F) != 0;
 }
-bool __force_inline is_inv_input_start(uint8_t input) {         
+bool __force_inline is_inv_input_start(uint8_t input) {
     return (input & INV_INP_BIT_S) != 0;
 }
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

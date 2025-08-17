@@ -26,14 +26,14 @@ SpriteId inv_gun_init(SpriteId start) {
 	SpriteId si = _sprite_index;
 
 	init_sprite(
-		si, 
+		si,
 		20,  // x
 		MODE_V_ACTIVE_LINES - 64, // y
 		16, // width
 		8,  // height
 		SF_ENABLE,  // flags
-		&tile16x8p2_gun[0], 
-		inv_pallet_green(), 
+		&tile16x8p2_gun[0],
+		inv_pallet_green(),
 		sprite_renderer_sprite_16x8_p1);
 
 	hstx_dvi_sprite_set_sprite_collision_mask(si, INV_GUN_COLLISION_MASK);
@@ -47,7 +47,6 @@ void __not_in_flash_func(inv_gun_update)() {
 	if (sprite->f & SF_ENABLE) {
 		if (_spriteCollisions.m[si]) {
 //			hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
-			_spriteCollisions.m[si] = 0;
             inv_score_clear();
 			sprite->x = 0; // Reset position
 		}

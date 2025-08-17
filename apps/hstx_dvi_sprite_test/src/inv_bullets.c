@@ -1,6 +1,7 @@
 #include "inv_bullets.h"
 #include "inv_pallet.h"
 #include "inv_collisions.h"
+#include "inv_base.h"
 
 #define INV_BULLET_COUNT 1
 
@@ -27,14 +28,14 @@ SpriteId inv_bullets_init(SpriteId start) {
 	    SpriteId si = _sprite_index + x;
 
 		init_sprite(
-			si, 
+			si,
 			0,  // x
 			0,  // y
 			8,  // width
 			8,  // height
 			0,  // flags
-			&tile8x8p2_bullets[0], 
-			inv_pallet_red(), 
+			&tile8x8p2_bullets[0],
+			inv_pallet_red(),
 			sprite_renderer_sprite_8x8_p1);
 
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BULLET_COLLISION_MASK);
@@ -49,9 +50,12 @@ void __not_in_flash_func(inv_bullets_update)() {
         SpriteId si = _sprite_index + i;
         Sprite *sprite = hstx_dvi_sprite_get(si);
         if (sprite->f & SF_ENABLE) {
-			if (_spriteCollisions.m[si] & ~INV_BULLET_COLLISION_MASK) {
+			SpriteCollisionMask m = _spriteCollisions.m[si];
+			if (m & ~INV_BULLET_COLLISION_MASK) {
+				if (m & INV_BASE_COLLISION_MASKS) {
+					inv_base_bullet_hit(si, m); // Notify the base of the bomb hit
+				}
 				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
-				_spriteCollisions.m[si] = 0;
 			}
 			else {
 				sprite->y -= 3; // Move the bullet up

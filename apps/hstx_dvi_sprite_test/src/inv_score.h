@@ -13,6 +13,6 @@ void inv_score_clear(void);
 void inv_score_add(uint32_t score);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

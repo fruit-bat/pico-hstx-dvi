@@ -26,7 +26,7 @@ const hstx_dvi_pixel_t  pallet1_Yellow[] = {
 
 hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_green)() {
     return (hstx_dvi_pixel_t*)&pallet1_Green;
-}   
+}
 
 hstx_dvi_pixel_t* __not_in_flash_func(inv_pallet_red)() {
     return (hstx_dvi_pixel_t*)&pallet1_Red;

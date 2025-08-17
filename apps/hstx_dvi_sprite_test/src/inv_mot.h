@@ -12,6 +12,6 @@ SpriteId inv_mot_init(SpriteId start);
 void inv_mot_update(void);
 
 #ifdef __cplusplus
-} 
+}
 #endif
 

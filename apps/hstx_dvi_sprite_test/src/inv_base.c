@@ -9,7 +9,7 @@ static SpriteId _sprite_index = 0;
 
 static Tile32x16p2_t tile32x16p2_base = {
 	{
-	//   0123456789012345 
+	//   0123456789012345
 		0b00000000011111111111111000000000,
 		0b00000000111111111111111100000000,
 		0b00000001111111111111111110000000,
@@ -44,14 +44,14 @@ SpriteId inv_base_init(SpriteId start) {
 		uint s = w1 * i;
 		uint p = s + ((w1 - 32) / 2);
 		init_sprite(
-			si, 
-			p, 
-			MODE_V_ACTIVE_LINES - 88, 
-			32, 
-			16, 
-			SF_ENABLE, 
-			&tile32x16p2_bases[i], 
-			inv_pallet_green(), 
+			si,
+			p,
+			MODE_V_ACTIVE_LINES - 88,
+			32,
+			16,
+			SF_ENABLE,
+			&tile32x16p2_bases[i],
+			inv_pallet_green(),
 			sprite_renderer_sprite_32x16_p1);
 
 			hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BASE_COLLISION_MASK << i);
@@ -89,7 +89,7 @@ void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMa
 			int32_t base_x = hstx_dvi_sprite_get(si)->x;
 			int32_t base_y = hstx_dvi_sprite_get(si)->y;
 			int32_t dx = bomb_x - base_x;
-			int32_t dy = (bomb_y - base_y); // Adjust for the bombs height
+			int32_t dy = (bomb_y - base_y);
 			for (uint32_t r = 0; r < 8; ++r)
 			{
 				uint32_t d1 = d->d[r];
@@ -102,6 +102,29 @@ void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMa
 	}
 }
 
-void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId) {
+void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId, SpriteCollisionMask m) {
+	SpriteCollisionMask t = INV_BASE_COLLISION_MASK;
+	for(uint i = 0; i < INV_BASE_COUNT; ++i) {
+		if (m & t) {
+			SpriteId si = _sprite_index + i;
+			uint32_t* base_image = (uint32_t*)(&tile32x16p2_bases[i]);
+			Tile8x8p2_t *d = &tile8x8p2_damage[0];
+			Sprite *bullet_sprite = hstx_dvi_sprite_get(spriteId);
+			int32_t bullet_x = bullet_sprite->x;
+			int32_t bullet_y = bullet_sprite->y;
+			int32_t base_x = hstx_dvi_sprite_get(si)->x;
+			int32_t base_y = hstx_dvi_sprite_get(si)->y;
+			int32_t dx = bullet_x - base_x - 4;
+			int32_t dy = (bullet_y - base_y);
+			for (uint32_t r = 0; r < 8; ++r)
+			{
+				uint32_t d1 = d->d[7-r];
+				int32_t y = dy + r;
+				if ((y < 0) || (y >= 16)) continue; // Skip
+				base_image[y] &= ~(d1 << (24 -dx));
+			}
+		}
+		t <<= 1;
+	}
 }
 

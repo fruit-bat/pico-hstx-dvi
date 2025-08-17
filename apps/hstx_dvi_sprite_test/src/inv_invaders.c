@@ -119,10 +119,10 @@ SpriteId inv_invaders_init(SpriteId start) {
 
 	uint32_t rt[5] = {0, 2, 2, 4, 4};
 	hstx_dvi_pixel_t* rp[5] = {
-        inv_pallet_white(), 
-        inv_pallet_blue(), 
-        inv_pallet_blue(), 
-        inv_pallet_purple(), 
+        inv_pallet_white(),
+        inv_pallet_blue(),
+        inv_pallet_blue(),
+        inv_pallet_purple(),
         inv_pallet_purple()
     };
 
@@ -130,14 +130,14 @@ SpriteId inv_invaders_init(SpriteId start) {
         for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
             // Create the invader sprite
 			init_sprite(
-                si, 
-                x << 4, 
-                60 + (y << 4), 
-                16, 
-                8, 
-                SF_ENABLE, 
-                &tile16x8p2_invaders[rt[y>>1]], 
-                rp[y >> 1], 
+                si,
+                x << 4,
+                60 + (y << 4),
+                16,
+                8,
+                SF_ENABLE,
+                &tile16x8p2_invaders[rt[y>>1]],
+                rp[y >> 1],
                 sprite_renderer_invader_16x8_p1);
 
 			hstx_dvi_sprite_set_sprite_collision_mask(si, INV_INVADER_COLLISION_MASK);

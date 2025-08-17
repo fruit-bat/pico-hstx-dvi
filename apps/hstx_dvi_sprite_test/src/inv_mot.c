@@ -28,14 +28,14 @@ SpriteId inv_mot_init(SpriteId start) {
 	SpriteId si = _sprite_index;
 
 	init_sprite(
-		si, 
+		si,
 		INV_MOT_MIN_X,  // x
 		16, // y
 		16, // width
 		8,  // height
 		SF_ENABLE,  // flags
-		&tile16x8p2_mot[0], 
-		inv_pallet_green(), 
+		&tile16x8p2_mot[0],
+		inv_pallet_green(),
 		sprite_renderer_sprite_16x8_p1);
 
 	hstx_dvi_sprite_set_sprite_collision_mask(si, INV_MOT_COLLISION_MASK);
@@ -49,17 +49,16 @@ void __not_in_flash_func(inv_mot_update)() {
 	if (sprite->f & SF_ENABLE) {
 		if (_spriteCollisions.m[si]) {
 //			hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
-			_spriteCollisions.m[si] = 0;
             inv_score_add(1000);
 			sprite->x = INV_MOT_MIN_X; // Reset position
 		}
 		else {
-			sprite->x += _mot_v; 
-			if (sprite->x > INV_MOT_MAX_X) { 
+			sprite->x += _mot_v;
+			if (sprite->x > INV_MOT_MAX_X) {
 				sprite->x = INV_MOT_MAX_X;
 				_mot_v = -_mot_v; // Reverse direction
 			}
-			else if (sprite->x < INV_MOT_MIN_X) { 
+			else if (sprite->x < INV_MOT_MIN_X) {
 				sprite->x = INV_MOT_MIN_X;
 				_mot_v = -_mot_v; // Reverse direction
 			}
