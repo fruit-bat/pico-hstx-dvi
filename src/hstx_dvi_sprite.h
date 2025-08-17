@@ -105,15 +105,11 @@ typedef union {
 
 typedef union {
 	SpriteCollisionMask m[MAX_SPRITES];
-	uint32_t word[MAX_SPRITES >> 2];
 } SpriteCollisions;
 
-// TODO probably should have accessor functions for these
 extern SpriteCollisions _spriteCollisions;
 
 void clear_sprite_id_row();
-
-void clear_sprite_collisions();
 
 void sprite_renderer_sprite_8x8_p1(
 	const void* d1,

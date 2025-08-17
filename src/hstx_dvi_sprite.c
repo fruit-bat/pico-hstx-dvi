@@ -12,9 +12,14 @@ static Sprite _sprites_rdy[MAX_SPRITES];
 static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow; 
 SpriteCollisions _spriteCollisions;
+static SpriteCollisions _spriteCollisionsFrame;
 
 static hstx_dvi_row_t _underflow_row;
 static struct semaphore _frame_sem;
+
+__force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
+	for(uint32_t i = 0; i < MAX_SPRITES; ++i) sc->m[i] = 0;
+}
 
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
@@ -25,6 +30,8 @@ void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 		// If the other core is waiting for the next frame
 		if(!sem_available(&_frame_sem)) {
 			memcpy(_sprites_rdy, _sprites, sizeof(_sprites));
+			memcpy(&_spriteCollisions, &_spriteCollisionsFrame, sizeof(_spriteCollisionsFrame));
+			clear_sprite_collisions(&_spriteCollisionsFrame);
 		}
         sem_release(&_frame_sem);
     }
@@ -61,16 +68,17 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 	}
     // Initialize the HSTX DVI row FIFO.
     hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+
+	// Clear down any collision flags
+	clear_sprite_collisions(&_spriteCollisionsFrame);
+	clear_sprite_collisions(&_spriteCollisions);
+
 	// Start the renderer
 	multicore_launch_core1(hstx_dvi_sprite_render_loop);
 }
 
 void __not_in_flash_func(clear_sprite_id_row)() {
 	for(uint32_t i = 0; i < SPRITE_ID_ROW_WORDS; ++i) _spriteIdRow.word[i] = 0;
-}
-
-void __not_in_flash_func(clear_sprite_collisions)() {
-	for(uint32_t i = 0; i < MAX_SPRITES >> 2; ++i) _spriteCollisions.word[i] = 0;
 }
 
 void __not_in_flash_func(render_row_mono)(
@@ -90,8 +98,8 @@ static inline void render_sprite_pixel(
 	if (ncid)
 	{
 		const SpriteId cid = ncid - 1;
-		_spriteCollisions.m[cid] |= _spriteCollisionMasks[spriteId];
-		_spriteCollisions.m[spriteId] |= _spriteCollisionMasks[cid];
+		_spriteCollisionsFrame.m[cid] |= _spriteCollisionMasks[spriteId];
+		_spriteCollisionsFrame.m[spriteId] |= _spriteCollisionMasks[cid];
 	}
 	else
 	{
@@ -119,7 +127,7 @@ static inline void render_sprite_row_n_p1(
 	if (d)
 	{
 		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasks[spriteId];
-		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisions.m[spriteId];
+		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
 		const uint32_t bm = 1 << (w-1);
         const hstx_dvi_pixel_t p = p1[0];
 		if (((uint32_t)x) < (MODE_H_ACTIVE_PIXELS - w))
@@ -133,7 +141,7 @@ static inline void render_sprite_row_n_p1(
 					if (ncid)
 					{
 						const SpriteId cid = ncid - 1;
-						_spriteCollisions.m[cid] |= spriteCollisionMask;
+						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
 						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
 					}
 					else
@@ -156,7 +164,7 @@ static inline void render_sprite_row_n_p1(
 					if (ncid)
 					{
 						const SpriteId cid = ncid - 1;
-						_spriteCollisions.m[cid] |= spriteCollisionMask;
+						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
 						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
 					}
 					else
