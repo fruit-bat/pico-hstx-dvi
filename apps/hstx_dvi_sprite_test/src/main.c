@@ -49,7 +49,7 @@ void __not_in_flash_func(game_loop)() {
 		inv_bombs_update();
 		inv_mot_update();
 		inv_base_update();
-		inv_gun_update();
+		inv_gun_update(frame);
 		inv_score_update();
     }
 }

@@ -9,7 +9,7 @@ extern "C" {
 
 SpriteId inv_gun_init(SpriteId start);
 
-void inv_gun_update(void);
+void inv_gun_update(uint32_t frame);
 
 #ifdef __cplusplus
 }

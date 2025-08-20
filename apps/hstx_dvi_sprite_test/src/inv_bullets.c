@@ -3,7 +3,7 @@
 #include "inv_collisions.h"
 #include "inv_base.h"
 
-#define INV_BULLET_COUNT 1
+#define INV_BULLET_COUNT 5
 
 static SpriteId _sprite_index = 0;
 
@@ -58,7 +58,7 @@ void __not_in_flash_func(inv_bullets_update)() {
 				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
 			}
 			else {
-				sprite->y -= 3; // Move the bullet up
+				sprite->y -= 4; // Move the bullet up
 				if (sprite->y < -8) { // If the bullet goes off screen
 					sprite->f &= ~SF_ENABLE; // Disable the bullet
 				}

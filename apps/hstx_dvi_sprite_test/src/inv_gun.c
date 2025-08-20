@@ -5,7 +5,12 @@
 #include "inv_bullets.h"
 #include "inv_collisions.h"
 
+#include "inv_gun.h"
+
+#define INV_GUN_COOLDOWN 20
+
 static SpriteId _sprite_index = 0;
+static uint32_t _cooldown = 0;
 
 static Tile16x8p2_t tile16x8p2_gun[] = {
 	{{
@@ -38,10 +43,12 @@ SpriteId inv_gun_init(SpriteId start) {
 
 	hstx_dvi_sprite_set_sprite_collision_mask(si, INV_GUN_COLLISION_MASK);
 
+	_cooldown = 0;
+
     return _sprite_index + 1;
 }
 
-void __not_in_flash_func(inv_gun_update)() {
+void __not_in_flash_func(inv_gun_update)(uint32_t frame) {
 	SpriteId si = _sprite_index;
 	Sprite *sprite = hstx_dvi_sprite_get(si);
 	if (sprite->f & SF_ENABLE) {
@@ -63,9 +70,14 @@ void __not_in_flash_func(inv_gun_update)() {
                 if (sprite->x + 16 > MODE_H_ACTIVE_PIXELS)
                     sprite->x = MODE_H_ACTIVE_PIXELS - 16;
             }
-            if (is_inv_input_fire(input)) {
+			if (_cooldown) {
+				--_cooldown;
+			}
+            else if (is_inv_input_fire(input)) {
                 // Fire a bullet
                 inv_bullets_fire(si);
+				// Set the cooldown
+				_cooldown = INV_GUN_COOLDOWN;
             }
 		}
 	}

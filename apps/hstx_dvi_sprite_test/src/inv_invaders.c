@@ -230,7 +230,7 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 				}
 				case INV_STATE_EXPLODE: {
 					sprite->x += inv_v;
-					if (frame >= state->end) {
+					if ((int32_t)(state->end - frame) < 0) {
 						state->state = INV_STATE_DEAD;
 						hstx_dvi_sprite_disable_1(hstx_dvi_sprite_get(si));
 						inv_score_add(get_score_for_sprite(si));
