@@ -137,7 +137,7 @@ static Tile16x8p2_t tile16x8p2_invader_explosion[] = {
 	}},
 };
 
-void inv_invader_explode(const uint32_t index, const uint32_t frame) {
+static void inv_invader_explode(const uint32_t index, const uint32_t frame) {
 	const SpriteId spriteId = _inv_index + index;
 	Sprite *sprite = hstx_dvi_sprite_get(spriteId);
 	if (sprite->f & SF_ENABLE) {
@@ -146,7 +146,7 @@ void inv_invader_explode(const uint32_t index, const uint32_t frame) {
 		sprite->d1 = &tile16x8p2_invader_explosion[0];
 		sprite->d2 = inv_pallet_white();
 		_inv_state[index].state = INV_STATE_EXPLODE;
-		_inv_state[index].end = frame + 20; 
+		_inv_state[index].end = frame + 10; 
 	}
 }
 
