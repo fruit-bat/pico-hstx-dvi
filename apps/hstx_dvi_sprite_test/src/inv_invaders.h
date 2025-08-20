@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 SpriteId inv_invaders_init(SpriteId start);
-
+SpriteId inv_invaders_init_title(SpriteId start);
 void inv_invader_update(uint32_t frame);
 
 #ifdef __cplusplus

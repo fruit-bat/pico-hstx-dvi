@@ -37,8 +37,8 @@ void __not_in_flash_func(intro_loop)() {
 	si = inv_gun_init(si);
 	si = inv_base_init(si);
 	si = inv_score_init(si);
+	si = inv_invaders_init_title(si);
 	inv_score_update();
-
 
 	// Wait for the user to press a button
 	while (true) {

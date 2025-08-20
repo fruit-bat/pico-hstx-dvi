@@ -3,6 +3,8 @@
 #include "inv_pallet.h"
 #include "inv_collisions.h"
 #include "inv_bombs.h"
+#include "font_inv.h" // TODO extern linkage
+#include <string.h>
 
 #define INV_INVADER_COLS 22
 #define INV_INVADER_ROWS 10
@@ -151,6 +153,53 @@ static void inv_invader_explode(const uint32_t index, const uint32_t frame) {
 	}
 }
 
+SpriteId inv_invaders_init_title(SpriteId start) {
+    _inv_index = start;
+
+	uint32_t rt[5] = {0, 1, 0, 1, 0};
+	hstx_dvi_pixel_t* rp[5] = {
+        inv_pallet_white(),
+        inv_pallet_blue(),
+        inv_pallet_blue(),
+        inv_pallet_purple(),
+        inv_pallet_purple()
+    };
+
+	char* inv_title = "INVADERS";
+	uint32_t len = strlen(inv_title);
+	uint32_t i = 0;
+	uint8_t* font = (uint8_t*)&font_8x8;
+	const uint32_t sx = (MODE_H_ACTIVE_PIXELS - (len << (3+3))) >> 1;
+
+	for(uint32_t y = 0; y < 8; ++y) {
+        for(uint32_t x = 0; x < len; ++x) {
+			const uint8_t c = inv_title[x];
+			if (c < 32 || c > 127) continue; // Skip invalid characters
+			const uint32_t k = (c - 32) << 3;
+			const uint8_t d = font[k + y];
+			for(uint32_t j = 0; j < 8; ++j) {
+				if (d & (1 << (7 - j))) {
+					const SpriteId si = start + i++;
+					// Create the invader sprite
+					init_sprite(
+						si,
+						sx + (((x << 3) + j) << 3),
+						60 + (y << 4),
+						16,
+						8,
+						SF_ENABLE,
+						&tile16x8p2_invaders[rt[y>>1]],
+						rp[y >> 1],
+						sprite_renderer_invader_16x8_p1);
+				}
+			}
+		}
+	}
+
+    return start + i;
+}
+
+
 SpriteId inv_invaders_init(SpriteId start) {
     _inv_index = start;
 
@@ -260,7 +309,7 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
             inv_bombs_fire((SpriteId)id);
         }
     }
-	_last_fire_col += 5;
+	_last_fire_col += 3;
 	if (_last_fire_col >= INV_INVADER_COLS) _last_fire_col = 0;
 
 	if (!any_alive) {

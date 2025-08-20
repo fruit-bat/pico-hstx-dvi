@@ -179,7 +179,7 @@ static __force_inline void render_sprite_row_n_p1(
 }
 
 static __force_inline void render_row_n_p1(
-	uint32_t d,
+	const uint32_t d,
 	const hstx_dvi_pixel_t* p1,
 	hstx_dvi_row_t* r,
 	const int32_t x,
@@ -194,11 +194,10 @@ static __force_inline void render_row_n_p1(
 			for (int32_t i = 0; i < w; i++)
 			{
 				const uint32_t j = (uint32_t)x + i;
-				if (d & bm)
+				if (d & (bm >> i))
 				{
 					render_pixel(r, p, j);
 				}
-				d <<= 1;
 			}
 		}
 		else
@@ -206,11 +205,10 @@ static __force_inline void render_row_n_p1(
 			for (int32_t i = 0; i < w; i++)
 			{
 				const uint32_t j = (uint32_t)x + i;
-				if ((j < MODE_H_ACTIVE_PIXELS) && (d & bm))
+				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
 				{
 					render_pixel(r, p, j);
 				}
-				d <<= 1;
 			}
 		}
 	}
