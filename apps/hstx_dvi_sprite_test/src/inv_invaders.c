@@ -249,11 +249,17 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
     }
     if (reverse) inv_v = -inv_v;
 
+	bool any_alive = false;
     for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
         int32_t id = inv_lowest[i];
         if (id != -1)  {
+			any_alive = true;
             inv_bombs_fire((SpriteId)id);
         }
     }
 
+	if (!any_alive) {
+		// Next wave
+		inv_invaders_init(_inv_index);
+	}
 }
