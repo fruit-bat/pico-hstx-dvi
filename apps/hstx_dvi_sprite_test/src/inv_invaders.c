@@ -8,8 +8,20 @@
 #define INV_INVADER_ROWS 10
 #define INV_INVADER_COUNT (INV_INVADER_COLS * INV_INVADER_ROWS)
 
+typedef enum  {
+	INV_STATE_WALK = 0,
+	INV_STATE_EXPLODE,
+	INV_STATE_DEAD
+ } InvInvaderState_e;
+
+typedef struct {
+	InvInvaderState_e state;
+	uint32_t end;
+} InvInvaderState_t;
+
 static SpriteId _inv_index = 0;
 static int32_t inv_v = 1;
+static InvInvaderState_t _inv_state[INV_INVADER_COUNT];
 
 const static uint8_t _inv_row_score[INV_INVADER_ROWS] = {
     20,20,10,10,10,10,5,5,5,5
@@ -112,10 +124,34 @@ static Tile16x8p2_t tile16x8p2_invaders[] = {
 	}}
 };
 
+static Tile16x8p2_t tile16x8p2_invader_explosion[] = {
+	{{
+		0b0000010001000000,
+		0b0010001010001000,
+		0b0001000000010000,
+		0b0000100000100000,
+		0b0110000000001100,
+		0b0000100000100000,
+		0b0001001010010000,
+		0b0010010001001000,
+	}},
+};
+
+void inv_invader_explode(const uint32_t index, const uint32_t frame) {
+	const SpriteId spriteId = _inv_index + index;
+	Sprite *sprite = hstx_dvi_sprite_get(spriteId);
+	if (sprite->f & SF_ENABLE) {
+		// Set the sprite to explode
+		sprite->r = sprite_renderer_sprite_16x8_p1;
+		sprite->d1 = &tile16x8p2_invader_explosion[0];
+		sprite->d2 = inv_pallet_white();
+		_inv_state[index].state = INV_STATE_EXPLODE;
+		_inv_state[index].end = frame + 20; 
+	}
+}
+
 SpriteId inv_invaders_init(SpriteId start) {
     _inv_index = start;
-
-    SpriteId si = _inv_index;
 
 	uint32_t rt[5] = {0, 2, 2, 4, 4};
 	hstx_dvi_pixel_t* rp[5] = {
@@ -126,8 +162,10 @@ SpriteId inv_invaders_init(SpriteId start) {
         inv_pallet_purple()
     };
 
+	uint32_t i = 0;
 	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
-        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
+        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x, ++i) {
+		    const SpriteId si = _inv_index + i;
             // Create the invader sprite
 			init_sprite(
                 si,
@@ -141,14 +179,20 @@ SpriteId inv_invaders_init(SpriteId start) {
                 sprite_renderer_invader_16x8_p1);
 
 			hstx_dvi_sprite_set_sprite_collision_mask(si, INV_INVADER_COLLISION_MASK);
-			si++;
+
+			// Initialize the invader states
+			_inv_state[i].state = INV_STATE_WALK;
+			_inv_state[i].end = 0;
 		}
 	}
 
-    return si;
+	// Set the invaders to move right
+	inv_v = 1;
+
+    return start + INV_INVADER_COUNT;
 }
 
-void __not_in_flash_func(inv_invader_update)() {
+void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 
     int32_t inv_lowest[INV_INVADER_COLS];
     for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
@@ -156,32 +200,51 @@ void __not_in_flash_func(inv_invader_update)() {
     }
 
     bool reverse = false;
-    SpriteId si = _inv_index;
-
+	uint32_t i = 0;
 	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
-        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
-            Sprite *sprite = hstx_dvi_sprite_get(si);
-            if (sprite->f & SF_ENABLE) {
-                if (_spriteCollisions.m[si]) {
-                    hstx_dvi_sprite_disable_1(sprite);
-                    const uint32_t score = get_score_for_sprite(si);
-                    inv_score_add(score);
-                }
-                else {
-                    sprite->x += inv_v;
-                    if (inv_v > 0) {
-                        if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
-                    }
-                    else {
-                        if(sprite->x <= 0) reverse = true;
-                    }
+        for(uint32_t x = 0; x < INV_INVADER_COLS; ++x, ++i) {
+			InvInvaderState_t* state = &_inv_state[i];
+		    const SpriteId si = _inv_index + i;
+			Sprite *sprite = hstx_dvi_sprite_get(si);
+			switch (state->state) {
+				case INV_STATE_WALK: {
+					sprite->x += inv_v;
+					if (sprite->f & SF_ENABLE) {
+						if (_spriteCollisions.m[si]) {
+							inv_invader_explode(i, frame);
+						}
+						else {
+							if (inv_v > 0) {
+								if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
+							}
+							else {
+								if(sprite->x <= 0) reverse = true;
+							}
 
-                    if ((inv_lowest[x] == -1) || (hstx_dvi_sprite_get(inv_lowest[x])->y < sprite->y)) {
-                        inv_lowest[x] = si;
-                    }
-                }
-            }
-            ++si;
+							if ((inv_lowest[x] == -1) || (hstx_dvi_sprite_get(inv_lowest[x])->y < sprite->y)) {
+								inv_lowest[x] = si;
+							}
+						}
+					}
+					break;
+				}
+				case INV_STATE_EXPLODE: {
+					sprite->x += inv_v;
+					if (frame >= state->end) {
+						state->state = INV_STATE_DEAD;
+						hstx_dvi_sprite_disable_1(hstx_dvi_sprite_get(si));
+						inv_score_add(get_score_for_sprite(si));
+					}
+					break;
+				}
+				case INV_STATE_DEAD: {
+					// Do nothing, the sprite is already disabled
+					break;
+				}
+				default: {
+					break;
+				}
+			}
         }
     }
     if (reverse) inv_v = -inv_v;

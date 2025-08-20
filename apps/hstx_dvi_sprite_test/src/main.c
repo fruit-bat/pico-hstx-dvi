@@ -41,10 +41,10 @@ void init_game() {
 }
 
 void __not_in_flash_func(game_loop)() {
-    while(1) {
+    for(uint32_t frame = 0; true; ++frame) {
         hstx_dvi_sprite_wait_for_frame();
 
-		inv_invader_update();
+		inv_invader_update(frame);
 		inv_bullets_update();
 		inv_bombs_update();
 		inv_mot_update();
