@@ -22,6 +22,7 @@ typedef struct {
 static SpriteId _inv_index = 0;
 static int32_t inv_v = 1;
 static InvInvaderState_t _inv_state[INV_INVADER_COUNT];
+static uint32_t _last_fire_col = 0;
 
 const static uint8_t _inv_row_score[INV_INVADER_ROWS] = {
     20,20,10,10,10,10,5,5,5,5
@@ -251,12 +252,16 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 
 	bool any_alive = false;
     for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
-        int32_t id = inv_lowest[i];
+		uint32_t j = i + _last_fire_col;
+		if (j >= INV_INVADER_COLS) j -= INV_INVADER_COLS;
+        int32_t id = inv_lowest[j];
         if (id != -1)  {
 			any_alive = true;
             inv_bombs_fire((SpriteId)id);
         }
     }
+	_last_fire_col += 5;
+	if (_last_fire_col >= INV_INVADER_COLS) _last_fire_col = 0;
 
 	if (!any_alive) {
 		// Next wave
