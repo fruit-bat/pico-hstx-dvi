@@ -28,7 +28,38 @@
 #include "inv_gun.h"
 #include "inv_base.h"
 
+
+
+void __not_in_flash_func(intro_loop)() {
+	hstx_dvi_sprite_disable_all();
+
+	uint32_t si = 0;	
+	si = inv_gun_init(si);
+	si = inv_base_init(si);
+	si = inv_score_init(si);
+	inv_score_update();
+
+
+	// Wait for the user to press a button
+	while (true) {
+		hstx_dvi_sprite_wait_for_frame();
+		// read the input
+		const uint8_t input = get_inv_input();
+
+		if( is_inv_input_fire(input) || is_inv_input_start(input)) {
+			break;
+		}
+	}
+}
+
+void __not_in_flash_func(game_over_loop)() {
+	for(uint32_t i = 0; i < 100; ++i) {
+		hstx_dvi_sprite_wait_for_frame();
+	}
+}
+
 void init_game() {
+	hstx_dvi_sprite_disable_all();
 
 	uint32_t si = 0;
 	si = inv_invaders_init(si);
@@ -40,9 +71,12 @@ void init_game() {
 	si = inv_bombs_init(si);
 }
 
+// Main game loop
 void __not_in_flash_func(game_loop)() {
-    for(uint32_t frame = 0; true; ++frame) {
-        hstx_dvi_sprite_wait_for_frame();
+
+	init_game();
+	for(uint32_t frame = 0; inv_gun_get_lives(); ++frame) {
+		hstx_dvi_sprite_wait_for_frame();
 
 		inv_invader_update(frame);
 		inv_bullets_update();
@@ -51,7 +85,20 @@ void __not_in_flash_func(game_loop)() {
 		inv_base_update();
 		inv_gun_update(frame);
 		inv_score_update();
-    }
+	}
+}
+
+void __not_in_flash_func(main_loop)() {
+
+	while(1) {
+
+		intro_loop();
+		
+		// Start the game loop
+		game_loop();
+		
+		game_over_loop();
+	}
 }
 
 int main(void)
@@ -75,6 +122,6 @@ int main(void)
     init_game();
     printf("Game initialized\n");
 
-	game_loop();
+	main_loop();
 }
 

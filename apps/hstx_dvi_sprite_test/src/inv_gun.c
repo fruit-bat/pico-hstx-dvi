@@ -22,7 +22,7 @@ typedef struct {
 
 static SpriteId _sprite_index = 0;
 static uint32_t _cooldown = 0;
-static uint32_t _lives = 3;
+static uint32_t _lives = 0;
 static InvGunState_t _gun_state;
 
 static Tile16x8p2_t tile16x8p2_gun[] = {

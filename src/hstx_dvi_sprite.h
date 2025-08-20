@@ -42,6 +42,7 @@ typedef void (*SpriteRenderer)(
 );
 
 enum SpriteFlags {
+  SF_NONE = 0,
   SF_ENABLE = 1
 };
 
@@ -174,6 +175,12 @@ void hstx_dvi_sprite_set_sprite_collision_mask(
 );
 
 void hstx_dvi_sprite_render_loop();
+
+inline void hstx_dvi_sprite_disable_all() {
+	for (uint32_t i = 0; i < MAX_SPRITES; ++i) {
+		hstx_dvi_sprite_disable(i);
+	}
+}
 
 #ifdef __cplusplus
 } 
