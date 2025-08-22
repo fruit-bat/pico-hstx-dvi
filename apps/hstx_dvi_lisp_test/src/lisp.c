@@ -1003,7 +1003,7 @@ void print(L x) {
 /* entry point with Lisp initialization, error handling and REPL */
 int lisp_main(int argc, char **argv) {
   int i;
-  printf("lisp");
+  printf("lisp\n");
   // PS HACK
   // input(argc > 1 ? argv[1] : "init.lisp");      /* set input source to load when available */
   out = stdout;
