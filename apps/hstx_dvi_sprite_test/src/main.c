@@ -119,9 +119,6 @@ int main(void)
 
     printf("HSTX DVI Sprite Test\n");
 
-    init_game();
-    printf("Game initialized\n");
-
 	main_loop();
 }
 
