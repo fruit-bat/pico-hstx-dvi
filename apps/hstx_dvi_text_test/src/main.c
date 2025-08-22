@@ -18,8 +18,6 @@
 #include <string.h>
 #include "pico/multicore.h"
 
-static hstx_dvi_row_t _underflow_row;
-
 static const char* kubla = "In Xanadu did Kubla Khan \n\
 A stately pleasure-dome decree: \n\
 Where Alph, the sacred river, ran \n\
@@ -34,7 +32,7 @@ Enfolding sunny spots of greenery.";
 
 void __not_in_flash_func(render_loop)() {
 
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_grid_render_frame(frame_index);
@@ -49,11 +47,6 @@ int main(void)
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
     
-    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
-    {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
-    }
-
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 

@@ -13,8 +13,6 @@ static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow; 
 SpriteCollisions _spriteCollisions;
 static SpriteCollisions _spriteCollisionsFrame;
-
-static hstx_dvi_row_t _underflow_row;
 static struct semaphore _frame_sem;
 
 __force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
@@ -23,7 +21,7 @@ __force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
 
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_sprite_render_frame(frame_index);
@@ -61,11 +59,6 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 	// Set up the frame semaphore. Released at the end of every frame.
     sem_init(&_frame_sem, 0, 1);
 
-	// Prepare a green underflow row
-    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
-    {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, HSTX_DVI_PIXEL_RGB(0,255,0));
-	}
     // Initialize the HSTX DVI row FIFO.
     hstx_dvi_row_fifo_init1(pio0);
 

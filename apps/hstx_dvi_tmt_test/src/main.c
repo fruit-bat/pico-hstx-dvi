@@ -22,11 +22,9 @@
 
 #include "libtmt/tmt.h"
 
-static hstx_dvi_row_t _underflow_row;
-
 void __not_in_flash_func(render_loop)() {
 
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
     for(uint32_t frame_index = 0; true; ++frame_index) {
         hstx_dvi_grid_render_frame(frame_index);
@@ -68,10 +66,6 @@ int main(void)
         printf("HSTX DVI TMT Test\n");
     }
 
-    for (uint32_t j = 0; j < HSTX_DVI_BYTES_PER_ROW; ++j)
-    {
-        _underflow_row.b[j] = 200;
-    }
     // Initialize the HSTX DVI row FIFO.
     hstx_dvi_row_fifo_init1(pio0);
 

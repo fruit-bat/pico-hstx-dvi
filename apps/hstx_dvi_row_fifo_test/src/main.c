@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Raspberry Pi (Trading) Ltd.
+// Copyright (c) 2025 fruit-bat.
 
 // Generate DVI output using the command expander and TMDS encoder in HSTX.
 
@@ -15,11 +15,9 @@
 #include <stdio.h>
 #include "pico/multicore.h"
 
-hstx_dvi_row_t _underflow_row;
-
 void __not_in_flash_func(render_loop)() {
 
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher(), &_underflow_row);
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
     uint32_t k = 0;
     uint32_t f = 200;
@@ -60,11 +58,6 @@ int main(void)
 
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
-
-    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
-    {
-        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
-    }
 
     sleep_ms(2000); // Allow time for initialization
 

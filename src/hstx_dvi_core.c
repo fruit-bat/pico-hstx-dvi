@@ -110,7 +110,7 @@ static uint v_scanline = 2;
 static  bool vactive_cmdlist_posted = false;
 
 static hstx_dvi_pixel_row_fetcher _row_fetcher;
-static hstx_dvi_row_t* _underflow_row;
+static hstx_dvi_row_t _underflow_row;
 static uint32_t _skipline = MODE_V_ACTIVE_LINES;
 
 static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
@@ -134,7 +134,7 @@ static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
         vactive_cmdlist_posted = true;
     } else {
         if (_skipline) {
-            ch->read_addr = (uintptr_t)&_underflow_row->w; 
+            ch->read_addr = (uintptr_t)&_underflow_row; 
             --_skipline;
         }
         else {
@@ -145,7 +145,7 @@ static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
             else {
                 // If we miss a line drop a whole frame
                 _skipline = MODE_V_ACTIVE_LINES - 1;
-                ch->read_addr = (uintptr_t)&_underflow_row->w; 
+                ch->read_addr = (uintptr_t)&_underflow_row; 
             }
         }
         ch->transfer_count = (MODE_BYTES_PER_PIXEL * MODE_H_ACTIVE_PIXELS) / sizeof(uint32_t);
@@ -157,10 +157,14 @@ static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
     }
 }
 
-void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher, hstx_dvi_row_t* underflow_row) {
+void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
 
     _row_fetcher = row_fetcher;
-    _underflow_row = underflow_row;
+
+    for (uint32_t j = 0; j < MODE_H_ACTIVE_PIXELS; ++j)
+    {
+        hstx_dvi_row_set_pixel(&_underflow_row, j, hstx_dvi_pixel_rgb(0,255,0));
+    }
 
     // Set core voltage to 1.2V
     vreg_set_voltage(VREG_VOLTAGE_1_20);
