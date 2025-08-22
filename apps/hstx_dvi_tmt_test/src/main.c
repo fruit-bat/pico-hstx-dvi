@@ -73,7 +73,7 @@ int main(void)
         _underflow_row.b[j] = 200;
     }
     // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+    hstx_dvi_row_fifo_init1(pio0);
 
     multicore_launch_core1(render_loop);
 

@@ -84,7 +84,7 @@ int main(void)
     hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
     
     // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+    hstx_dvi_row_fifo_init1(pio0);
 
     multicore_launch_core1(render_loop);
    

@@ -16,6 +16,9 @@ typedef uint8_t hstx_dvi_grid_attr_t;
 #define HSTX_DVI_GRID_ATTRS_REVERSE   (0x10)
 #define HSTX_DVI_GRID_ATTRS_INVISIBLE (0x20)
 
+void hstx_dvi_grid_init_all();
+void hstx_dvi_grid_render_loop();
+
 void hstx_dvi_grid_init();
 void hstx_dvi_grid_clear();
 void hstx_dvi_grid_render_frame(uint32_t frame_index);

@@ -183,3 +183,11 @@ void __not_in_flash_func(hstx_dvi_grid_write_str)(
         }
     }
 }
+
+void hstx_dvi_grid_init_all(){
+
+}
+
+void hstx_dvi_grid_render_loop(){
+
+}

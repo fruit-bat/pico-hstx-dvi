@@ -67,7 +67,7 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
         hstx_dvi_row_set_pixel(&_underflow_row, j, HSTX_DVI_PIXEL_RGB(0,255,0));
 	}
     // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0, &_underflow_row);
+    hstx_dvi_row_fifo_init1(pio0);
 
 	// Clear down any collision flags
 	clear_sprite_collisions(&_spriteCollisionsFrame);
