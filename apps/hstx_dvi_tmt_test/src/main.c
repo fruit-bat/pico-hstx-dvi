@@ -18,18 +18,8 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/multicore.h"
 
 #include "libtmt/tmt.h"
-
-void __not_in_flash_func(render_loop)() {
-
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
-
-    for(uint32_t frame_index = 0; true; ++frame_index) {
-        hstx_dvi_grid_render_frame(frame_index);
-    }
-}
 
 /* Forward declaration of a callback.
  * libtmt will call this function when the terminal's state changes.
@@ -48,7 +38,7 @@ int main(void)
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
 
-    hstx_dvi_grid_init();
+    hstx_dvi_grid_init_all();
 
     hstx_dvi_grid_set_pallet(TMT_COLOR_BLACK, hstx_dvi_pixel_rgb(0,0,0));
     hstx_dvi_grid_set_pallet(TMT_COLOR_RED, hstx_dvi_pixel_rgb(255,0,0));
@@ -61,17 +51,9 @@ int main(void)
 
     sleep_ms(2000); // Allow time for initialization
 
-    for (uint32_t j = 0; j < 1; ++j)
-    {
-        printf("HSTX DVI TMT Test\n");
-    }
+    printf("HSTX DVI TMT Test\n");
 
-    // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0);
-
-    multicore_launch_core1(render_loop);
-
-        /* Open a virtual terminal with 2 lines and 10 columns.
+    /* Open a virtual terminal with 60 lines and 80 columns.
      * The first NULL is just a pointer that will be provided to the
      * callback; it can be anything. The second NULL specifies that
      * we want to use the default Alternate Character Set; this

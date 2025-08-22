@@ -2,7 +2,7 @@
 #include "hstx_dvi_core.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
-
+#include "pico/multicore.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
@@ -184,10 +184,23 @@ void __not_in_flash_func(hstx_dvi_grid_write_str)(
     }
 }
 
-void hstx_dvi_grid_init_all(){
+void hstx_dvi_grid_init_all() {
+    // Initialize the row buffer
+    hstx_dvi_row_buf_init();
 
+    hstx_dvi_grid_init();
+
+    // Initialize the HSTX DVI row FIFO.
+    hstx_dvi_row_fifo_init1(pio0);
+
+    multicore_launch_core1(hstx_dvi_grid_render_loop);
 }
 
-void hstx_dvi_grid_render_loop(){
+void __not_in_flash_func(hstx_dvi_grid_render_loop)() {
 
+    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
+
+    for(uint32_t frame_index = 0; true; ++frame_index) {
+        hstx_dvi_grid_render_frame(frame_index);
+    }
 }

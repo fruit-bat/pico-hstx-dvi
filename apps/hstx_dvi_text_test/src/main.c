@@ -16,7 +16,6 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/multicore.h"
 
 static const char* kubla = "In Xanadu did Kubla Khan \n\
 A stately pleasure-dome decree: \n\
@@ -30,15 +29,6 @@ Where blossomed many an incense-bearing tree; \n\
 And here were forests ancient as the hills, \n\
 Enfolding sunny spots of greenery."; 
 
-void __not_in_flash_func(render_loop)() {
-
-    hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
-
-    for(uint32_t frame_index = 0; true; ++frame_index) {
-        hstx_dvi_grid_render_frame(frame_index);
-    }
-}
-
 int main(void)
 {
     // Initialize stdio and GPIO 25 for the onboard LED
@@ -46,15 +36,12 @@ int main(void)
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
-    
-    // Initialize the row buffer
-    hstx_dvi_row_buf_init();
+
+    hstx_dvi_grid_init_all();
 
     sleep_ms(2000); // Allow time for initialization
 
     printf("HSTX DVI Text Test\n");
-
-    hstx_dvi_grid_init();
 
     hstx_dvi_grid_set_pallet(0, hstx_dvi_pixel_rgb(0,0,0));
     hstx_dvi_grid_set_pallet(1, hstx_dvi_pixel_rgb(255,0,0));
@@ -76,11 +63,6 @@ int main(void)
     hstx_dvi_grid_write_str(23, 0, "Dim", 4, 0, HSTX_DVI_GRID_ATTRS_DIM);
     hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
     
-    // Initialize the HSTX DVI row FIFO.
-    hstx_dvi_row_fifo_init1(pio0);
-
-    multicore_launch_core1(render_loop);
-   
     char buffer[64];
     uint32_t k = 0;
     while(1) {
