@@ -3,7 +3,7 @@ add_executable(hstx_div_lisp_test
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
   ${CMAKE_CURRENT_LIST_DIR}/src/lisp.c)
 
-set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp.c PROPERTIES COMPILE_FLAGS -Wstrict-aliasing)
+set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp.c PROPERTIES COMPILE_FLAGS -Wno-strict-aliasing)
 
 target_compile_definitions(hstx_div_lisp_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400

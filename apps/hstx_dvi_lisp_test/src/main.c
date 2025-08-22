@@ -17,17 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char* kubla = "In Xanadu did Kubla Khan \n\
-A stately pleasure-dome decree: \n\
-Where Alph, the sacred river, ran \n\
-Through caverns measureless to man \n\
-   Down to a sunless sea. \n\
-So twice five miles of fertile ground \n\
-With walls and towers were girdled round; \n\
-And there were gardens bright with sinuous rills, \n\
-Where blossomed many an incense-bearing tree; \n\
-And here were forests ancient as the hills, \n\
-Enfolding sunny spots of greenery."; 
+extern int lisp_main(int argc, char **argv);
+
 
 int main(void)
 {
@@ -41,7 +32,7 @@ int main(void)
 
     sleep_ms(2000); // Allow time for initialization
 
-    printf("HSTX DVI Text Test\n");
+    printf("HSTX DVI Lisp Test\n");
 
     hstx_dvi_grid_set_pallet(0, hstx_dvi_pixel_rgb(0,0,0));
     hstx_dvi_grid_set_pallet(1, hstx_dvi_pixel_rgb(255,0,0));
@@ -50,25 +41,10 @@ int main(void)
     hstx_dvi_grid_set_pallet(4, hstx_dvi_pixel_rgb(255,255,0));
     hstx_dvi_grid_set_pallet(5, hstx_dvi_pixel_rgb(255,0,255));
 
-    hstx_dvi_grid_write_str(5, 0, kubla, 5, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
-    hstx_dvi_grid_write_ch(0, 0, '0', 1, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
-    hstx_dvi_grid_write_ch(0, 79, '1', 2, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
-    hstx_dvi_grid_write_ch(59, 0, '2', 3, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
-    hstx_dvi_grid_write_ch(59, 79, '3', 0, 4, HSTX_DVI_GRID_ATTRS_NORMAL);
-    hstx_dvi_grid_write_ch(20, 10, '4', 4, 0, HSTX_DVI_GRID_ATTRS_BLINK);
-    hstx_dvi_grid_write_ch(20, 11, '5', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE | HSTX_DVI_GRID_ATTRS_BLINK);
-    hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
-    hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
-    hstx_dvi_grid_write_str(22, 0, "Normal", 4, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
-    hstx_dvi_grid_write_str(23, 0, "Dim", 4, 0, HSTX_DVI_GRID_ATTRS_DIM);
-    hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
-    
-    char buffer[64];
-    uint32_t k = 0;
     while(1) {
-        sleep_ms(100);
-        sprintf(buffer, "HSTX DVI Text Test %ld", k++);
-        hstx_dvi_grid_write_str(30, 0, buffer, 5, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
+
+        lisp_main(0, NULL);
+
     }
 }
 

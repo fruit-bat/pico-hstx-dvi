@@ -506,7 +506,7 @@ L parse() {
     case '"':  return string(buf+1);            /* if token is a string, then return a new string */
     case ')':  return ERR(8, "unexpected ) ");
   }
-  if (sscanf(buf, "%lg%n", &x, &i) > 0 && !buf[i])
+  if (sscanf(buf, "%lg%ln", &x, &i) > 0 && !buf[i])
     return x;                                   /* return a number, including inf, -inf and nan */
   return atom(buf);                             /* return an atom (a symbol) */
 }
@@ -868,7 +868,7 @@ struct {
 
 /* when tracing is enabled, then display the evaluation of w => x */
 void trace(L w, L x) {
-  printf("\e[32m%4u: \e[33m", N-sp); print(w);  /* <stack depth>: unevaluated expression */
+  printf("\e[32m%4lu: \e[33m", N-sp); print(w);  /* <stack depth>: unevaluated expression */
   printf("\e[36m => \e[33m");        print(x);  /* => value of the expression */
   printf("\e[m\t");
   if (tr > 1)                                   /* wait for ENTER key or other CTRL */
@@ -990,8 +990,8 @@ void print(L x) {
     case ATOM: fprintf(out, "%s", A+ord(x));         break;
     case STRG: fprintf(out, "\"%s\"", A+ord(x));     break;
     case CONS: printlist(x);                         break;
-    case CLOS: fprintf(out, "{%u}", ord(x));         break;
-    case MACR: fprintf(out, "[%u]", ord(x));         break;
+    case CLOS: fprintf(out, "{%lu}", ord(x));         break;
+    case MACR: fprintf(out, "[%lu]", ord(x));         break;
     default:   fprintf(out, FLOAT, x);               break;
   }
 }
@@ -1004,7 +1004,8 @@ void print(L x) {
 int lisp_main(int argc, char **argv) {
   int i;
   printf("lisp");
-  input(argc > 1 ? argv[1] : "init.lisp");      /* set input source to load when available */
+  // PS HACK
+  // input(argc > 1 ? argv[1] : "init.lisp");      /* set input source to load when available */
   out = stdout;
   if (setjmp(jb))                               /* if something goes wrong before REPL, it is fatal */
     abort();
@@ -1026,7 +1027,7 @@ int lisp_main(int argc, char **argv) {
     putchar('\n');
     unwind(N);
     i = gc();
-    snprintf(ps, sizeof(ps), "%u+%u>", i, sp-hp/8);
+    snprintf(ps, sizeof(ps), "%u+%lu>", i, sp-hp/8);
     out = stdout;
     print(eval(*push(readlisp()), env));
   }
