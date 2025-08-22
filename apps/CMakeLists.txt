@@ -53,5 +53,8 @@ add_subdirectory(hstx_dvi_row_fifo_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_r
 add_subdirectory(hstx_dvi_text_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_text_test")
 add_subdirectory(hstx_dvi_tmt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_tmt_test")
 add_subdirectory(hstx_dvi_sprite_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_sprite_test")
+add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
+
+
 
 
