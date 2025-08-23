@@ -637,12 +637,12 @@ writecharatcurs(TMT *vt, wchar_t w)
 	// See also codepage.c from qodem.
 	switch (w)
 	{
-	case 0x2192: w = vt->acschars[0]; break; // RIGHT ARROW
-	case 0x2190: w = vt->acschars[1]; break; // LEFT ARROW
-	case 0x2191: w = vt->acschars[2]; break; // UP ARROW
-	case 0x2193: w = vt->acschars[3]; break; // DOWN ARROW
-	case 0x2588: w = vt->acschars[4]; break; // BLOCK
-	case 0x25A6: w = vt->acschars[9]; break; // BOARD
+        case 0x2192: w = vt->acschars[0]; break; // RIGHT ARROW
+        case 0x2190: w = vt->acschars[1]; break; // LEFT ARROW
+        case 0x2191: w = vt->acschars[2]; break; // UP ARROW
+        case 0x2193: w = vt->acschars[3]; break; // DOWN ARROW
+        case 0x2588: w = vt->acschars[4]; break; // BLOCK
+        case 0x25A6: w = vt->acschars[9]; break; // BOARD
         case 0x00A0: w = dec_to_acs(vt, 0x5f); break; // NBSP
         case 0x2666: // BLACK DIAMOND SUIT
         case 0x25C6: w = dec_to_acs(vt, 0x60); break; // BLACK DIAMOND

@@ -72,6 +72,9 @@ inline void using_history() { }
 #define ALWAYS_GC 0
 #endif
 
+/* Just printf output for now */
+#define fprintf(A, ...) printf(__VA_ARGS__)
+
 #ifdef LISP_FLOAT
 #define T(x) (*(uint32_t*)&x >> 20)
 #else
@@ -101,8 +104,11 @@ Lisp<P,S>() {
   nil = box(NIL, 0);                            /* set the constant nil (empty list) */
   tru = atom("#t");                             /* set the constant #t */
   env = pair(tru, tru, nil);                    /* create environment with symbolic constant #t */
-  for (I i = 0; prim[i].s; ++i)                 /* expand environment with primitives */
+  for (I i = 0; prim[i].s; ++i) {               /* expand environment with primitives */
+    printf("adding %s\n ", prim[i].s);
     env = pair(atom(prim[i].s), box(PRIM, i), env);
+
+  }
   fin = 0;                                      /* no open files */
   see = '\n';                                   /* input line sentinel \n */
   ptr = "";                                     /* pointer to char in line, init to \0 end of line */
@@ -515,7 +521,7 @@ char get() {
       strcpy(ps, "?");
     }
     if ((c = getchar()) == EOF) {
-      freopen("/dev/tty", "r", stdin);
+//      freopen("/dev/tty", "r", stdin);
       c = '\n';
     }
     see = c;
@@ -687,14 +693,14 @@ L f_div(L t, L *_) {
 
 L f_int(L t, L *_) {
   L n = car(t);
-  return n < 1e16 && n > -1e16 ? (int64_t)n : n;
+  return n < 1e16 && n > -1e16 ? (I)n : n;
 }
 
 L f_lt(L t, L *_) {
   L x = car(t), y = car(cdr(t));
   return (T(x) == T(y) && (T(x) & ~(ATOM^STRG)) == ATOM ? strcmp(A+ord(x), A+ord(y)) < 0 :
       x == x && y == y ? x < y : /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-      *(int64_t*)&x < *(int64_t*)&y) ? tru : nil;
+      *(I*)&x < *(I*)&y) ? tru : nil;
 }
 
 L f_eq(L t, L *_) {

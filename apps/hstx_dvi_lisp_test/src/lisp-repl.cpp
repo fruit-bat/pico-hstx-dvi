@@ -7,11 +7,11 @@
 // a small Lisp interpreter with 8192 cells pool and 2048 cells stack/heap
 typedef Lisp<2048,1024> MySmallLisp;
 
+extern "C" int lisp_main(int argc, char **argv) {
+
 MySmallLisp lisp;
 
-
-extern "C" int lisp_main(int argc, char **argv) {
-  printf("lisp");
+printf("lisp");
  // lisp.input(argc > 1 ? argv[1] : "init.lisp");
   using_history();
   int i = GETSIGINT(lisp);      // when compiling with -DHAVE_SIGINT_H we must set this handler!

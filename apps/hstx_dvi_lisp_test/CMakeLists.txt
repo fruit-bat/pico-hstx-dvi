@@ -9,6 +9,7 @@ set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp-repl.cpp PROPERTI
 
 target_compile_definitions(hstx_dvi_lisp_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
+  PICO_CORE0_STACK_SIZE=0x10000
   MODE_BYTES_PER_PIXEL=1
 )
 
