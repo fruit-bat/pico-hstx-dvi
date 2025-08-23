@@ -1,9 +1,11 @@
 
 add_executable(hstx_dvi_lisp_test
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/lisp.c)
+  ${CMAKE_CURRENT_LIST_DIR}/src/lisp-repl.cpp)
 
 set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp.c PROPERTIES COMPILE_FLAGS -Wno-strict-aliasing)
+set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp-repl.cpp PROPERTIES COMPILE_FLAGS -Wno-strict-aliasing)
+set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/lisp-repl.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 
 target_compile_definitions(hstx_dvi_lisp_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400

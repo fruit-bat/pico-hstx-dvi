@@ -23,12 +23,13 @@ extern int lisp_main(int argc, char **argv);
 int main(void)
 {
     // Initialize stdio and GPIO 25 for the onboard LED
-    stdio_init_all();
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
     gpio_put(25, 1); // Turn LED on
 
     hstx_dvi_grid_init_all();
+
+    stdio_init_all();
 
     sleep_ms(2000); // Allow time for initialization
 
