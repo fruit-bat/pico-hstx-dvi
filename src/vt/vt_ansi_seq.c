@@ -227,15 +227,29 @@ int main() {
     vt_parser_t p;
     vt_parser_init(&p);
 
-    vt_state_t* s0 = vt_parser_put_ch(&p, 0x1B); // ESC
-    assert(s0 != NULL);
-    assert(s0->m == VT_M_C0_ESC);
-    assert(p.state == VT_G_ESC);
-
-    vt_state_t* s1 = vt_parser_put_ch(&p, 'D'); // D
-    assert(s1 != NULL);
-    assert(s1->m == 'D');
-    assert(p.state == VT_G_GROUND);
+    {
+        vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
+        assert(s != NULL);
+        assert(s->m == VT_M_CHAR);
+        assert(s->n == VT_A_CHAR);
+        assert(s->f & VT_F_FINAL);
+        assert(p.state == VT_G_GROUND);
+    }
+    {
+        vt_state_t* s = vt_parser_put_ch(&p, 0x1B); // ESC
+        assert(s != NULL);
+        assert(s->m == VT_M_C0_ESC);
+        assert(p.state == VT_G_ESC);
+        assert((s->f & VT_F_FINAL) == 0);
+    }
+    {
+        vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
+        assert(s != NULL);
+        assert(s->m == 'D');
+        assert(p.state == VT_G_GROUND);
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_IND);
+    }
 
     return 0;
 }   
