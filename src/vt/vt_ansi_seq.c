@@ -13,6 +13,7 @@ typedef int16_t vt_match_t; // Match symbol
 typedef enum {
     VT_M_CHAR = -1,      // A normal character
     VT_M_NP_LOW = -2,    // A non printing char (below 0x20 ' ')
+    VT_M_DIGIT = -3,      // A digit 0-9
     VT_M_C0_NULL = 0x00, // Null
     VT_M_C0_ENQ  = 0x05, // Enquiry
     VT_M_C0_BEL  = 0x07, // Bell
@@ -90,6 +91,21 @@ typedef enum {
     VT_A_SAVE_CUR, // VT100 Save Cursor Position (ESC 7)
     VT_A_RESTORE_CUR, // VT100 Restore Cursor Position (ESC 8)
 
+    VT_A_CUU,
+    VT_A_CUD,
+    VT_A_CUF,
+    VT_A_CUB,
+    VT_A_CUP,
+    VT_A_CHA,
+    VT_A_CHT,
+    VT_A_ED,
+    VT_A_EL,
+    VT_A_SGR,
+    VT_A_DECSTBM,
+    VT_A_DA, 
+    VT_A_RM,
+    VT_A_SM,
+
 
     VT_A_CTRL_C
 } vt_a_t;
@@ -97,7 +113,9 @@ typedef enum {
 typedef enum {
     VT_F_NONE    = 0x00,
     VF_F_NEXT_CH = 0x01,
-    VT_F_FINAL   = 0x02
+    VT_F_FINAL   = 0x02,
+    VT_F_COL_P   = 0x04, // Collect parameter
+    VF_F_NXT_P   = 0x08  // Next parameter
 } vt_f_t;   
 
 typedef enum {
@@ -105,7 +123,9 @@ typedef enum {
     VT_G_GROUND = 0,
     VT_G_C0,
     VT_G_ESC,
-    VT_G_ESC_SBRACE,
+    VT_G_CSI,
+    VT_G_CSI_P,
+    VT_G_CSI_F
 } vt_g_t;
 
 typedef struct {
@@ -146,7 +166,7 @@ vt_state_t vt_states_c0[] = {
     {VT_M_C0_DC3,  VT_A_C0_DC3,  VT_F_FINAL},
 };
 vt_state_t vt_states_esc[] = {
-    {'[',          VT_G_ESC_SBRACE,   VF_F_NEXT_CH}, // ESC [
+    {'[',          VT_G_CSI,          VF_F_NEXT_CH}, // ESC [
     {'D',          VT_A_IND,          VT_F_FINAL}, // ESC D
     {'E',          VT_A_NEL,          VT_F_FINAL}, // ESC E
     {'H',          VT_A_HTS,          VT_F_FINAL}, // ESC H
@@ -160,9 +180,29 @@ vt_state_t vt_states_esc[] = {
     {'7',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC 7
     {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC 8
 };
-vt_state_t vt_states_esc_sbrace[] = {
+vt_state_t vt_states_csi[] = {
     {'s',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC [s
     {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC [u
+    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NONE}, // ESC [0-9
+};
+vt_state_t vt_states_csi_p[] = {
+    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NONE}, // Collect param digits
+    {';',          VT_G_CSI_P,        VT_F_NONE}, // Next param
+    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE}, // ESC [0-9;s
+};
+vt_state_t vt_states_csi_f[] = {
+    {'A',          VT_A_CUU,          VT_F_FINAL}, // ESC [nA
+    {'B',          VT_A_CUD,          VT_F_FINAL}, // ESC [nB
+    {'C',          VT_A_CUF,          VT_F_FINAL}, // ESC [nC
+    {'D',          VT_A_CUB,          VT_F_FINAL}, // ESC [nD
+    {'H',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nH
+    {'f',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nF
+    {'J',          VT_A_ED,           VT_F_FINAL}, // ESC [nJ
+    {'K',          VT_A_EL,           VT_F_FINAL}, // ESC [nK
+    {'m',          VT_A_SGR,          VT_F_FINAL}, // ESC [n;n;...m
+    {'r',          VT_A_DECSTBM,      VT_F_FINAL}, // ESC [t;r
+    {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
+    {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
 };
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
@@ -171,7 +211,9 @@ vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_ground),
     STATE_PTR(vt_states_c0),
     STATE_PTR(vt_states_esc),
-    STATE_PTR(vt_states_esc_sbrace),
+    STATE_PTR(vt_states_csi),
+    STATE_PTR(vt_states_csi_p),
+    STATE_PTR(vt_states_csi_f)
 };
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
@@ -180,7 +222,9 @@ uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_ground),
     COUNT_ARR(vt_states_c0),
     COUNT_ARR(vt_states_esc),
-    COUNT_ARR(vt_states_esc_sbrace),
+    COUNT_ARR(vt_states_csi),
+    COUNT_ARR(vt_states_csi_p),
+    COUNT_ARR(vt_states_csi_f)
 };
 
 typedef struct {
@@ -196,6 +240,7 @@ bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {
         switch(m) {
             case VT_M_CHAR:     return ch >= 0x20 && ch != 0x7F;
             case VT_M_NP_LOW:   return ch < 0x20;
+            case VT_M_DIGIT:    return ch >= '0' && ch <= '9';
             default:            return 0;
         }
     }
@@ -213,6 +258,14 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         vt_state_t* s = &gps[i];
         if (vt_parser_match_ch(s->m, ch)) {
             p->state = s->f & VT_F_FINAL ? VT_G_GROUND : (vt_g_t)s->n;
+            if (s->f & VT_F_COL_P) {
+                // Collect parameter digit
+                // TODO
+            }
+            if (s->f & VF_F_NXT_P) {
+                // Next parameter
+                // TODO
+            }
             if (s->f & (VF_F_NEXT_CH | VT_F_FINAL)) {
                 // Need next char to determine action
                 return s;
