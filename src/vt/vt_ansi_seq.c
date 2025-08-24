@@ -112,10 +112,10 @@ typedef enum {
 
 typedef enum {
     VT_F_NONE    = 0x00,
-    VF_F_NEXT_CH = 0x01,
+    VT_F_NEXT_CH = 0x01,
     VT_F_FINAL   = 0x02,
     VT_F_COL_P   = 0x04, // Collect parameter
-    VF_F_NXT_P   = 0x08  // Next parameter
+    VT_F_NXT_P   = 0x08  // Next parameter
 } vt_f_t;   
 
 typedef enum {
@@ -149,7 +149,7 @@ vt_state_t vt_states_ground[] = {
     {VT_M_CHAR,   VT_A_CHAR, VT_F_FINAL}, // A normal character
 };
 vt_state_t vt_states_c0[] = {
-    {VT_M_C0_ESC,  VT_G_ESC,     VF_F_NEXT_CH}, // ESC
+    {VT_M_C0_ESC,  VT_G_ESC,     VT_F_NEXT_CH}, // ESC
     {VT_M_C0_NULL, VT_A_C0_NULL, VT_F_FINAL},
     {VT_M_C0_ENQ,  VT_A_C0_ENQ,  VT_F_FINAL},
     {VT_M_C0_BEL,  VT_A_C0_BEL,  VT_F_FINAL},
@@ -166,7 +166,7 @@ vt_state_t vt_states_c0[] = {
     {VT_M_C0_DC3,  VT_A_C0_DC3,  VT_F_FINAL},
 };
 vt_state_t vt_states_esc[] = {
-    {'[',          VT_G_CSI,          VF_F_NEXT_CH}, // ESC [
+    {'[',          VT_G_CSI,          VT_F_NEXT_CH}, // ESC [
     {'D',          VT_A_IND,          VT_F_FINAL}, // ESC D
     {'E',          VT_A_NEL,          VT_F_FINAL}, // ESC E
     {'H',          VT_A_HTS,          VT_F_FINAL}, // ESC H
@@ -186,8 +186,8 @@ vt_state_t vt_states_csi[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NONE}, // ESC [0-9
 };
 vt_state_t vt_states_csi_p[] = {
-    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NONE}, // Collect param digits
-    {';',          VT_G_CSI_P,        VT_F_NONE}, // Next param
+    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
+    {';',          VT_G_CSI_P,        VT_F_NXT_P|VT_F_NEXT_CH}, // Next param
     {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE}, // ESC [0-9;s
 };
 vt_state_t vt_states_csi_f[] = {
@@ -262,11 +262,11 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
                 // Collect parameter digit
                 // TODO
             }
-            if (s->f & VF_F_NXT_P) {
+            if (s->f & VT_F_NXT_P) {
                 // Next parameter
                 // TODO
             }
-            if (s->f & (VF_F_NEXT_CH | VT_F_FINAL)) {
+            if (s->f & (VT_F_NEXT_CH | VT_F_FINAL)) {
                 // Need next char to determine action
                 return s;
             }
