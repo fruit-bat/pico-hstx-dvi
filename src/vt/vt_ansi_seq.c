@@ -87,6 +87,8 @@ typedef enum {
     VT_A_SOS,
     VT_A_PM,
     VT_A_APC,
+    VT_A_SAVE_CUR, // VT100 Save Cursor Position (ESC 7)
+    VT_A_RESTORE_CUR, // VT100 Restore Cursor Position (ESC 8)
 
 
     VT_A_CTRL_C
@@ -102,7 +104,8 @@ typedef enum {
     VT_G_NONE = -1,
     VT_G_GROUND = 0,
     VT_G_C0,
-    VT_G_ESC
+    VT_G_ESC,
+    VT_G_ESC_SBRACE,
 } vt_g_t;
 
 typedef struct {
@@ -143,18 +146,23 @@ vt_state_t vt_states_c0[] = {
     {VT_M_C0_DC3,  VT_A_C0_DC3,  VT_F_FINAL},
 };
 vt_state_t vt_states_esc[] = {
-    {'D',          VT_A_IND,     VT_F_FINAL}, // ESC D
-    {'E',          VT_A_NEL,     VT_F_FINAL}, // ESC E
-    {'H',          VT_A_HTS,     VT_F_FINAL}, // ESC H
-    {'M',          VT_A_RI,      VT_F_FINAL}, // ESC M
-    {'N',          VT_A_SS2,     VT_F_FINAL}, // ESC N
-    {'O',          VT_A_SS3,     VT_F_FINAL}, // ESC O
-    {'P',          VT_A_DCS,     VT_F_FINAL}, // ESC P
-    {'X',          VT_A_SOS,     VT_F_FINAL}, // ESC X
-    {'^',          VT_A_PM,      VT_F_FINAL}, // ESC ^
-    {'_',          VT_A_APC,     VT_F_FINAL}, // ESC _
-
-    // TODO More to be added here
+    {'[',          VT_G_ESC_SBRACE,   VF_F_NEXT_CH}, // ESC [
+    {'D',          VT_A_IND,          VT_F_FINAL}, // ESC D
+    {'E',          VT_A_NEL,          VT_F_FINAL}, // ESC E
+    {'H',          VT_A_HTS,          VT_F_FINAL}, // ESC H
+    {'M',          VT_A_RI,           VT_F_FINAL}, // ESC M
+    {'N',          VT_A_SS2,          VT_F_FINAL}, // ESC N
+    {'O',          VT_A_SS3,          VT_F_FINAL}, // ESC O
+    {'P',          VT_A_DCS,          VT_F_FINAL}, // ESC P
+    {'X',          VT_A_SOS,          VT_F_FINAL}, // ESC X
+    {'^',          VT_A_PM,           VT_F_FINAL}, // ESC ^
+    {'_',          VT_A_APC,          VT_F_FINAL}, // ESC _
+    {'7',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC 7
+    {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC 8
+};
+vt_state_t vt_states_esc_sbrace[] = {
+    {'s',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC [s
+    {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC [u
 };
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
@@ -162,7 +170,8 @@ vt_state_t vt_states_esc[] = {
 vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_ground),
     STATE_PTR(vt_states_c0),
-    STATE_PTR(vt_states_esc)
+    STATE_PTR(vt_states_esc),
+    STATE_PTR(vt_states_esc_sbrace),
 };
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
@@ -170,7 +179,8 @@ vt_state_t* vt_state_grp[] = {
 uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_ground),
     COUNT_ARR(vt_states_c0),
-    COUNT_ARR(vt_states_esc)
+    COUNT_ARR(vt_states_esc),
+    COUNT_ARR(vt_states_esc_sbrace),
 };
 
 typedef struct {
@@ -250,7 +260,16 @@ int main() {
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_IND);
     }
-
+    {
+        vt_parser_put_ch(&p, 0x1B); // ESC
+        vt_parser_put_ch(&p, '[');  // [
+        vt_state_t* s = vt_parser_put_ch(&p, 's');  // s
+        assert(s != NULL);
+        assert(s->m == 's');
+        assert(p.state == VT_G_GROUND);
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SAVE_CUR);
+    }
     return 0;
 }   
 
