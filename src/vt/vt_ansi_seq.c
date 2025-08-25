@@ -40,6 +40,7 @@ typedef enum {
     VT_M_CHAR    = -1,   // A normal character
     VT_M_NP_LOW  = -2,   // A non printing char (below 0x20 ' ')
     VT_M_DIGIT   = -3,   // A digit 0-9
+    VT_M_ANY     = -4,   // Any char
     VT_M_C0_NULL = 0x00, // Null
     VT_M_C0_ENQ  = 0x05, // Enquiry
     VT_M_C0_BEL  = 0x07, // Bell
@@ -86,7 +87,16 @@ typedef enum {
     VT_G_ESC,
     VT_G_CSI,
     VT_G_CSI_P,
-    VT_G_CSI_F
+    VT_G_CSI_F,
+    VT_G_OSC,
+    VT_G_OSC_P1,
+    VT_G_OSC_P2,
+    VT_G_OSC_P3,
+    VT_G_OSC_P4,
+    VT_G_OSC_P5,
+    VT_G_OSC_P6,
+    VT_G_OSC_P7,
+    VT_G_OSC_T,
 } vt_g_t;
 
 vt_state_t vt_states_ground[] = {
@@ -123,6 +133,7 @@ vt_state_t vt_states_c0[] = {
 };
 vt_state_t vt_states_esc[] = {
     {'[',          VT_G_CSI,          VT_F_NEXT_CH}, // ESC [
+    {']',          VT_G_OSC,          VT_F_NEXT_CH}, // ESC ]
     {'D',          VT_A_IND,          VT_F_FINAL},   // ESC D
     {'E',          VT_A_NEL,          VT_F_FINAL},   // ESC E
     {'H',          VT_A_HTS,          VT_F_FINAL},   // ESC H
@@ -141,7 +152,7 @@ vt_state_t vt_states_csi[] = {
     {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC [u
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
     {';',          VT_G_CSI_P,        VT_F_NXT_P},
-    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE},    // ESC [0-9;s
+    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE},    // ESC [c
 };
 vt_state_t vt_states_csi_p[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
@@ -167,6 +178,23 @@ vt_state_t vt_states_csi_f[] = {
     {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
     {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
 };
+vt_state_t vt_states_osc[] = {
+    {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b
+    {'R',          VT_A_XPALR,        VT_F_FINAL},    // Linux reset pallet ESC ] R
+    {VT_M_ANY,     VT_G_OSC_T,        VT_F_NONE},     // ESC ]
+};
+vt_state_t vt_states_osc_p1[] = {{VT_M_CHAR, VT_G_OSC_P2, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p2[] = {{VT_M_CHAR, VT_G_OSC_P3, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p3[] = {{VT_M_CHAR, VT_G_OSC_P4, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p4[] = {{VT_M_CHAR, VT_G_OSC_P5, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p5[] = {{VT_M_CHAR, VT_G_OSC_P6, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p6[] = {{VT_M_CHAR, VT_G_OSC_P7, VT_F_COL_OSC|VT_F_NEXT_CH}};
+vt_state_t vt_states_osc_p7[] = {{VT_M_CHAR, VT_A_XPALS,  VT_F_COL_OSC|VT_F_FINAL}};
+vt_state_t vt_states_osc_t[] = {
+    {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {VT_M_ANY,     VT_G_OSC_T,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character
+};
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
 
@@ -176,7 +204,16 @@ vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_esc),
     STATE_PTR(vt_states_csi),
     STATE_PTR(vt_states_csi_p),
-    STATE_PTR(vt_states_csi_f)
+    STATE_PTR(vt_states_csi_f),
+    STATE_PTR(vt_states_osc),
+    STATE_PTR(vt_states_osc_p1),
+    STATE_PTR(vt_states_osc_p2),
+    STATE_PTR(vt_states_osc_p3),
+    STATE_PTR(vt_states_osc_p4),
+    STATE_PTR(vt_states_osc_p5),
+    STATE_PTR(vt_states_osc_p6),
+    STATE_PTR(vt_states_osc_p7),
+    STATE_PTR(vt_states_osc_t),
 };
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
@@ -187,17 +224,28 @@ uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_esc),
     COUNT_ARR(vt_states_csi),
     COUNT_ARR(vt_states_csi_p),
-    COUNT_ARR(vt_states_csi_f)
+    COUNT_ARR(vt_states_csi_f),
+    COUNT_ARR(vt_states_osc),
+    COUNT_ARR(vt_states_osc_p1),
+    COUNT_ARR(vt_states_osc_p2),
+    COUNT_ARR(vt_states_osc_p3),
+    COUNT_ARR(vt_states_osc_p4),
+    COUNT_ARR(vt_states_osc_p5),
+    COUNT_ARR(vt_states_osc_p6),
+    COUNT_ARR(vt_states_osc_p7),
+    COUNT_ARR(vt_states_osc_t),
 };
 
 void vt_parser_init(vt_parser_t *p) {
     p->state = NULL;
     p->n_params = 0;
+    p->osc_param_len = 0;
 }
 
 bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {
     if (m < 0) {
         switch(m) {
+            case VT_M_ANY:      return true;
             case VT_M_CHAR:     return ch >= 0x20 && ch != 0x7F;
             case VT_M_NP_LOW:   return ch < 0x20;
             case VT_M_DIGIT:    return ch >= '0' && ch <= '9';
@@ -213,7 +261,11 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         
     vt_state_t* ps = p->state;
     vt_g_t g = ps && !(ps->f & VT_F_FINAL) ? (vt_g_t)ps->n : VT_G_GROUND;
-    if (g == VT_G_GROUND) p->n_params = 0;
+    if (g == VT_G_GROUND) {
+        p->n_params = 0;
+        p->osc_param_len = 0;
+        p->osc_param[0] = 0;
+    }
     vt_state_t* gps = vt_state_grp[g];
     uint8_t gpl = vt_state_grp_len[g];
 
@@ -223,6 +275,12 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
             p->state = s;
             if (s->f & VT_F_COL_CH) {
                 p->ch = ch;
+            }
+            if (s->f & VT_F_COL_OSC) {
+                if (p->osc_param_len + 2 < COUNT_ARR(p->osc_param)) {
+                    p->osc_param[p->osc_param_len++] = ch;
+                    p->osc_param[p->osc_param_len] = 0;
+                }
             }
             if (s->f & VT_F_NXT_P) {
                 // Next parameter

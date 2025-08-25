@@ -107,6 +107,11 @@ typedef enum {
     VT_A_SU,          // Scroll Up
     VT_A_SD,          // Scroll Down
 
+    VT_A_XPALS,       // Linux set pallet 
+    VT_A_XPALR,       // Linux reset pallet
+
+    VT_A_OSC,         // General OSC string handling
+
     VT_A_NONE         // Do nothing!
 } vt_a_t;
 
@@ -117,6 +122,7 @@ typedef enum {
     VT_F_COL_P   = 0x04, // Collect parameter
     VT_F_NXT_P   = 0x08, // Next parameter
     VT_F_COL_CH  = 0x10, // Collect a character
+    VT_F_COL_OSC = 0x20, // Collect OSC string
 } vt_f_t;   
 
 typedef struct {
@@ -126,10 +132,12 @@ typedef struct {
 } vt_state_t;
 
 typedef struct {
-    vt_state_t* state; // Current state
-    uint32_t params[16]; // Parameters collected
-    uint8_t n_params; // Number of parameters collected
+    vt_state_t* state;             // Current state
+    uint32_t params[16];           // Parameters collected
+    uint8_t n_params;              // Number of parameters collected
     vt_char_t ch;
+    vt_char_t osc_param[128];     // Control sequences & title
+    uint8_t osc_param_len;
 } vt_parser_t;
 
 void vt_parser_init(vt_parser_t *p);

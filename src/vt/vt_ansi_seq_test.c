@@ -30,7 +30,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "vt_ansi_seq.h"
-
+#include <string.h>
 #include <assert.h>
 
 int main() {
@@ -217,6 +217,28 @@ int main() {
     // TODO CSI 4i		AUX Port Off	Disable aux serial port usually for local serial printer
     // TODO CSI 6n	DSR	Device Status Report	Reports the cursor position (CPR) by transmitting ESC[n;mR, where n is the row and m is the column.
 
+    // Linux style osc
+    // Set and reset pallet
+    {
+        vt_parser_put_str(&p, (vt_char_t*)"\033]P0123456");
+        assert(p.state->n == VT_A_XPALS);
+        assert(p.osc_param_len == 7);
+        assert(strcmp((char*)(p.osc_param), "0123456") == 0);
+    }
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033]R")->n == VT_A_XPALR);
+    {
+        vt_parser_put_str(&p, (vt_char_t*)"\033]8;;https://example.com\x9C");
+        assert(p.state->n == VT_A_OSC);
+        assert(p.osc_param_len == 22);
+        assert(strcmp((char*)(p.osc_param), "8;;https://example.com") == 0);
+    }
+    {
+        vt_parser_put_str(&p, (vt_char_t*)"\033]8;;https://example.com\x07");
+        assert(p.state->n == VT_A_OSC);
+        assert(p.osc_param_len == 22);
+        assert(strcmp((char*)(p.osc_param), "8;;https://example.com") == 0);
+    }
+    printf("all ok\n");
     return 0;
 }   
 
