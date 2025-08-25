@@ -184,7 +184,7 @@ vt_state_t vt_states_esc[] = {
 vt_state_t vt_states_csi[] = {
     {'s',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC [s
     {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC [u
-    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NONE}, // ESC [0-9
+    {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
 };
 vt_state_t vt_states_csi_p[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
@@ -257,7 +257,12 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         
     vt_state_t* ps = p->state;
     vt_g_t g = ps && !(ps->f & VT_F_FINAL) ? (vt_g_t)ps->n : VT_G_GROUND;
-    if (g == VT_G_GROUND) p->n_params = 0;
+    if (g == VT_G_GROUND) {
+        p->n_params = 0;
+        for (uint8_t i = 0; i < COUNT_ARR(p->params); ++i) {
+            p->params[i] = 0;
+        }
+    }
     vt_state_t* gps = vt_state_grp[g];
     uint8_t gpl = vt_state_grp_len[g];
 
@@ -265,23 +270,22 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         vt_state_t* s = &gps[i];
         if (vt_parser_match_ch(s->m, ch)) {
             p->state = s;
-            if (s->f & VT_F_COL_P) {
-                // Collect parameter digit
-                uint8_t np = p->n_params;
-                if (np < COUNT_ARR(p->params)) {
-                    if (np) {
-                        p->params[np-1] = p->params[np-1] * 10 + (ch - '0');
-                    }
-                    else {
-                        p->params[0] = ch - '0';
-                        p->n_params = 1;
-                    }
-                }
-            }
             if (s->f & VT_F_NXT_P) {
                 // Next parameter
                 if (p->n_params < COUNT_ARR(p->params)) {
+                    p->params[p->n_params] = 0;
                     p->n_params++;
+                }
+                else {
+                    // Too many parameters, ignore
+                    // TODO consider failure mode
+                }
+            }
+            if (s->f & VT_F_COL_P)  {
+                // Collect parameter digit
+                uint8_t pi = p->n_params - 1;
+                if (pi < COUNT_ARR(p->params)) {
+                    p->params[pi] = p->params[pi] * 10 + (ch - '0');
                 }
             }
             if (s->f & (VT_F_NEXT_CH | VT_F_FINAL)) {
@@ -372,6 +376,20 @@ int main() {
         assert(s->n == VT_A_SGR);
         assert(p.n_params == 1);
         assert(p.params[0] == 456);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[1;2;3;4;5;0m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 6);
+        assert(p.params[0] == 1);
+        assert(p.params[1] == 2);
+        assert(p.params[2] == 3);
+        assert(p.params[3] == 4);
+        assert(p.params[4] == 5);
+        assert(p.params[5] == 0);
     }
     return 0;
 }   
