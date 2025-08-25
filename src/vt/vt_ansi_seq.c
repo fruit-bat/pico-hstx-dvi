@@ -106,14 +106,12 @@ typedef enum {
     VT_A_RM,          // Reset Mode
     VT_A_SM,          // Set Mode
 
-
-    VT_A_CTRL_C
 } vt_a_t;
 
 typedef enum {
     VT_F_NONE    = 0x00,
-    VT_F_NEXT_CH = 0x01,
-    VT_F_FINAL   = 0x02,
+    VT_F_NEXT_CH = 0x01, // Another charater is needed to complete the sequence
+    VT_F_FINAL   = 0x02, // Leaf node (n) now contains an action code VT_A_xxx
     VT_F_COL_P   = 0x04, // Collect parameter
     VT_F_NXT_P   = 0x08  // Next parameter
 } vt_f_t;   
@@ -185,6 +183,8 @@ vt_state_t vt_states_csi[] = {
     {'s',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC [s
     {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC [u
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
+    {';',          VT_G_CSI_P,        VT_F_NXT_P},
+    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE}, // ESC [0-9;s
 };
 vt_state_t vt_states_csi_p[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
@@ -390,6 +390,34 @@ int main() {
         assert(p.params[3] == 4);
         assert(p.params[4] == 5);
         assert(p.params[5] == 0);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 0);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[5;m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 2);
+        assert(p.params[0] == 5);
+        assert(p.params[1] == 0);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[;m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 2);
+        assert(p.params[0] == 0);
+        assert(p.params[1] == 0);
     }
     return 0;
 }   
