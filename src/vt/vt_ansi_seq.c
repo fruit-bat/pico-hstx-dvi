@@ -425,6 +425,52 @@ int main() {
         assert(p.params[0] == 0);
         assert(p.params[1] == 0);
     }
+
+    // Test a list of example sequences
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x00')->n == VT_A_C0_NULL);
+    
+    // C0 codes
+    //
+    // See: https://en.wikipedia.org/wiki/ANSI_escape_code
+    //
+    // ^G	0x07	BEL	Bell	Makes an audible noise.
+    // ^H	0x08	BS	Backspace	Moves the cursor left (but may "backwards wrap" if cursor is at start of line).
+    // ^I	0x09	HT	Tab	Moves the cursor right to next tab stop.
+    // ^J	0x0A	LF	Line Feed	Moves to next line, scrolls the display up if at bottom of the screen. Usually does not move horizontally, though programs should not rely on this.
+    // ^L	0x0C	FF	Form Feed	Move a printer to top of next page. Usually does not move horizontally, though programs should not rely on this. Effect on video terminals varies.
+    // ^M	0x0D	CR	Carriage Return	Moves the cursor to column zero.
+    // ^[	0x1B	ESC	Escape	Starts all the escape sequences
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x07')->n == VT_A_C0_BEL);
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x08')->n == VT_A_C0_BS);
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x09')->n == VT_A_C0_HT);
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x0A')->n == VT_A_C0_LF);
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x0C')->n == VT_A_C0_FF);
+    assert(vt_parser_put_ch(&p, (vt_char_t)'\x0D')->n == VT_A_C0_CR);
+    
+    // C1 codes
+    //
+    // See: https://en.wikipedia.org/wiki/ANSI_escape_code
+    //
+    // ESC N	0x8E	SS2	Single Shift Two	Select a single character from one of the alternative character sets. SS2 selects the G2 character set, and SS3 selects the G3 character set.[17] In a 7-bit environment, this is followed by one or more GL bytes (0x20–0x7F) specifying a character from that set.[15]: 9.4  In an 8-bit environment, these may instead be GR bytes (0xA0–0xFF).[15]: 8.4 
+    // ESC O	0x8F	SS3	Single Shift Three
+    // ESC P	0x90	DCS	Device Control String	Terminated by ST.[16]: 5.6  Xterm's uses of this sequence include defining User-Defined Keys, and requesting or setting Termcap/Terminfo data.[17]
+    // ESC \	0x9C	ST	String Terminator	Terminates strings in other controls.[16]: 8.3.143 
+    // ESC ]	0x9D	OSC	Operating System Command	Starts a control string for the operating system to use, terminated by ST.[16]: 8.3.89 
+    // ESC X	0x98	SOS	Start of String	Takes an argument of a string of text, terminated by ST.[16]: 5.6  The uses for these string control sequences are defined by the application[16]: 8.3.2, 8.3.128  or privacy discipline.[16]: 8.3.94  These functions are rarely implemented and the arguments are ignored by xterm.[17] Some Kermit clients allow the server to automatically execute Kermit commands on the client by embedding them in APC sequences; this is a potential security risk if the server is untrusted.[18]
+    // ESC ^	0x9E	PM	Privacy Message
+    // ESC _	0x9F	APC	Application Program Command
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033N")->n == VT_A_SS2);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033O")->n == VT_A_SS3);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033P")->n == VT_A_DCS);
+    // TODO ST
+    // TODO OSC
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033X")->n == VT_A_SOS);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033^")->n == VT_A_PM);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033_")->n == VT_A_APC);
+
+
+
+
     return 0;
 }   
 
