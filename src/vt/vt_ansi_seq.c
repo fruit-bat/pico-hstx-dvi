@@ -13,7 +13,7 @@ typedef int16_t vt_match_t; // Match symbol
 typedef enum {
     VT_M_CHAR = -1,      // A normal character
     VT_M_NP_LOW = -2,    // A non printing char (below 0x20 ' ')
-    VT_M_DIGIT = -3,      // A digit 0-9
+    VT_M_DIGIT = -3,     // A digit 0-9
     VT_M_C0_NULL = 0x00, // Null
     VT_M_C0_ENQ  = 0x05, // Enquiry
     VT_M_C0_BEL  = 0x07, // Bell
@@ -44,67 +44,67 @@ typedef enum {
     VT_M_C1_PM  = 0x9E, // Privacy Message
     VT_M_C1_APC = 0x9F, // Application Program Command
 
-    VT_M_CSI = 0x9B, // Control Sequence Introducer
-    VT_M_OSC = 0x9D, // Operating System Command
-    VT_M_ST  = 0x9C, // String Terminator
-    VT_M_DCS = 0x90, // Device Control String
-    VT_M_SOS = 0x98, // Start of String
-    VT_M_PM  = 0x9E, // Privacy Message
-    VT_M_APC = 0x9F  // Application Program Command
+    VT_M_CSI = 0x9B,    // Control Sequence Introducer
+    VT_M_OSC = 0x9D,    // Operating System Command
+    VT_M_ST  = 0x9C,    // String Terminator
+    VT_M_DCS = 0x90,    // Device Control String
+    VT_M_SOS = 0x98,    // Start of String
+    VT_M_PM  = 0x9E,    // Privacy Message
+    VT_M_APC = 0x9F     // Application Program Command
 } vt_m_t;
 
 typedef enum {
     VT_A_CHAR,
 
-    VT_A_C0_NULL,
-    VT_A_C0_SOH,
-    VT_A_C0_STX,
-    VT_A_C0_ETX,
-    VT_A_C0_EOT,
-    VT_A_C0_ENQ,
-    VT_A_C0_ACK,
-    VT_A_C0_BEL,
-    VT_A_C0_BS,
-    VT_A_C0_HT,
-    VT_A_C0_LF,
-    VT_A_C0_VT,
-    VT_A_C0_FF,
-    VT_A_C0_CR,
-    VT_A_C0_SO,
-    VT_A_C0_SI,
-    VT_A_C0_DLE,
-    VT_A_C0_DC1,
-    VT_A_C0_DC2,
-    VT_A_C0_DC3,
-    VT_A_C0_DC4,
+    VT_A_C0_NULL,     // C0 control codes
+    VT_A_C0_SOH,      // Start of Heading
+    VT_A_C0_STX,      // Start of Text
+    VT_A_C0_ETX,      // End of Text
+    VT_A_C0_EOT,      // End of Transmission
+    VT_A_C0_ENQ,      // Enquiry 
+    VT_A_C0_ACK,      // Acknowledge
+    VT_A_C0_BEL,      // Bell
+    VT_A_C0_BS,       // Backspace
+    VT_A_C0_HT,       // Horizontal Tab  
+    VT_A_C0_LF,       // Line Feed
+    VT_A_C0_VT,       // Vertical Tab
+    VT_A_C0_FF,       // Form Feed
+    VT_A_C0_CR,       // Carriage Return
+    VT_A_C0_SO,       // Shift Out  
+    VT_A_C0_SI,       // Shift In
+    VT_A_C0_DLE,      // Data Link Escape
+    VT_A_C0_DC1,      // Device Control 1 
+    VT_A_C0_DC2,      // Device Control 2
+    VT_A_C0_DC3,      // Device Control 3
+    VT_A_C0_DC4,      // Device Control 4
 
-    VT_A_IND, // ESC D, RC(8,4)
-    VT_A_NEL,
-    VT_A_HTS,
-    VT_A_RI,
-    VT_A_SS2,
-    VT_A_SS3,
-    VT_A_DCS,
-    VT_A_SOS,
-    VT_A_PM,
-    VT_A_APC,
-    VT_A_SAVE_CUR, // VT100 Save Cursor Position (ESC 7)
+    VT_A_IND,         // VT100 Index (ESC D)
+    VT_A_NEL,         // VT100 Next Line (ESC E)
+    VT_A_HTS,         // VT100 Horizontal Tab Set (ESC H)
+    VT_A_RI,          // VT100 Reverse Index (ESC M)
+    VT_A_SS2,         // VT100 Single Shift 2 (ESC N)
+    VT_A_SS3,         // VT100 Single Shift 3 (ESC O)
+    VT_A_DCS,         // VT100 Device Control String (ESC P)
+    VT_A_SOS,         // VT100 Start of String (ESC X)
+    VT_A_PM,          // VT100 Privacy Message (ESC ^)
+    VT_A_APC,         // VT100 Application Program Command (ESC _)
+    VT_A_SAVE_CUR,    // VT100 Save Cursor Position (ESC 7)
     VT_A_RESTORE_CUR, // VT100 Restore Cursor Position (ESC 8)
 
-    VT_A_CUU,
-    VT_A_CUD,
-    VT_A_CUF,
-    VT_A_CUB,
-    VT_A_CUP,
-    VT_A_CHA,
-    VT_A_CHT,
-    VT_A_ED,
-    VT_A_EL,
-    VT_A_SGR,
-    VT_A_DECSTBM,
-    VT_A_DA, 
-    VT_A_RM,
-    VT_A_SM,
+    VT_A_CUU,         // CUU - Cursor Up
+    VT_A_CUD,         // CUD - Cursor Down 
+    VT_A_CUF,         // CUF - Cursor Forward
+    VT_A_CUB,         // CUB - Cursor Back
+    VT_A_CUP,         // CUP - Cursor Position
+    VT_A_CHA,         // CHA - Cursor Horizontal Absolute 
+    VT_A_CHT,         // CHT - Cursor Horizontal Tabulation
+    VT_A_ED,          // ED  - Erase in Display
+    VT_A_EL,          // EL  - Erase in Line
+    VT_A_SGR,         // Select Graphic Rendition
+    VT_A_DECSTBM,     // Set Top and Bottom Margins
+    VT_A_DA,          // Device Attributes
+    VT_A_RM,          // Reset Mode
+    VT_A_SM,          // Set Mode
 
 
     VT_A_CTRL_C
@@ -146,6 +146,7 @@ vt_state_t vt_states_ground[] = {
     {VT_M_C1_SOS, VT_A_SOS,  VT_F_FINAL},
     {VT_M_C1_PM,  VT_A_PM,   VT_F_FINAL},
     {VT_M_C1_APC, VT_A_APC,  VT_F_FINAL},
+    {VT_M_CSI,    VT_G_CSI,  VT_F_NEXT_CH}, // CSI
     {VT_M_CHAR,   VT_A_CHAR, VT_F_FINAL}, // A normal character
 };
 vt_state_t vt_states_c0[] = {
@@ -229,10 +230,13 @@ uint8_t vt_state_grp_len[] = {
 
 typedef struct {
     vt_g_t state; // Current state group
+    uint32_t params[16]; // Parameters collected
+    uint8_t n_params; // Number of parameters collected
 } vt_parser_t;
 
 void vt_parser_init(vt_parser_t *p) {
     p->state = VT_G_GROUND;
+    p->n_params = 0;
 }
 
 bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {
@@ -260,11 +264,22 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
             p->state = s->f & VT_F_FINAL ? VT_G_GROUND : (vt_g_t)s->n;
             if (s->f & VT_F_COL_P) {
                 // Collect parameter digit
-                // TODO
+                uint8_t np = p->n_params;
+                if (np < COUNT_ARR(p->params)) {
+                    if (np) {
+                        p->params[np-1] = p->params[np-1] * 10 + (ch - '0');
+                    }
+                    else {
+                        p->params[0] = ch - '0';
+                        p->n_params = 1;
+                    }
+                }
             }
             if (s->f & VT_F_NXT_P) {
                 // Next parameter
-                // TODO
+                if (p->n_params < COUNT_ARR(p->params)) {
+                    p->n_params++;
+                }
             }
             if (s->f & (VT_F_NEXT_CH | VT_F_FINAL)) {
                 // Need next char to determine action
@@ -280,8 +295,19 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         }
         ++i;
     }
-    p->state = VT_G_GROUND;
+    vt_parser_init(p);
     return NULL;
+}
+
+vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s) {
+    vt_state_t* last = NULL;
+    for (vt_char_t* c = s; *c; ++c) {
+        vt_state_t* st = vt_parser_put_ch(p, *c);
+        if (st) {
+            last = st;
+        }
+    }
+    return last;
 }
 
 #include <assert.h>
@@ -322,6 +348,24 @@ int main() {
         assert(p.state == VT_G_GROUND);
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SAVE_CUR);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[s"); // ESC
+        assert(s != NULL);
+        assert(s->m == 's');
+        assert(p.state == VT_G_GROUND);
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SAVE_CUR);
+    }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[123m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(p.state == VT_G_GROUND);
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 1);
+        assert(p.params[0] == 123);
     }
     return 0;
 }   
