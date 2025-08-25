@@ -113,7 +113,8 @@ typedef enum {
     VT_F_NEXT_CH = 0x01, // Another charater is needed to complete the sequence
     VT_F_FINAL   = 0x02, // Leaf node (n) now contains an action code VT_A_xxx
     VT_F_COL_P   = 0x04, // Collect parameter
-    VT_F_NXT_P   = 0x08  // Next parameter
+    VT_F_NXT_P   = 0x08, // Next parameter
+    VT_F_COL_CH  = 0x10, // Collect a character
 } vt_f_t;   
 
 typedef enum {
@@ -145,7 +146,7 @@ vt_state_t vt_states_ground[] = {
     {VT_M_C1_PM,  VT_A_PM,   VT_F_FINAL},
     {VT_M_C1_APC, VT_A_APC,  VT_F_FINAL},
     {VT_M_CSI,    VT_G_CSI,  VT_F_NEXT_CH}, // CSI
-    {VT_M_CHAR,   VT_A_CHAR, VT_F_FINAL}, // A normal character
+    {VT_M_CHAR,   VT_A_CHAR, VT_F_COL_CH|VT_F_FINAL}, // A normal character
 };
 vt_state_t vt_states_c0[] = {
     {VT_M_C0_ESC,  VT_G_ESC,     VT_F_NEXT_CH}, // ESC
@@ -232,6 +233,7 @@ typedef struct {
     vt_state_t* state; // Current state
     uint32_t params[16]; // Parameters collected
     uint8_t n_params; // Number of parameters collected
+    vt_char_t ch;
 } vt_parser_t;
 
 void vt_parser_init(vt_parser_t *p) {
@@ -270,6 +272,9 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         vt_state_t* s = &gps[i];
         if (vt_parser_match_ch(s->m, ch)) {
             p->state = s;
+            if (s->f & VT_F_COL_CH) {
+                p->ch = ch;
+            }
             if (s->f & VT_F_NXT_P) {
                 // Next parameter
                 if (p->n_params < COUNT_ARR(p->params)) {
@@ -329,6 +334,7 @@ int main() {
         assert(s->m == VT_M_CHAR);
         assert(s->n == VT_A_CHAR);
         assert(s->f & VT_F_FINAL);
+        assert(p.ch == 'D');
     }
     {
         vt_state_t* s = vt_parser_put_ch(&p, 0x1B); // ESC
