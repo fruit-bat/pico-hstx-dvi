@@ -181,7 +181,7 @@ vt_state_t vt_states_csi_f[] = {
 vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b
     {'R',          VT_A_XPALR,        VT_F_FINAL},    // Linux reset pallet ESC ] R
-    {VT_M_ANY,     VT_G_OSC_T,        VT_F_NONE},     // ESC ]
+    {VT_M_CHAR,    VT_G_OSC_T,        VT_F_NONE},     // ESC ]
 };
 vt_state_t vt_states_osc_p1[] = {{VT_M_CHAR, VT_G_OSC_P2, VT_F_COL_OSC|VT_F_NEXT_CH}};
 vt_state_t vt_states_osc_p2[] = {{VT_M_CHAR, VT_G_OSC_P3, VT_F_COL_OSC|VT_F_NEXT_CH}};
