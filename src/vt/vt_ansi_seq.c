@@ -95,16 +95,21 @@ typedef enum {
     VT_A_CUD,         // CUD - Cursor Down 
     VT_A_CUF,         // CUF - Cursor Forward
     VT_A_CUB,         // CUB - Cursor Back
+    VT_A_CNL,         // CNL - Cursor Next Line
+    VT_A_CPL,         // CPL - Cursor Previous Line
     VT_A_CUP,         // CUP - Cursor Position
     VT_A_CHA,         // CHA - Cursor Horizontal Absolute 
     VT_A_CHT,         // CHT - Cursor Horizontal Tabulation
     VT_A_ED,          // ED  - Erase in Display
     VT_A_EL,          // EL  - Erase in Line
+    VT_A_HVP,         // HVP - Horizontal Vertical Position
     VT_A_SGR,         // Select Graphic Rendition
     VT_A_DECSTBM,     // Set Top and Bottom Margins
     VT_A_DA,          // Device Attributes
     VT_A_RM,          // Reset Mode
     VT_A_SM,          // Set Mode
+    VT_A_SU,          // Scroll Up
+    VT_A_SD,          // Scroll Down
 
 } vt_a_t;
 
@@ -197,10 +202,15 @@ vt_state_t vt_states_csi_f[] = {
     {'B',          VT_A_CUD,          VT_F_FINAL}, // ESC [nB
     {'C',          VT_A_CUF,          VT_F_FINAL}, // ESC [nC
     {'D',          VT_A_CUB,          VT_F_FINAL}, // ESC [nD
+    {'E',          VT_A_CNL,          VT_F_FINAL}, // ESC [nE          
+    {'F',          VT_A_CPL,          VT_F_FINAL}, // ESC [nF
+    {'f',          VT_A_HVP,          VT_F_FINAL}, // ESC [nf
+    {'G',          VT_A_CHA,          VT_F_FINAL}, // ESC [nG          
     {'H',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nH
-    {'f',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nF
     {'J',          VT_A_ED,           VT_F_FINAL}, // ESC [nJ
     {'K',          VT_A_EL,           VT_F_FINAL}, // ESC [nK
+    {'S',          VT_A_SU,           VT_F_FINAL}, // ESC [nS
+    {'T',          VT_A_SD,           VT_F_FINAL}, // ESC [nT
     {'m',          VT_A_SGR,          VT_F_FINAL}, // ESC [n;n;...m
     {'r',          VT_A_DECSTBM,      VT_F_FINAL}, // ESC [t;r
     {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
@@ -468,8 +478,47 @@ int main() {
     assert(vt_parser_put_str(&p, (vt_char_t*)"\033^")->n == VT_A_PM);
     assert(vt_parser_put_str(&p, (vt_char_t*)"\033_")->n == VT_A_APC);
 
-
-
+    // CSI codes
+    //
+    // See: https://en.wikipedia.org/wiki/ANSI_escape_code
+    //
+    // CSI n A	CUU	Cursor Up	Moves the cursor n (default 1) cells in the given direction. If the cursor is already at the edge of the screen, this has no effect.
+    // CSI n B	CUD	Cursor Down
+    // CSI n C	CUF	Cursor Forward
+    // CSI n D	CUB	Cursor Back
+    // CSI n E	CNL	Cursor Next Line	Moves cursor to beginning of the line n (default 1) lines down. (not ANSI.SYS)
+    // CSI n F	CPL	Cursor Previous Line	Moves cursor to beginning of the line n (default 1) lines up. (not ANSI.SYS)
+    // CSI n G	CHA	Cursor Horizontal Absolute	Moves the cursor to column n (default 1). (not ANSI.SYS)
+    // CSI n ; m H	CUP	Cursor Position	Moves the cursor to row n, column m. The values are 1-based, and default to 1 (top left corner) if omitted. A sequence such as CSI ;5H is a synonym for CSI 1;5H as well as CSI 17;H is the same as CSI 17H and CSI 17;1H
+    // CSI n J	ED	Erase in Display	Clears part of the screen. If n is 0 (or missing), clear from cursor to end of screen. If n is 1, clear from cursor to beginning of the screen. If n is 2, clear entire screen (and moves cursor to upper left on DOS ANSI.SYS). If n is 3, clear entire screen and delete all lines saved in the scrollback buffer (this feature was added for xterm and is supported by other terminal applications).
+    // CSI n K	EL	Erase in Line	Erases part of the line. If n is 0 (or missing), clear from cursor to the end of the line. If n is 1, clear from cursor to beginning of the line. If n is 2, clear entire line. Cursor position does not change.
+    // CSI n S	SU	Scroll Up	Scroll whole page up by n (default 1) lines. New lines are added at the bottom. (not ANSI.SYS)
+    // CSI n T	SD	Scroll Down	Scroll whole page down by n (default 1) lines. New lines are added at the top. (not ANSI.SYS)
+    // CSI n ; m f	HVP	Horizontal Vertical Position	Same as CUP, but counts as a format effector function (like CR or LF) rather than an editor function (like CUD or CNL). This can lead to different handling in certain terminal modes.[16]: Annex A 
+    // CSI n m	SGR	Select Graphic Rendition	Sets colors and style of the characters following this code
+    // CSI 5i		AUX Port On	Enable aux serial port usually for local serial printer
+    // CSI 4i		AUX Port Off	Disable aux serial port usually for local serial printer
+    // CSI 6n	DSR	Device Status Report	Reports the cursor position (CPR) by transmitting ESC[n;mR, where n is the row and m is the column.
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[A")->n == VT_A_CUU);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[B")->n == VT_A_CUD);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[C")->n == VT_A_CUF);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[D")->n == VT_A_CUB);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[E")->n == VT_A_CNL);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[F")->n == VT_A_CPL);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[G")->n == VT_A_CHA);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[H")->n == VT_A_CUP);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[J")->n == VT_A_ED);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[K")->n == VT_A_EL);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[S")->n == VT_A_SU);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[T")->n == VT_A_SD);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[f")->n == VT_A_HVP);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[m")->n == VT_A_SGR);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[r")->n == VT_A_DECSTBM);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[l")->n == VT_A_RM);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033[h")->n == VT_A_SM);
+    // TODO CSI 5i		AUX Port On	Enable aux serial port usually for local serial printer
+    // TODO CSI 4i		AUX Port Off	Disable aux serial port usually for local serial printer
+    // TODO CSI 6n	DSR	Device Status Report	Reports the cursor position (CPR) by transmitting ESC[n;mR, where n is the row and m is the column.
 
     return 0;
 }   
