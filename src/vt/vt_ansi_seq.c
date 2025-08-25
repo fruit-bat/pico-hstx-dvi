@@ -324,10 +324,7 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
 vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s) {
     vt_state_t* last = NULL;
     for (vt_char_t* c = s; *c; ++c) {
-        vt_state_t* st = vt_parser_put_ch(p, *c);
-        if (st) {
-            last = st;
-        }
+        last = vt_parser_put_ch(p, *c);
     }
     return last;
 }
