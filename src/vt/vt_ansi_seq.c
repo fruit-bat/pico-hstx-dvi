@@ -229,13 +229,13 @@ uint8_t vt_state_grp_len[] = {
 };
 
 typedef struct {
-    vt_g_t state; // Current state group
+    vt_g_t group; // Current state group
     uint32_t params[16]; // Parameters collected
     uint8_t n_params; // Number of parameters collected
 } vt_parser_t;
 
 void vt_parser_init(vt_parser_t *p) {
-    p->state = VT_G_GROUND;
+    p->group = VT_G_GROUND;
     p->n_params = 0;
 }
 
@@ -255,13 +255,13 @@ bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {
 
 vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         
-    vt_state_t* gps = vt_state_grp[p->state];
-    uint8_t gpl = vt_state_grp_len[p->state];
+    vt_state_t* gps = vt_state_grp[p->group];
+    uint8_t gpl = vt_state_grp_len[p->group];
 
     for (uint8_t i = 0; i < gpl;) {
         vt_state_t* s = &gps[i];
         if (vt_parser_match_ch(s->m, ch)) {
-            p->state = s->f & VT_F_FINAL ? VT_G_GROUND : (vt_g_t)s->n;
+            p->group = s->f & VT_F_FINAL ? VT_G_GROUND : (vt_g_t)s->n;
             if (s->f & VT_F_COL_P) {
                 // Collect parameter digit
                 uint8_t np = p->n_params;
@@ -287,8 +287,8 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
             }
             else {
                 // Keep processing with the current char
-                gps = vt_state_grp[p->state];
-                gpl = vt_state_grp_len[p->state];
+                gps = vt_state_grp[p->group];
+                gpl = vt_state_grp_len[p->group];
                 i = 0;
                 continue;
             }
@@ -322,20 +322,20 @@ int main() {
         assert(s->m == VT_M_CHAR);
         assert(s->n == VT_A_CHAR);
         assert(s->f & VT_F_FINAL);
-        assert(p.state == VT_G_GROUND);
+        assert(p.group == VT_G_GROUND);
     }
     {
         vt_state_t* s = vt_parser_put_ch(&p, 0x1B); // ESC
         assert(s != NULL);
         assert(s->m == VT_M_C0_ESC);
-        assert(p.state == VT_G_ESC);
+        assert(p.group == VT_G_ESC);
         assert((s->f & VT_F_FINAL) == 0);
     }
     {
         vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
         assert(s != NULL);
         assert(s->m == 'D');
-        assert(p.state == VT_G_GROUND);
+        assert(p.group == VT_G_GROUND);
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_IND);
     }
@@ -345,7 +345,7 @@ int main() {
         vt_state_t* s = vt_parser_put_ch(&p, 's');  // s
         assert(s != NULL);
         assert(s->m == 's');
-        assert(p.state == VT_G_GROUND);
+        assert(p.group == VT_G_GROUND);
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SAVE_CUR);
     }
@@ -353,7 +353,7 @@ int main() {
         vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[s"); // ESC
         assert(s != NULL);
         assert(s->m == 's');
-        assert(p.state == VT_G_GROUND);
+        assert(p.group == VT_G_GROUND);
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SAVE_CUR);
     }
@@ -361,7 +361,7 @@ int main() {
         vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[123m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
-        assert(p.state == VT_G_GROUND);
+        assert(p.group == VT_G_GROUND);
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SGR);
         assert(p.n_params == 1);
