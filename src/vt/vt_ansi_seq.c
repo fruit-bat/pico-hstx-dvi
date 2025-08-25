@@ -367,6 +367,16 @@ int main() {
         assert(p.n_params == 1);
         assert(p.params[0] == 123);
     }
+    {
+        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[456m"); // ESC
+        assert(s != NULL);
+        assert(s->m == 'm');
+        assert(p.group == VT_G_GROUND);
+        assert(s->f & VT_F_FINAL);
+        assert(s->n == VT_A_SGR);
+        assert(p.n_params == 1);
+        assert(p.params[0] == 456);
+    }
     return 0;
 }   
 
