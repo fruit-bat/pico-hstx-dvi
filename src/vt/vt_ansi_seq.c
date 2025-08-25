@@ -31,7 +31,9 @@
 #include <stdio.h>
 #include "vt_ansi_seq.h"
 
-// See https://vt100.net/docs/vt510-rm/chapter4.html#:~:text=A%20DCS%20control%20string%20is,or%20a%20soft%20character%20set.&text=Ignored.&text=Makes%20the%20terminal%20send%20its,the%20ANSI%20DA%20sequence%20instead.
+// See :
+//  https://vt100.net/docs/vt510-rm/chapter4.html#:~:text=A%20DCS%20control%20string%20is,or%20a%20soft%20character%20set.&text=Ignored.&text=Makes%20the%20terminal%20send%20its,the%20ANSI%20DA%20sequence%20instead.
+//  https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #define RC(R,C) ((R<<4)+(C))
 typedef enum {
