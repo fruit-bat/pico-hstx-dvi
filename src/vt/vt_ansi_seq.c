@@ -11,9 +11,9 @@ typedef int16_t vt_match_t; // Match symbol
 
 #define RC(R,C) ((R<<4)+(C))
 typedef enum {
-    VT_M_CHAR = -1,      // A normal character
-    VT_M_NP_LOW = -2,    // A non printing char (below 0x20 ' ')
-    VT_M_DIGIT = -3,     // A digit 0-9
+    VT_M_CHAR    = -1,   // A normal character
+    VT_M_NP_LOW  = -2,   // A non printing char (below 0x20 ' ')
+    VT_M_DIGIT   = -3,   // A digit 0-9
     VT_M_C0_NULL = 0x00, // Null
     VT_M_C0_ENQ  = 0x05, // Enquiry
     VT_M_C0_BEL  = 0x07, // Bell
@@ -54,7 +54,7 @@ typedef enum {
 } vt_m_t;
 
 typedef enum {
-    VT_A_CHAR,
+    VT_A_CHAR,        // A character is ready
 
     VT_A_C0_NULL,     // C0 control codes
     VT_A_C0_SOH,      // Start of Heading
@@ -172,25 +172,25 @@ vt_state_t vt_states_c0[] = {
 };
 vt_state_t vt_states_esc[] = {
     {'[',          VT_G_CSI,          VT_F_NEXT_CH}, // ESC [
-    {'D',          VT_A_IND,          VT_F_FINAL}, // ESC D
-    {'E',          VT_A_NEL,          VT_F_FINAL}, // ESC E
-    {'H',          VT_A_HTS,          VT_F_FINAL}, // ESC H
-    {'M',          VT_A_RI,           VT_F_FINAL}, // ESC M
-    {'N',          VT_A_SS2,          VT_F_FINAL}, // ESC N
-    {'O',          VT_A_SS3,          VT_F_FINAL}, // ESC O
-    {'P',          VT_A_DCS,          VT_F_FINAL}, // ESC P
-    {'X',          VT_A_SOS,          VT_F_FINAL}, // ESC X
-    {'^',          VT_A_PM,           VT_F_FINAL}, // ESC ^
-    {'_',          VT_A_APC,          VT_F_FINAL}, // ESC _
-    {'7',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC 7
-    {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC 8
+    {'D',          VT_A_IND,          VT_F_FINAL},   // ESC D
+    {'E',          VT_A_NEL,          VT_F_FINAL},   // ESC E
+    {'H',          VT_A_HTS,          VT_F_FINAL},   // ESC H
+    {'M',          VT_A_RI,           VT_F_FINAL},   // ESC M
+    {'N',          VT_A_SS2,          VT_F_FINAL},   // ESC N
+    {'O',          VT_A_SS3,          VT_F_FINAL},   // ESC O
+    {'P',          VT_A_DCS,          VT_F_FINAL},   // ESC P
+    {'X',          VT_A_SOS,          VT_F_FINAL},   // ESC X
+    {'^',          VT_A_PM,           VT_F_FINAL},   // ESC ^
+    {'_',          VT_A_APC,          VT_F_FINAL},   // ESC _
+    {'7',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC 7
+    {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC 8
 };
 vt_state_t vt_states_csi[] = {
-    {'s',          VT_A_SAVE_CUR,     VT_F_FINAL}, // ESC [s
-    {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL}, // ESC [u
+    {'s',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC [s
+    {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC [u
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
     {';',          VT_G_CSI_P,        VT_F_NXT_P},
-    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE}, // ESC [0-9;s
+    {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE},    // ESC [0-9;s
 };
 vt_state_t vt_states_csi_p[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
