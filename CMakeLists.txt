@@ -25,3 +25,10 @@ pico_generate_pio_header(pico_hstx_dvi ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_ro
 target_include_directories(pico_hstx_dvi INTERFACE
     src
 )
+
+add_library(vtlib INTERFACE)
+
+target_sources(vtlib INTERFACE
+  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_ansi_seq.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_ansi_seq.h
+)
