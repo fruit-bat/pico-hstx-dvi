@@ -269,12 +269,7 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         
     vt_state_t* ps = p->state;
     vt_g_t g = ps && !(ps->f & VT_F_FINAL) ? (vt_g_t)ps->n : VT_G_GROUND;
-    if (g == VT_G_GROUND) {
-        p->n_params = 0;
-        for (uint8_t i = 0; i < COUNT_ARR(p->params); ++i) {
-            p->params[i] = 0;
-        }
-    }
+    if (g == VT_G_GROUND) p->n_params = 0;
     vt_state_t* gps = vt_state_grp[g];
     uint8_t gpl = vt_state_grp_len[g];
 
