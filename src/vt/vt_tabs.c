@@ -31,28 +31,25 @@
 #include <stdio.h>
 #include "vt_tabs.h"
 
-const vt_char_t VT_T_CHAR = (vt_char_t)'*';
-const vt_char_t VT_N_CHAR = (vt_char_t)' ';
-
 inline static bool _vt_tabs_is_tab(
     vt_tabs_t *t,  // The tabs structure
     vt_coord_t c   // The column
 ) {
-    return t->row[c] == VT_T_CHAR;
+    return t->row[c >> 3] & (1 << (c & 7));
 }
 
 inline static void _vt_tabs_set_tab(
     vt_tabs_t *t,  // The tabs structure
     vt_coord_t c   // The column
 ) {
-    t->row[c] = VT_T_CHAR;
+    t->row[c >> 3] |= 1 << (c & 7);
 }
 
 inline static void _vt_tabs_clear_tab(
     vt_tabs_t *t,  // The tabs structure
     vt_coord_t c   // The column
 ) {
-    t->row[c] = VT_N_CHAR;
+    t->row[c >> 3] &= ~(1 << (c & 7));
 }
 
 void vt_tabs_init(

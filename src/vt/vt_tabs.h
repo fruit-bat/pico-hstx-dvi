@@ -35,7 +35,7 @@ extern "C"
 
     typedef struct
     {
-        vt_char_t row[VT_SCREEN_MAX_COLS]; // Perhaps we could use single bits for this
+        uint8_t row[(VT_SCREEN_MAX_COLS+7)>>3];
         vt_coord_t w;
     } vt_tabs_t;
 
