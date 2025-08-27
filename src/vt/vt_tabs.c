@@ -91,10 +91,9 @@ vt_coord_t vt_tabs_prev(
     vt_tabs_t *t, // The tabs structure
     vt_coord_t c // The cursor column
 ) {
-    const vt_coord_t s = c - 1;
-    if (s == 0) return c;
-    for(vt_coord_t i = s; i < t->w; ++i) {
-        if(_vt_tabs_is_tab(t, i)) return i;
+    for(vt_coord_t i = c; i > 0; --i) {
+        const vt_coord_t s = i - 1;
+        if(_vt_tabs_is_tab(t, s)) return s;
     }
     return c;
 }

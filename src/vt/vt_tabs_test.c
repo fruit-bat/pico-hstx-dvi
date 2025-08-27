@@ -48,8 +48,8 @@ int main() {
         5   // Tab stop every 5
     );
     //printf("%s\n", (char*)&t.row);
-    //             0000000000111111
-    //             0123456789012345
+    //                      0000000000111111
+    //                      0123456789012345
     const char* expected = "*    *    *    *";
     for(vt_coord_t i = 0; i < 16; ++i) {
         assert(vt_tabs_is_tab(&t, i) == (expected[i] == '*'));
@@ -58,7 +58,18 @@ int main() {
     assert(vt_tabs_next(&t, 12) == 15);
     assert(vt_tabs_next(&t, 15) == 15);
     assert(vt_tabs_next(&t, 0) == 5);
+    assert(vt_tabs_prev(&t, 8) == 5);
+    assert(vt_tabs_prev(&t, 5) == 0);
+    assert(vt_tabs_prev(&t, 0) == 0);
 
+    vt_tabs_clear_all(&t);
+
+    for(vt_coord_t i = 0; i < 16; ++i) {
+        assert(!vt_tabs_is_tab(&t, i));
+    }
+
+    assert(vt_tabs_prev(&t, 8) == 8);
+    assert(vt_tabs_next(&t, 8) == 8);
 
     printf("all ok\n");
     return 0;
