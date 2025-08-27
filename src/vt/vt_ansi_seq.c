@@ -25,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- #include <stdint.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -97,6 +97,8 @@ typedef enum {
     VT_G_OSC_P6,
     VT_G_OSC_P7,
     VT_G_OSC_T,
+    VT_G_OSC_C,
+    VT_G_OSC_D,
 } vt_g_t;
 
 vt_state_t vt_states_ground[] = {
@@ -181,6 +183,8 @@ vt_state_t vt_states_csi_f[] = {
 vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b
     {'R',          VT_A_XPALR,        VT_F_FINAL},    // Linux reset pallet ESC ] R
+    // TODO at least parse out the command - up to the first ;
+    // The command can go into the numeric parameters
     {VT_M_CHAR,    VT_G_OSC_T,        VT_F_NONE},     // ESC ]
 };
 vt_state_t vt_states_osc_p1[] = {{VT_M_CHAR, VT_G_OSC_P2, VT_F_COL_OSC|VT_F_NEXT_CH}};
@@ -193,7 +197,18 @@ vt_state_t vt_states_osc_p7[] = {{VT_M_CHAR, VT_A_XPALS,  VT_F_COL_OSC|VT_F_FINA
 vt_state_t vt_states_osc_t[] = {
     {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
-    {VT_M_ANY,     VT_G_OSC_T,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character
+    {VT_M_DIGIT,   VT_G_OSC_C,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
+};
+vt_state_t vt_states_osc_c[] = {
+    {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {';',          VT_G_OSC_D,        VT_F_NEXT_CH},
+    {VT_M_ANY,     VT_G_OSC_C,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character
+};
+vt_state_t vt_states_osc_d[] = {
+    {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
+    {VT_M_ANY,     VT_G_OSC_D,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character  
 };
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
@@ -214,6 +229,8 @@ vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_osc_p6),
     STATE_PTR(vt_states_osc_p7),
     STATE_PTR(vt_states_osc_t),
+    STATE_PTR(vt_states_osc_c),
+    STATE_PTR(vt_states_osc_d),
 };
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
@@ -234,6 +251,8 @@ uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_osc_p6),
     COUNT_ARR(vt_states_osc_p7),
     COUNT_ARR(vt_states_osc_t),
+    COUNT_ARR(vt_states_osc_c),
+    COUNT_ARR(vt_states_osc_d),
 };
 
 void vt_parser_init(vt_parser_t *p) {

@@ -225,14 +225,18 @@ int main() {
     {
         vt_parser_put_str(&p, (vt_char_t*)"\033]8;;https://example.com\x9C");
         assert(p.state->n == VT_A_OSC);
-        assert(p.osc_param_len == 22);
-        assert(strcmp((char*)(p.osc_param), "8;;https://example.com") == 0);
+        assert(p.n_params == 1);
+        assert(p.params[0] == 8);
+        assert(p.osc_param_len == 20);
+        assert(strcmp((char*)(p.osc_param), ";https://example.com") == 0);
     }
     {
         vt_parser_put_str(&p, (vt_char_t*)"\033]8;;https://example.com\x07");
         assert(p.state->n == VT_A_OSC);
-        assert(p.osc_param_len == 22);
-        assert(strcmp((char*)(p.osc_param), "8;;https://example.com") == 0);
+        assert(p.n_params == 1);
+        assert(p.params[0] == 8);
+        assert(p.osc_param_len == 20);
+        assert(strcmp((char*)(p.osc_param), ";https://example.com") == 0);
     }
     printf("all ok\n");
     return 0;
