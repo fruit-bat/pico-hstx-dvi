@@ -25,55 +25,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include <stdint.h>
-#include "vt_types.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif
+extern "C" {
+#endif 
 
-    typedef struct
-    {
-        uint8_t row[(VT_SCREEN_MAX_COLS+7)>>3];
-        vt_coord_t w;
-    } vt_tabs_t;
-
-    void vt_tabs_init(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t w,  // The width of the screen
-        vt_coord_t tw  // The width of tabs (default 8)
-    );
-
-    void vt_tabs_clear_all(
-        vt_tabs_t *t   // The tabs structure
-    );
-
-    vt_coord_t vt_tabs_next(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The cursor column
-    );
-
-    vt_coord_t vt_tabs_prev(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The cursor column
-    );
-
-    bool vt_tabs_is_tab(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The column
-    );
-
-    void vt_tabs_set_tab(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The column
-    );
-    
-    void vt_tabs_clear_tab(
-        vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The column
-    );
+#define VT_SCREEN_MAX_COLS 80
+typedef uint8_t vt_char_t;  // The character type
+typedef uint8_t vt_coord_t; // cols, rows, col, row etc.
+typedef int16_t vt_match_t; // Match symbol
 
 #ifdef __cplusplus
 }
-#endif
+#endif 
+
