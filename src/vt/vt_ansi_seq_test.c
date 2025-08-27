@@ -24,7 +24,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/* Build instructions:
+ *
+ * cc -Wall vt_ansi_seq.c vt_ansi_seq_test.c 
+ * 
+ * ./a.out
+ *
+ */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

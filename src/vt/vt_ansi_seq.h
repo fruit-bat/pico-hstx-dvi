@@ -126,17 +126,17 @@ typedef enum {
 } vt_f_t;   
 
 typedef struct {
-    vt_match_t m; // A symbol to match
-    int8_t n; // The next state or the action to take
-    uint8_t f; // Flags
+    vt_match_t m;   // A symbol to match
+    int8_t n;       // The next state or the action to take
+    uint8_t f;      // Flags
 } vt_state_t;
 
 typedef struct {
-    const vt_state_t* state;             // Current state
+    const vt_state_t* state;       // Current state
     uint32_t params[16];           // Parameters collected
     uint8_t n_params;              // Number of parameters collected
     vt_char_t ch;
-    vt_char_t osc_param[128];     // Control sequences & title
+    vt_char_t osc_param[128];      // Control sequences & title
     uint8_t osc_param_len;
 } vt_parser_t;
 
