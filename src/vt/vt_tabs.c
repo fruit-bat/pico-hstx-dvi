@@ -77,7 +77,7 @@ void vt_tabs_clear_all(
 
 vt_coord_t vt_tabs_next(
     vt_tabs_t *t, // The tabs structure
-    vt_coord_t c // The cursor column
+    vt_coord_t c  // The cursor column
 ) {
     const vt_coord_t s = c  + 1;
     if (s >= t->w) return c;
@@ -89,7 +89,7 @@ vt_coord_t vt_tabs_next(
 
 vt_coord_t vt_tabs_prev(
     vt_tabs_t *t, // The tabs structure
-    vt_coord_t c // The cursor column
+    vt_coord_t c  // The cursor column
 ) {
     for(vt_coord_t i = c; i > 0; --i) {
         const vt_coord_t s = i - 1;
@@ -118,3 +118,4 @@ void vt_tabs_clear_tab(
 ) {
     _vt_tabs_clear_tab(t, c);
 }
+
