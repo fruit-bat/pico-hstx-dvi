@@ -37,6 +37,8 @@ int main() {
     vt_parser_t p;
     vt_parser_init(&p);
 
+    printf("Size of vt_state_t %ld\n", sizeof(vt_state_t));
+
     {
         vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
         assert(s != NULL);

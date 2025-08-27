@@ -127,7 +127,7 @@ typedef enum {
 
 typedef struct {
     vt_match_t m; // A symbol to match
-    int16_t n; // The next state or the action to take
+    int8_t n; // The next state or the action to take
     uint8_t f; // Flags
 } vt_state_t;
 
