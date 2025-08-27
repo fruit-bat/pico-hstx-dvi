@@ -25,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- #include <stdint.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -37,22 +37,22 @@ int main() {
     vt_parser_t p;
     vt_parser_init(&p);
 
-    printf("Size of vt_state_t %ld\n", sizeof(vt_state_t));
+    assert(sizeof(vt_state_t) == 4);
 
     {
-        vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
+        const vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
         assert(s != NULL);
         assert(s->n == VT_A_CHAR);
         assert(s->f & VT_F_FINAL);
         assert(p.ch == 'D');
     }
     {
-        vt_state_t* s = vt_parser_put_ch(&p, 0x1B); // ESC
+        const vt_state_t* s = vt_parser_put_ch(&p, 0x1B); // ESC
         assert(s != NULL);
         assert((s->f & VT_F_FINAL) == 0);
     }
     {
-        vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
+        const vt_state_t* s = vt_parser_put_ch(&p, 'D'); // D
         assert(s != NULL);
         assert(s->m == 'D');
         assert(s->f & VT_F_FINAL);
@@ -61,21 +61,21 @@ int main() {
     {
         vt_parser_put_ch(&p, 0x1B); // ESC
         vt_parser_put_ch(&p, '[');  // [
-        vt_state_t* s = vt_parser_put_ch(&p, 's');  // s
+        const vt_state_t* s = vt_parser_put_ch(&p, 's');  // s
         assert(s != NULL);
         assert(s->m == 's');
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SAVE_CUR);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[s"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[s"); // ESC
         assert(s != NULL);
         assert(s->m == 's');
         assert(s->f & VT_F_FINAL);
         assert(s->n == VT_A_SAVE_CUR);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[123m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[123m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);
@@ -84,7 +84,7 @@ int main() {
         assert(p.params[0] == 123);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[456m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[456m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);
@@ -93,7 +93,7 @@ int main() {
         assert(p.params[0] == 456);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[1;2;3;4;5;0m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[1;2;3;4;5;0m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);
@@ -107,7 +107,7 @@ int main() {
         assert(p.params[5] == 0);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);
@@ -115,7 +115,7 @@ int main() {
         assert(p.n_params == 0);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[5;m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[5;m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);
@@ -125,7 +125,7 @@ int main() {
         assert(p.params[1] == 0);
     }
     {
-        vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[;m"); // ESC
+        const vt_state_t* s = vt_parser_put_str(&p, (vt_char_t*)"\033[;m"); // ESC
         assert(s != NULL);
         assert(s->m == 'm');
         assert(s->f & VT_F_FINAL);

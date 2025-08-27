@@ -101,7 +101,7 @@ typedef enum {
     VT_G_OSC_D,
 } vt_g_t;
 
-vt_state_t vt_states_ground[] = {
+const vt_state_t vt_states_ground[] = {
     {VT_M_NP_LOW, VT_G_C0,   VT_F_NONE},
     {VT_M_C1_IND, VT_A_IND,  VT_F_FINAL},
     {VT_M_C1_NEL, VT_A_NEL,  VT_F_FINAL},
@@ -116,7 +116,7 @@ vt_state_t vt_states_ground[] = {
     {VT_M_CSI,    VT_G_CSI,  VT_F_NEXT_CH}, // CSI
     {VT_M_CHAR,   VT_A_CHAR, VT_F_COL_CH|VT_F_FINAL}, // A normal character
 };
-vt_state_t vt_states_c0[] = {
+const vt_state_t vt_states_c0[] = {
     {VT_M_C0_ESC,  VT_G_ESC,     VT_F_NEXT_CH}, // ESC
     {VT_M_C0_NULL, VT_A_C0_NULL, VT_F_FINAL},
     {VT_M_C0_ENQ,  VT_A_C0_ENQ,  VT_F_FINAL},
@@ -133,7 +133,7 @@ vt_state_t vt_states_c0[] = {
     {VT_M_C0_DC2,  VT_A_C0_DC2,  VT_F_FINAL},
     {VT_M_C0_DC3,  VT_A_C0_DC3,  VT_F_FINAL},
 };
-vt_state_t vt_states_esc[] = {
+const vt_state_t vt_states_esc[] = {
     {'[',          VT_G_CSI,          VT_F_NEXT_CH}, // ESC [
     {']',          VT_G_OSC,          VT_F_NEXT_CH}, // ESC ]
     {'D',          VT_A_IND,          VT_F_FINAL},   // ESC D
@@ -149,19 +149,19 @@ vt_state_t vt_states_esc[] = {
     {'7',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC 7
     {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC 8
 };
-vt_state_t vt_states_csi[] = {
+const vt_state_t vt_states_csi[] = {
     {'s',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC [s
     {'u',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC [u
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
     {';',          VT_G_CSI_P,        VT_F_NXT_P},
     {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE},    // ESC [c
 };
-vt_state_t vt_states_csi_p[] = {
+const vt_state_t vt_states_csi_p[] = {
     {VT_M_DIGIT,   VT_G_CSI_P,        VT_F_COL_P|VT_F_NEXT_CH}, // Collect param digits
     {';',          VT_G_CSI_P,        VT_F_NXT_P|VT_F_NEXT_CH}, // Next param
     {VT_M_CHAR,    VT_G_CSI_F,        VT_F_NONE}, // ESC [0-9;s
 };
-vt_state_t vt_states_csi_f[] = {
+const vt_state_t vt_states_csi_f[] = {
     {'A',          VT_A_CUU,          VT_F_FINAL}, // ESC [nA
     {'B',          VT_A_CUD,          VT_F_FINAL}, // ESC [nB
     {'C',          VT_A_CUF,          VT_F_FINAL}, // ESC [nC
@@ -180,32 +180,32 @@ vt_state_t vt_states_csi_f[] = {
     {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
     {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
 };
-vt_state_t vt_states_osc[] = {
+const vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b
     {'R',          VT_A_XPALR,        VT_F_FINAL},    // Linux reset pallet ESC ] R
     // TODO at least parse out the command - up to the first ;
     // The command can go into the numeric parameters
     {VT_M_CHAR,    VT_G_OSC_T,        VT_F_NONE},     // ESC ]
 };
-vt_state_t vt_states_osc_p1[] = {{VT_M_CHAR, VT_G_OSC_P2, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p2[] = {{VT_M_CHAR, VT_G_OSC_P3, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p3[] = {{VT_M_CHAR, VT_G_OSC_P4, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p4[] = {{VT_M_CHAR, VT_G_OSC_P5, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p5[] = {{VT_M_CHAR, VT_G_OSC_P6, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p6[] = {{VT_M_CHAR, VT_G_OSC_P7, VT_F_COL_OSC|VT_F_NEXT_CH}};
-vt_state_t vt_states_osc_p7[] = {{VT_M_CHAR, VT_A_XPALS,  VT_F_COL_OSC|VT_F_FINAL}};
-vt_state_t vt_states_osc_t[] = {
+const vt_state_t vt_states_osc_p1[] = {{VT_M_CHAR, VT_G_OSC_P2, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p2[] = {{VT_M_CHAR, VT_G_OSC_P3, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p3[] = {{VT_M_CHAR, VT_G_OSC_P4, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p4[] = {{VT_M_CHAR, VT_G_OSC_P5, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p5[] = {{VT_M_CHAR, VT_G_OSC_P6, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p6[] = {{VT_M_CHAR, VT_G_OSC_P7, VT_F_COL_OSC|VT_F_NEXT_CH}};
+const vt_state_t vt_states_osc_p7[] = {{VT_M_CHAR, VT_A_XPALS,  VT_F_COL_OSC|VT_F_FINAL}};
+const vt_state_t vt_states_osc_t[] = {
     {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_DIGIT,   VT_G_OSC_C,        VT_F_NXT_P|VT_F_COL_P|VT_F_NEXT_CH}, // ESC [0-9
 };
-vt_state_t vt_states_osc_c[] = {
+const vt_state_t vt_states_osc_c[] = {
     {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {';',          VT_G_OSC_D,        VT_F_NEXT_CH},
     {VT_M_ANY,     VT_G_OSC_C,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character
 };
-vt_state_t vt_states_osc_d[] = {
+const vt_state_t vt_states_osc_d[] = {
     {VT_M_C0_BEL,  VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ANY,     VT_G_OSC_D,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character  
@@ -213,7 +213,7 @@ vt_state_t vt_states_osc_d[] = {
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
 
-vt_state_t* vt_state_grp[] = {
+const vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_ground),
     STATE_PTR(vt_states_c0),
     STATE_PTR(vt_states_esc),
@@ -235,7 +235,7 @@ vt_state_t* vt_state_grp[] = {
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
 
-uint8_t vt_state_grp_len[] = {
+const uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_ground),
     COUNT_ARR(vt_states_c0),
     COUNT_ARR(vt_states_esc),
@@ -276,20 +276,20 @@ bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {
     }
 }
 
-vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
+const vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
         
-    vt_state_t* ps = p->state;
+    const vt_state_t* ps = p->state;
     vt_g_t g = ps && !(ps->f & VT_F_FINAL) ? (vt_g_t)ps->n : VT_G_GROUND;
     if (g == VT_G_GROUND) {
         p->n_params = 0;
         p->osc_param_len = 0;
         p->osc_param[0] = 0;
     }
-    vt_state_t* gps = vt_state_grp[g];
+    const vt_state_t* gps = vt_state_grp[g];
     uint8_t gpl = vt_state_grp_len[g];
 
     for (uint8_t i = 0; i < gpl;) {
-        vt_state_t* s = &gps[i];
+        const vt_state_t* s = &gps[i];
         if (vt_parser_match_ch(s->m, ch)) {
             p->state = s;
             if (s->f & VT_F_COL_CH) {
@@ -337,8 +337,8 @@ vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch) {
     return NULL;
 }
 
-vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s) {
-    vt_state_t* last = NULL;
+const vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s) {
+    const vt_state_t* last = NULL;
     for (vt_char_t* c = s; *c; ++c) {
         last = vt_parser_put_ch(p, *c);
     }

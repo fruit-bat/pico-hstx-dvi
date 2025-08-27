@@ -132,7 +132,7 @@ typedef struct {
 } vt_state_t;
 
 typedef struct {
-    vt_state_t* state;             // Current state
+    const vt_state_t* state;             // Current state
     uint32_t params[16];           // Parameters collected
     uint8_t n_params;              // Number of parameters collected
     vt_char_t ch;
@@ -142,9 +142,9 @@ typedef struct {
 
 void vt_parser_init(vt_parser_t *p);
 
-vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch);
+const vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch);
 
-vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s);
+const vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s);
 
 vt_a_t vt_parser_action(vt_parser_t *p);
 
