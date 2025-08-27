@@ -31,6 +31,30 @@
 #include <stdio.h>
 #include "vt_tabs.h"
 
+const vt_char_t VT_T_CHAR = (vt_char_t)'*';
+const vt_char_t VT_N_CHAR = (vt_char_t)' ';
+
+inline static bool _vt_tabs_is_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    return t->row[c] == VT_T_CHAR;
+}
+
+inline static void _vt_tabs_set_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    t->row[c] = VT_T_CHAR;
+}
+
+inline static void _vt_tabs_clear_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    t->row[c] = VT_N_CHAR;
+}
+
 void vt_tabs_init(
     vt_tabs_t *t,  // The tabs structure
     vt_coord_t w,  // The width of the screen
@@ -38,17 +62,60 @@ void vt_tabs_init(
 ) {
     if (w > VT_SCREEN_MAX_COLS) w = VT_SCREEN_MAX_COLS;
     for (vt_coord_t i = 0; i < w; i++) {
-        t->row[i] = i % tw == 0 ? (vt_char_t)'*' : (vt_char_t)' ';
+        if (i % tw == 0) _vt_tabs_set_tab(t, i);
+        else _vt_tabs_clear_tab(t, i);
     }
-    t->row[w - 1] = (vt_char_t)'*';
+    _vt_tabs_set_tab(t, w - 1);
     t->w = w;
 }
 
-void vt_tabs_clear(
+void vt_tabs_clear_all(
     vt_tabs_t *t  // The tabs structure
 ) {
-    for (vt_coord_t i = 0; i < t->w; i++) t->row[t->w - 1] = (vt_char_t)' ';
+    for (vt_coord_t i = 0; i < t->w; i++) _vt_tabs_clear_tab(t, i);
 }
 
+vt_coord_t vt_tabs_next(
+    vt_tabs_t *t, // The tabs structure
+    vt_coord_t c // The cursor column
+) {
+    const vt_coord_t s = c  + 1;
+    if (s >= t->w) return c;
+    for(vt_coord_t i = s; i < t->w; ++i) {
+        if(_vt_tabs_is_tab(t, i)) return i;
+    }
+    return c;
+}
 
+vt_coord_t vt_tabs_prev(
+    vt_tabs_t *t, // The tabs structure
+    vt_coord_t c // The cursor column
+) {
+    const vt_coord_t s = c - 1;
+    if (s == 0) return c;
+    for(vt_coord_t i = s; i < t->w; ++i) {
+        if(_vt_tabs_is_tab(t, i)) return i;
+    }
+    return c;
+}
 
+bool vt_tabs_is_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    return _vt_tabs_is_tab(t, c);
+}
+
+void vt_tabs_set_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    _vt_tabs_set_tab(t, c);
+}
+
+void vt_tabs_clear_tab(
+    vt_tabs_t *t,  // The tabs structure
+    vt_coord_t c   // The column
+) {
+    _vt_tabs_clear_tab(t, c);
+}

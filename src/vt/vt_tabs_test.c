@@ -40,14 +40,24 @@
 #include <assert.h>
 
 int main() {
+
     vt_tabs_t t;
     vt_tabs_init(
         &t, // Tabs structure
         16, // Width of 16
         5   // Tab stop every 5
     );
+    //printf("%s\n", (char*)&t.row);
+    //             0000000000111111
     //             0123456789012345
-    assert(strcmp("*    *    *    *", (char*)&t.row) == 0);
+    const char* expected = "*    *    *    *";
+    for(vt_coord_t i = 0; i < 16; ++i) {
+        assert(vt_tabs_is_tab(&t, i) == (expected[i] == '*'));
+    }
+
+    assert(vt_tabs_next(&t, 12) == 15);
+    assert(vt_tabs_next(&t, 15) == 15);
+    assert(vt_tabs_next(&t, 0) == 5);
 
 
     printf("all ok\n");

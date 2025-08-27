@@ -35,8 +35,8 @@ extern "C"
 
     typedef struct
     {
-        vt_char_t row[VT_SCREEN_MAX_COLS];
-        vt_coord_t w; 
+        vt_char_t row[VT_SCREEN_MAX_COLS]; // Perhaps we could use single bits for this
+        vt_coord_t w;
     } vt_tabs_t;
 
     void vt_tabs_init(
@@ -45,8 +45,33 @@ extern "C"
         vt_coord_t tw  // The width of tabs (default 8)
     );
 
-    void vt_tabs_clear(
+    void vt_tabs_clear_all(
         vt_tabs_t *t   // The tabs structure
+    );
+
+    vt_coord_t vt_tabs_next(
+        vt_tabs_t *t,  // The tabs structure
+        vt_coord_t c   // The cursor column
+    );
+
+    vt_coord_t vt_tabs_prev(
+        vt_tabs_t *t,  // The tabs structure
+        vt_coord_t c   // The cursor column
+    );
+
+    bool vt_tabs_is_tab(
+        vt_tabs_t *t,  // The tabs structure
+        vt_coord_t c   // The column
+    );
+
+    void vt_tabs_set_tab(
+        vt_tabs_t *t,  // The tabs structure
+        vt_coord_t c   // The column
+    );
+    
+    void vt_tabs_clear_tab(
+        vt_tabs_t *t,  // The tabs structure
+        vt_coord_t c   // The column
     );
 
 #ifdef __cplusplus
