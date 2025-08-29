@@ -43,6 +43,12 @@ int main() {
 
     assert(sizeof(vt_cell_t) == 4);
 
+    {
+        vt_cell_attr_t c1 = vt_cell_enc_attr(1,2,0);
+        vt_cell_t c3 = vt_cell_combine(c1, 42);
+        assert(vt_cell_get_attr(c3) == c1);
+    }
+
 
     printf("all ok\n");
     return 0;

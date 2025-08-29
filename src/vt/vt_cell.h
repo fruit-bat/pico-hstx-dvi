@@ -33,27 +33,38 @@ extern "C"
 {
 #endif
 
-#define VT_ATTRS_NORMAL    (0x00)
-#define VT_ATTRS_BOLD      (0x01)
-#define VT_ATTRS_DIM       (0x02)
-#define VT_ATTRS_UNDERLINE (0x04)
-#define VT_ATTRS_BLINK     (0x08)
-#define VT_ATTRS_REVERSE   (0x10)
-#define VT_ATTRS_INVISIBLE (0x20)
+#define VT_CELL_FLAGS_NORMAL    (0x00)
+#define VT_CELL_FLAGS_BOLD      (0x01)
+#define VT_CELL_FLAGS_DIM       (0x02)
+#define VT_CELL_FLAGS_UNDERLINE (0x04)
+#define VT_CELL_FLAGS_BLINK     (0x08)
+#define VT_CELL_FLAGS_REVERSE   (0x10)
+#define VT_CELL_FLAGS_INVISIBLE (0x20)
 
-typedef struct
-{
-    vt_char_t ch;
-    uint8_t at;
-    uint8_t bg;
-    uint8_t fg;
-} vt_cell_s_t;
+typedef uint32_t vt_cell_t;
+typedef uint32_t vt_cell_attr_t;
+typedef uint8_t  vt_cell_flags_t;
+typedef uint8_t  vt_cell_colour_t;
 
-typedef union
-{
-    vt_cell_s_t s; // Separate
-    uint32_t c;    // Combined
-} vt_cell_t;
+static inline vt_cell_t vt_cell_combine(vt_cell_attr_t cell, vt_char_t ch) {
+    return cell | ch;
+}
+
+static inline vt_cell_attr_t vt_cell_get_attr(vt_cell_t cell) {
+    return cell &~0xff;
+}
+
+static inline vt_char_t vt_cell_get_char(vt_cell_t cell) {
+    return cell &0xff;
+} 
+
+static inline vt_cell_attr_t vt_cell_enc_attr(
+    const vt_cell_colour_t fgci,
+    const vt_cell_colour_t bgci,
+    const vt_cell_flags_t flags
+){
+    return (((uint32_t)fgci) << 8) | (((uint32_t)bgci) << 16) | (((uint32_t)flags) << 24);
+}
 
 #ifdef __cplusplus
 }

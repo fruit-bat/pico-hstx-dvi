@@ -41,12 +41,12 @@ typedef struct
 {
     vt_coord_t mt; // Margin top row
     vt_coord_t mb; // Margin bottom row
-    vt_coord_t ri[VT_SCREEN_MAX_ROWS]; // Row indexes
     vt_coord_t r; // Cursor row
     vt_coord_t c; // Cursor column
     vt_coord_t w; // Terminal width in characters
     vt_coord_t h; // Terminal height in characters
-    vt_cell_t* grid; // Cell grid for the display
+    vt_cell_t* rp[VT_SCREEN_MAX_ROWS]; // Row pointers
+    vt_cell_attr_t attr; // The current attributes
 
 } vt_term_t;
 

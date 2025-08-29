@@ -30,6 +30,55 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "vt_term.h"
+#include "vt_cell.h"
+
+#define VT_TERM_DEFAULT_BG 0
+#define VT_TERM_DEFAULT_FG 1
+
+void vt_term_reset_attr(
+    vt_term_t* t // The terminal
+) {
+    // The default attributes
+    t->attr = vt_cell_enc_attr(
+        VT_TERM_DEFAULT_FG,
+        VT_TERM_DEFAULT_BG,
+        VT_CELL_FLAGS_NORMAL
+    );
+}
+
+static void vt_term_clearline(
+    vt_term_t* t,  // The terminal
+    vt_coord_t ri, // Row index
+    vt_coord_t sc, // The start column
+    vt_coord_t ec  // The end column
+) {
+    vt_cell_t c = vt_cell_combine(t->attr, (vt_char_t)' ');
+    vt_cell_t* rp = t->rp[ri];
+    if (ec > t->w) ec = t->w;
+    for (vt_coord_t i = sc; i < ec; i++){
+        rp[i] = c;
+    }
+}
+
+static void vt_term_clearlines(
+    vt_term_t* t,  // The terminal
+    vt_coord_t rs, // Row start
+    vt_coord_t rc  // Row count
+) {
+    if (rs >= t->h) return;
+    if (rs + rc >= t->h) rc = t->h - rs;
+    for (vt_coord_t ri = 0; ri < rc; ++ri) {
+        vt_term_clearline(t, ri, 0, t->w);
+    }
+}
+
+static void vt_term_putch(
+    vt_term_t* t,  // The terminal
+    vt_char_t ch
+) {
+    t->rp[t->r][t->c] = vt_cell_combine(t->attr, ch);
+
+}
 
 void vt_term_init(
     vt_term_t* t, // The terminal
@@ -37,19 +86,27 @@ void vt_term_init(
     vt_coord_t w, // Terminal width in characters
     vt_coord_t h  // Terminal height in characters
 ) {
-    // The screen character grid
-    t-> grid = grid;
     // Set the terminal size
     t->w = w;  // Terminal width
     t->h = h;  // Terminal height
+
     // Cursor top left
     t->c = 0;  // Cursor column
     t->r = 0;  // Cursor row
+
     // No margins
     t->mt = 0; // Margin top
     t->mb = 0; // Margin bottom
 
+    // The default attributes
+    vt_term_reset_attr(t);
 
+    // TODO perhaps these should be passed in?
+    // Initialize the row pointers
+    for(vt_coord_t r = 0; r < h; ++r) {
+        t->rp[r] = grid;
+        grid += w;
+    }
 }
 
 void vt_term_cursor_up(
