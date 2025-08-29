@@ -40,8 +40,15 @@
 #include <assert.h>
 
 int main() {
-
-
+    const vt_coord_t w = 20;
+    const vt_coord_t h = 16;
+    vt_cell_t grid[w][h];
+    vt_term_t t;
+    vt_term_init(&t, (vt_cell_t*)grid, w, h);
+    assert(t.c == 0);
+    assert(t.r == 0);
+    assert(t.w == w);
+    assert(t.h == h);
 
     printf("all ok\n");
     return 0;

@@ -1,4 +1,3 @@
-#pragma once
 /* Copyright (c) 2025 fruit-bat
  * All rights reserved.
  *
@@ -25,36 +24,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/* Build instructions:
+ *
+ * cc -Wall vt_cell.c vt_cell_test.c 
+ * 
+ * ./a.out
+ *
+ */
 #include <stdint.h>
-#include "vt_types.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include "vt_cell.h"
+#include <string.h>
+#include <assert.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+int main() {
 
-#define VT_ATTRS_NORMAL    (0x00)
-#define VT_ATTRS_BOLD      (0x01)
-#define VT_ATTRS_DIM       (0x02)
-#define VT_ATTRS_UNDERLINE (0x04)
-#define VT_ATTRS_BLINK     (0x08)
-#define VT_ATTRS_REVERSE   (0x10)
-#define VT_ATTRS_INVISIBLE (0x20)
+    assert(sizeof(vt_cell_t) == 4);
 
-typedef struct
-{
-    uint8_t ch;
-    uint8_t at;
-    uint8_t bg;
-    uint8_t fg;
-} vt_attr_c_t;
 
-typedef union
-{
-    vt_attr_c_t s; // Separate
-    uint32_t c;    // Combined
-} vt_attr_t;
+    printf("all ok\n");
+    return 0;
+}   
 
-#ifdef __cplusplus
-}
-#endif
+

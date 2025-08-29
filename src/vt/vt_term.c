@@ -31,3 +31,50 @@
 #include <stdio.h>
 #include "vt_term.h"
 
+void vt_term_init(
+    vt_term_t* t, // The terminal
+    vt_cell_t* grid, // Cell grid for the display
+    vt_coord_t w, // Terminal width in characters
+    vt_coord_t h  // Terminal height in characters
+) {
+    // The screen character grid
+    t-> grid = grid;
+    // Set the terminal size
+    t->w = w;  // Terminal width
+    t->h = h;  // Terminal height
+    // Cursor top left
+    t->c = 0;  // Cursor column
+    t->r = 0;  // Cursor row
+    // No margins
+    t->mt = 0; // Margin top
+    t->mb = 0; // Margin bottom
+
+
+}
+
+void vt_term_cursor_up(
+    vt_term_t* t
+) {
+
+
+}
+
+void vt_term_cursor_down(
+    vt_term_t* t
+) {
+
+    
+}
+
+void vt_term_scroll_up(
+    vt_term_t* t
+) {
+
+    
+}
+
+void vt_term_scroll_down(
+    vt_term_t* t
+) {
+}
+    

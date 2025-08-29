@@ -24,28 +24,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* Build instructions:
- *
- * cc -Wall vt_attr.c vt_attr_test.c 
- * 
- * ./a.out
- *
- */
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "vt_attr.h"
-#include <string.h>
-#include <assert.h>
+#include "vt_cell.h"
 
-int main() {
-
-    assert(sizeof(vt_attr_t) == 4);
-
-
-    printf("all ok\n");
-    return 0;
-}   
 
 

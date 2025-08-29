@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright (c) 2025 fruit-bat
  * All rights reserved.
  *
@@ -24,12 +25,36 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include "vt_attr.h"
+#include "vt_types.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
+#define VT_ATTRS_NORMAL    (0x00)
+#define VT_ATTRS_BOLD      (0x01)
+#define VT_ATTRS_DIM       (0x02)
+#define VT_ATTRS_UNDERLINE (0x04)
+#define VT_ATTRS_BLINK     (0x08)
+#define VT_ATTRS_REVERSE   (0x10)
+#define VT_ATTRS_INVISIBLE (0x20)
 
+typedef struct
+{
+    vt_char_t ch;
+    uint8_t at;
+    uint8_t bg;
+    uint8_t fg;
+} vt_cell_s_t;
+
+typedef union
+{
+    vt_cell_s_t s; // Separate
+    uint32_t c;    // Combined
+} vt_cell_t;
+
+#ifdef __cplusplus
+}
+#endif

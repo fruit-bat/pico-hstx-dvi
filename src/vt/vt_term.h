@@ -27,27 +27,35 @@
  */
 #include <stdint.h>
 #include "vt_types.h"
+#include "vt_cell.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-    #define VT_SCREEN_MAX_COLS 80
-    #define VT_SCREEN_MAX_ROWS 60
+#define VT_SCREEN_MAX_COLS 80
+#define VT_SCREEN_MAX_ROWS 60
 
-    typedef struct 
-    {
-        vt_coord_t mt; // Margin top (count of rows)
-        vt_coord_t mb; // Margin bottom (count of rows)
-        vt_coord_t ri[VT_SCREEN_MAX_ROWS]; // Row indexes
-        vt_coord_t r; // Cursor row
-        vt_coord_t c; // Cursor column
-        vt_coord_t w; // Screen width
-        vt_coord_t h; // Screen height
+typedef struct 
+{
+    vt_coord_t mt; // Margin top row
+    vt_coord_t mb; // Margin bottom row
+    vt_coord_t ri[VT_SCREEN_MAX_ROWS]; // Row indexes
+    vt_coord_t r; // Cursor row
+    vt_coord_t c; // Cursor column
+    vt_coord_t w; // Terminal width in characters
+    vt_coord_t h; // Terminal height in characters
+    vt_cell_t* grid; // Cell grid for the display
 
-        
-    } vt_term_t;
+} vt_term_t;
+
+void vt_term_init(
+    vt_term_t* t, // The terminal
+    vt_cell_t* grid, // Cell grid for the display
+    vt_coord_t w, // Terminal width in characters
+    vt_coord_t h  // Terminal height in characters
+);
 
 #ifdef __cplusplus
 }
