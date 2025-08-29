@@ -34,7 +34,7 @@ extern "C" {
 
 #define VT_SCREEN_MAX_COLS 80
 typedef uint8_t vt_char_t;  // The character type
-typedef uint8_t vt_coord_t; // cols, rows, col, row etc.
+typedef uint16_t vt_coord_t; // cols, rows, col, row etc.
 typedef int16_t vt_match_t; // Match symbol
 
 #ifdef __cplusplus

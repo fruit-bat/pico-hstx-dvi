@@ -60,7 +60,7 @@ static void vt_term_clearline(
     }
 }
 
-static void vt_term_clearlines(
+static void vt_term_clear_lines(
     vt_term_t* t,  // The terminal
     vt_coord_t rs, // Row start
     vt_coord_t rc  // Row count
@@ -70,6 +70,12 @@ static void vt_term_clearlines(
     for (vt_coord_t ri = 0; ri < rc; ++ri) {
         vt_term_clearline(t, ri, 0, t->w);
     }
+}
+
+static inline void vt_term_clear_screen(
+    vt_term_t* t   // The terminal
+) {
+    vt_term_clear_lines(t, 0, t->w);
 }
 
 static void vt_term_putch(
@@ -107,13 +113,79 @@ void vt_term_init(
         t->rp[r] = grid;
         grid += w;
     }
+
+    // Clear the screen
+    vt_term_clear_screen(t);
 }
 
-void vt_term_cursor_up(
-    vt_term_t* t
+void vt_term_scroll_up(
+    vt_term_t* t,  // The terminal
+    vt_coord_t rs, // The start row
+    vt_coord_t n   // Number of rows to scroll
 ) {
+    // Don't scroll the lower margin
+    if (rs > t->mb) return;
+    // Don't scroll in the bottom margin
+    vt_coord_t h = t->mb - rs;
+    if (n >= h) {
+        // If scrolling more than visible just clear the lines
+        vt_term_clear_lines(t, rs, h);
+    }
+    else {
+        n = n < h ? n : h;
+        // Rotate the line indexs
+        vt_cell_t** rp = t->rp;
+        vt_cell_t* tmp[n];
+        // Save the first n row pointers
+        for (vt_coord_t i = 0; i < n; ++i) {
+            tmp[i] = rp[rs + i];
+        }
+        // Shift the remaining row pointers up
+        for (vt_coord_t i = 0; i < h - n; ++i) {
+            rp[rs + i] = rp[rs + i + n];
+        }
+        // Restore the saved row pointers to the end
+        for (vt_coord_t i = 0; i < n; ++i) {
+            rp[rs + h - n + i] = tmp[i];
+        }
+        // Clear the lines that have been moved to the bottom
+        vt_term_clear_lines(t, rs + h - n, n);
+    }
+}
 
 
+void vt_term_scroll_down(
+    vt_term_t* t,  // The terminal
+    vt_coord_t rs, // The start row
+    vt_coord_t n   // Number of rows to scroll
+) {
+    // Don't scroll the lower margin
+    if (rs > t->mb) return;
+    // Don't scroll in the bottom margin
+    vt_coord_t h = t->mb - rs;
+    if (n >= h) {
+        // If scrolling more than visible just clear the lines
+        vt_term_clear_lines(t, rs, h);
+    } else {
+        n = n < h ? n : h;
+        // Rotate the line indexes down
+        vt_cell_t** rp = t->rp;
+        vt_cell_t* tmp[n];
+        // Save the last n row pointers
+        for (vt_coord_t i = 0; i < n; ++i) {
+            tmp[i] = rp[rs + h - n + i];
+        }
+        // Shift the remaining row pointers down
+        for (vt_coord_t i = h - n; i > 0; --i) {
+            rp[rs + i + n - 1] = rp[rs + i - 1];
+        }
+        // Restore the saved row pointers to the start
+        for (vt_coord_t i = 0; i < n; ++i) {
+            rp[rs + i] = tmp[i];
+        }
+        // Clear the lines that have been moved to the top
+        vt_term_clear_lines(t, rs, n);
+    }
 }
 
 void vt_term_cursor_down(
@@ -123,15 +195,11 @@ void vt_term_cursor_down(
     
 }
 
-void vt_term_scroll_up(
+void vt_term_cursor_up(
     vt_term_t* t
 ) {
 
     
 }
 
-void vt_term_scroll_down(
-    vt_term_t* t
-) {
-}
     
