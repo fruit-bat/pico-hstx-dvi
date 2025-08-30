@@ -109,15 +109,12 @@ void check_grid_rows(vt_term_t *t, char* chs) {
     }
 }
 
-void check_grid_row(vt_term_t *t, char* chs) {
+void check_grid_row(vt_term_t *t, vt_coord_t r, char* chs) {
     vt_coord_t w = t->w;
-    vt_coord_t h = t->h;    
     for (vt_coord_t c = 0; c < w; ++c) {
-        for (vt_coord_t r = 0; r < h; ++r) {
-            vt_cell_t ct = t->rp[r][c];
-            vt_char_t ch = vt_cell_get_char(ct);
-            assert(ch == (vt_char_t)(chs[c]));
-        }
+        vt_cell_t ct = t->rp[r][c];
+        vt_char_t ch = vt_cell_get_char(ct);
+        assert(ch == (vt_char_t)(chs[c]));
     }
 }
 
@@ -177,7 +174,43 @@ void test_erase_in_display(vt_term_t *t) {
     // n = 0: Erase from cursor to end of screen (including cursor position).
     // n = 1: Erase from start of screen to cursor (including cursor position).
     // n = 2: Erase entire screen.
-    
+
+    printf("\nErase in display [0]\n");
+    set_grid_rows(t);
+    t->r = 5; t->c = 7;
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_erase_in_display(t, 0);
+    print_grid(t);
+    check_grid_row(t, 0, "AAAAAAAAAAAAAAAAAAAA");
+    check_grid_row(t, 1, "BBBBBBBBBBBBBBBBBBBB");
+    check_grid_row(t, 2, "CCCCCCCCCCCCCCCCCCCC");
+    check_grid_row(t, 3, "DDDDDDDDDDDDDDDDDDDD");
+    check_grid_row(t, 4, "EEEEEEEEEEEEEEEEEEEE");
+    check_grid_row(t, 5, "FFFFFFF             ");
+    for(vt_coord_t r = 6; r < t->h; ++r)
+        check_grid_row(t, r, "                    ");
+
+    printf("\nErase in display [1]\n");
+    set_grid_rows(t);
+    t->r = 10; t->c = 7;
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_erase_in_display(t, 1);
+    print_grid(t);
+    for(vt_coord_t r = 0; r < 10; ++r)
+        check_grid_row(t, r, "                    ");
+    check_grid_row(t, 10, "       KKKKKKKKKKKKK");
+    check_grid_row(t, 11, "LLLLLLLLLLLLLLLLLLLL");
+    check_grid_row(t, 12, "MMMMMMMMMMMMMMMMMMMM");
+    check_grid_row(t, 13, "NNNNNNNNNNNNNNNNNNNN");
+    check_grid_row(t, 14, "OOOOOOOOOOOOOOOOOOOO");
+    check_grid_row(t, 15, "PPPPPPPPPPPPPPPPPPPP");
+
+    printf("\nErase in display [2]\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_erase_in_display(t, 2);
+    print_grid(t);
+    check_grid_blank(t);
 }
 
 int main() {
@@ -192,6 +225,7 @@ int main() {
     assert(t.h == h);
 
     // Check the screen is blank on start-up
+    printf("Initial display check\n");
     print_grid(&t);
     check_grid_blank(&t);
 
