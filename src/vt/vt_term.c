@@ -325,6 +325,20 @@ void vt_term_erase_in_line(
     }
 }
 
+void vt_term_flags_add(
+    vt_term_t *t,
+    vt_cell_flags_t f
+) {
+    t->attr = vt_cell_flags_add(t->attr, f);
+}
+
+void vt_term_flags_clear(
+    vt_term_t *t,
+    vt_cell_flags_t f
+) {
+    t->attr = vt_cell_flags_clear(t->attr, f);
+}
+
 void vt_term_cursor_down(
     vt_term_t *t)
 {
