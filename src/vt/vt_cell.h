@@ -51,7 +51,7 @@ static inline vt_cell_t vt_cell_combine(vt_cell_attr_t cell, vt_char_t ch) {
 }
 
 static inline vt_cell_attr_t vt_cell_get_attr(vt_cell_t cell) {
-    return cell &~0xff;
+    return cell & ~0xff;
 }
 
 static inline vt_cell_attr_t vt_cell_flags_add(vt_cell_attr_t cell, vt_cell_flags_t flags)
@@ -90,7 +90,7 @@ static inline vt_cell_attr_t vt_cell_flags_get(vt_cell_attr_t cell)
 }
 
 static inline vt_char_t vt_cell_get_char(vt_cell_t cell) {
-    return cell &0xff;
+    return cell & 0xff;
 } 
 
 static inline vt_cell_attr_t vt_cell_enc_attr(

@@ -255,10 +255,14 @@ const uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_osc_d),
 };
 
-void vt_parser_init(vt_parser_t *p) {
+void vt_parser_reset(vt_parser_t *p) {
     p->state = NULL;
     p->n_params = 0;
     p->osc_param_len = 0;
+}
+
+void vt_parser_init(vt_parser_t *p) {
+    vt_parser_reset(p);
 }
 
 bool vt_parser_match_ch(vt_match_t m, vt_char_t ch) {

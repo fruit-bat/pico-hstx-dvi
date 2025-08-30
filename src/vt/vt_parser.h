@@ -140,6 +140,8 @@ typedef struct {
 
 void vt_parser_init(vt_parser_t *p);
 
+void vt_parser_reset(vt_parser_t *p);
+
 const vt_state_t* vt_parser_put_ch(vt_parser_t *p, vt_char_t ch);
 
 const vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s);
