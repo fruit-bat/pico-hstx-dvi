@@ -339,14 +339,21 @@ void vt_term_flags_clear(
     t->attr = vt_cell_flags_clear(t->attr, f);
 }
 
+void vt_term_set_fgci(
+    vt_term_t *t,
+    vt_cell_colour_t fgci
+) {
+    t->attr = vt_cell_fg_set(t->attr, fgci);
+}
+
 void vt_term_cursor_down(
-    vt_term_t *t)
-{
+    vt_term_t *t
+) {
 }
 
 void vt_term_cursor_up(
-    vt_term_t *t)
-{
+    vt_term_t *t
+) {
 }
 
 #ifdef VT_BUILD_TEST

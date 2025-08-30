@@ -59,6 +59,26 @@ static inline vt_cell_attr_t vt_cell_flags_add(vt_cell_attr_t cell, vt_cell_flag
     return cell | (((uint32_t)flags) << 24);
 }
 
+static inline vt_cell_attr_t vt_cell_fg_set(vt_cell_attr_t cell, vt_cell_colour_t fgci)
+{
+    return (cell & ~(0xff << 8)) | (((uint32_t)fgci) << 8);
+}
+
+static inline vt_cell_attr_t vt_cell_bg_set(vt_cell_attr_t cell, vt_cell_colour_t bgci)
+{
+    return (cell & ~(0xff << 16)) | (((uint32_t)bgci) << 16);
+}
+
+static inline vt_cell_colour_t vt_cell_fg_get(vt_cell_attr_t cell)
+{
+    return (cell >> 8) & 0xff;
+}
+
+static inline vt_cell_colour_t vt_cell_bg_get(vt_cell_attr_t cell)
+{
+    return (cell >> 16) & 0xff;
+}
+
 static inline vt_cell_attr_t vt_cell_flags_clear(vt_cell_attr_t cell, vt_cell_flags_t flags)
 {
     return cell & ~(((uint32_t)flags) << 24);

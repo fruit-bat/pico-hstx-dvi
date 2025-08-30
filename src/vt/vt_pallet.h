@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright (c) 2025 fruit-bat
  * All rights reserved.
  *
@@ -24,40 +25,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* Build instructions:
- *
- * cc -Wall vt_cell.c vt_cell_test.c 
- * 
- * ./a.out
- *
- */
 #include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include "vt_cell.h"
-#include <string.h>
-#include <assert.h>
+#include "vt_types.h"
 
-int main() {
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-    assert(sizeof(vt_cell_t) == 4);
+typedef enum{
+    VT_COLOR_DEFAULT = 255,
+    VT_COLOR_BLACK = 0,
+    VT_COLOR_RED,
+    VT_COLOR_GREEN,
+    VT_COLOR_YELLOW,
+    VT_COLOR_BLUE,
+    VT_COLOR_MAGENTA,
+    VT_COLOR_CYAN,
+    VT_COLOR_WHITE,
+    VT_COLOR_MAX
+} vt_color_t;
 
-    {
-        vt_cell_attr_t c1 = vt_cell_enc_attr(1,2,0);
-        vt_cell_t c3 = vt_cell_combine(c1, 42);
-        assert(vt_cell_get_attr(c3) == c1);
-    }
-    {
-        vt_cell_attr_t c1 = vt_cell_enc_attr(1,2,0);
-        vt_cell_attr_t c2 = vt_cell_bg_set(c1, 5);
-        vt_cell_attr_t c3 = vt_cell_fg_set(c2, 7);
-        assert(vt_cell_bg_get(c3) == 5);
-        assert(vt_cell_fg_get(c3) == 7);
-    }
-
-    printf("all ok\n");
-    return 0;
-}   
-
+#ifdef __cplusplus
+}
+#endif 
 
