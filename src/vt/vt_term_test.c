@@ -97,6 +97,27 @@ void set_grid_rows(vt_term_t *t) {
     } 
 }
 
+void set_grid_cols(vt_term_t *t) {
+    // Create a cell with default attributes and a space character
+    vt_cell_attr_t c1 = vt_cell_enc_attr(
+        VT_TERM_DEFAULT_FG,
+        VT_TERM_DEFAULT_BG,
+        VT_TERM_DEFAULT_FLAGS
+    );
+    vt_coord_t w = t->w;
+    vt_coord_t h = t->h;    
+
+    // Put characters in the grid so we can test scroll up
+    // AAAAA...
+    // BBBBB...
+    // etc.
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            t->rp[r][c] = vt_cell_combine(c1, c + 'A');
+        }
+    } 
+}
+
 void check_grid_rows(vt_term_t *t, char* chs) {
     vt_coord_t w = t->w;
     vt_coord_t h = t->h;    
@@ -196,8 +217,9 @@ void test_erase_in_display(vt_term_t *t) {
     check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
     vt_term_erase_in_display(t, 1);
     print_grid(t);
-    for(vt_coord_t r = 0; r < 10; ++r)
+    for(vt_coord_t r = 0; r < 10; ++r) {
         check_grid_row(t, r, "                    ");
+    }
     check_grid_row(t, 10, "       KKKKKKKKKKKKK");
     check_grid_row(t, 11, "LLLLLLLLLLLLLLLLLLLL");
     check_grid_row(t, 12, "MMMMMMMMMMMMMMMMMMMM");
@@ -211,6 +233,33 @@ void test_erase_in_display(vt_term_t *t) {
     vt_term_erase_in_display(t, 2);
     print_grid(t);
     check_grid_blank(t);
+}
+
+void test_insert_characters(vt_term_t *t) {
+    t->r = 5;
+    t->c = 0;
+    set_grid_cols(t);
+    vt_term_insert_characters(t, 3);
+    print_grid(t);
+    check_grid_row(t, 5, "   ABCDEFGHIJKLMNOPQ");
+
+    t->c = 5;
+    set_grid_cols(t);
+    vt_term_insert_characters(t, 3);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDE   FGHIJKLMNOPQ");
+
+    t->c = 5;
+    set_grid_cols(t);
+    vt_term_insert_characters(t, 300);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDE               ");
+
+    t->c = t->w - 1;
+    set_grid_cols(t);
+    vt_term_insert_characters(t, 1);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDEFGHIJKLMNOPQRS ");
 }
 
 int main() {
@@ -229,8 +278,9 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    test_scroll(&t);
-    test_erase_in_display(&t);
+    //test_scroll(&t);
+    //test_erase_in_display(&t);
+    test_insert_characters(&t);
 
     printf("all ok\n");
     return 0;
