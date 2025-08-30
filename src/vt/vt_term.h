@@ -36,6 +36,9 @@ extern "C"
 
 #define VT_SCREEN_MAX_COLS 80
 #define VT_SCREEN_MAX_ROWS 60
+#define VT_TERM_DEFAULT_BG 0
+#define VT_TERM_DEFAULT_FG 1
+#define VT_TERM_DEFAULT_FLAGS VT_CELL_FLAGS_NORMAL
 
 typedef struct 
 {

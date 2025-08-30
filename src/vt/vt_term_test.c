@@ -42,7 +42,7 @@
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
-    vt_cell_t grid[w][h];
+    vt_cell_t grid[h][w];
     vt_term_t t;
     vt_term_init(&t, (vt_cell_t*)grid, w, h);
     assert(t.c == 0);
@@ -50,6 +50,19 @@ int main() {
     assert(t.w == w);
     assert(t.h == h);
 
+    vt_cell_attr_t c1 = vt_cell_enc_attr(
+        VT_TERM_DEFAULT_FG,
+        VT_TERM_DEFAULT_BG,
+        VT_TERM_DEFAULT_FLAGS
+    );
+    vt_cell_t c3 = vt_cell_combine(c1, 32);
+
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            vt_cell_t ct = grid[r][c];
+            assert(ct == c3);
+        }
+    }
     printf("all ok\n");
     return 0;
 }   
