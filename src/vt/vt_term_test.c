@@ -26,7 +26,7 @@
  */
 /* Build instructions:
  *
- * cc -Wall vt_term.c vt_term_test.c 
+ * cc -DVT_BUILD_TEST -Wall vt_term.c
  * 
  * ./a.out
  *
@@ -40,13 +40,15 @@
 #include <assert.h>
 
 // Print out the characters in the grid so we can see what is going on
-void print_grid(vt_cell_t* grid, vt_coord_t w, vt_coord_t h) {
+void print_grid(vt_term_t *t) {
+    vt_coord_t w = t->w;
+    vt_coord_t h = t->h;
     for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
     printf("\n");
     for (vt_coord_t r = 0; r < h; ++r) {
         printf("|");
         for (vt_coord_t c = 0; c < w; ++c) {
-            vt_cell_t ct = grid[(r * w) + c];
+            vt_cell_t ct = t->rp[r][c];
             vt_char_t ch = vt_cell_get_char(ct);
             printf("%c", (uint8_t)ch);
         }
@@ -54,6 +56,15 @@ void print_grid(vt_cell_t* grid, vt_coord_t w, vt_coord_t h) {
     }
     for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
     printf("\n");
+}
+
+void check_grid_blank(vt_cell_t* grid, vt_coord_t w, vt_coord_t h, vt_cell_t cb) {
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            vt_cell_t ct = grid[(r * w) + c];
+            assert(ct == cb);
+        }
+    }
 }
 
 int main() {
@@ -76,7 +87,8 @@ int main() {
     vt_cell_t c3 = vt_cell_combine(c1, 32);
 
     // Check the screen is blank on start-up
-    print_grid(&grid[0][0], w, h);
+    print_grid(&t);
+    check_grid_blank(&grid[0][0], w, h, c3);
     for (vt_coord_t c = 0; c < w; ++c) {
         for (vt_coord_t r = 0; r < h; ++r) {
             vt_cell_t ct = grid[r][c];
@@ -93,7 +105,16 @@ int main() {
             grid[r][c] = vt_cell_combine(c1, r + 'A');
         }
     }    
-    print_grid(&grid[0][0], w, h);
+    print_grid(&t);
+
+    printf("\nScroll up 1 row\n");
+    vt_term_scroll_up(&t, 0, 1);
+    print_grid(&t);
+
+    printf("\nScroll up 100 rows\n");
+    vt_term_scroll_up(&t, 0, 100);
+    print_grid(&t);
+    check_grid_blank(&grid[0][0], w, h, c3);
 
     printf("all ok\n");
     return 0;

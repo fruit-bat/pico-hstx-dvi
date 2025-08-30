@@ -70,9 +70,9 @@ static void vt_term_clear_lines(
         return;
     if (rs + rc >= t->h)
         rc = t->h - rs;
-    for (vt_coord_t ri = 0; ri < rc; ++ri)
+    for (vt_coord_t i = 0; i < rc; ++i)
     {
-        vt_term_clearline(t, ri, 0, t->w);
+        vt_term_clearline(t, rs + i, 0, t->w);
     }
 }
 
@@ -107,7 +107,7 @@ void vt_term_init(
 
     // No margins
     t->mt = 0; // Margin top
-    t->mb = 0; // Margin bottom
+    t->mb = h - 1; // Margin bottom
 
     // The default attributes
     vt_term_reset_attr(t);
@@ -134,7 +134,7 @@ void vt_term_scroll_up(
     if (rs > t->mb)
         return;
     // Don't scroll in the bottom margin
-    vt_coord_t h = t->mb - rs;
+    vt_coord_t h = t->mb - rs + 1;
     if (n >= h)
     {
         // If scrolling more than visible just clear the lines
@@ -217,3 +217,7 @@ void vt_term_cursor_up(
     vt_term_t *t)
 {
 }
+
+#ifdef VT_BUILD_TEST
+#include "vt_term_test.c"
+#endif
