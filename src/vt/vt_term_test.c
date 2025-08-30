@@ -43,16 +43,16 @@
 void print_grid(vt_term_t *t) {
     vt_coord_t w = t->w;
     vt_coord_t h = t->h;
-    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf("-");
+    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf(c == (t->c + 1) ? "+" : "-");
     printf("\n");
     for (vt_coord_t r = 0; r < h; ++r) {
-        printf("|");
+        printf(r == (t->r) ? "+" : "|");
         for (vt_coord_t c = 0; c < w; ++c) {
             vt_cell_t ct = t->rp[r][c];
             vt_char_t ch = vt_cell_get_char(ct);
             printf("%c", (uint8_t)ch);
         }
-        printf("|");
+        printf(r == (t->r) ? "+" : "|");
         for (vt_coord_t c = 0; c < w; ++c) {
             vt_cell_t ct = t->rp[r][c];
             vt_cell_attr_t ca = vt_cell_get_attr(ct);
@@ -75,7 +75,7 @@ void print_grid(vt_term_t *t) {
         }
         printf("|\n");
     }
-    for (vt_coord_t c = 0; c < (w * 7) + 5; ++c) printf("-");
+    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf(c == (t->c + 1) ? "+" : "-");
     printf("\n");
 }
 
@@ -348,6 +348,32 @@ void test_putch(vt_term_t *t) {
         if(r != 5) check_grid_row(t, r, "                    ");
     }
     check_grid_row(t, 5, "       ABC          ");
+
+    printf("\nTesting putch wrap\n");
+    vt_term_clear_screen(t);
+    t->r = 5;t->c = t->w - 1;
+    vt_term_putch(t, 'A');
+    vt_term_putch(t, 'B');
+    vt_term_putch(t, 'C');
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if(r != 5 && r != 6) check_grid_row(t, r, "                    ");
+    }
+    check_grid_row(t, 5, "                   A");
+    check_grid_row(t, 6, "BC                  ");
+
+    printf("\nTesting scroll hang\n");
+    vt_term_clear_screen(t);
+    t->r = t->h - 1;t->c = t->w - 1;
+    vt_term_putch(t, 'A');
+    print_grid(t);
+    for(vt_coord_t r = 0; r < (t->h - 1); ++r) {
+        check_grid_row(t, r, "                    ");
+    }
+    vt_term_putch(t, 'B');
+    vt_term_putch(t, 'C');
+    print_grid(t);
+
 }
 
 int main() {
