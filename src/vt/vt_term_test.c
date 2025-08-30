@@ -75,7 +75,7 @@ void print_grid(vt_term_t *t) {
         }
         printf("|\n");
     }
-    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf("-");
+    for (vt_coord_t c = 0; c < (w * 7) + 5; ++c) printf("-");
     printf("\n");
 }
 
@@ -336,6 +336,20 @@ void test_erase_in_line(vt_term_t *t) {
     check_grid_row(t, 5, "                    ");
 }
 
+void test_putch(vt_term_t *t) {
+    printf("\nTesting putch no scroll\n");
+    vt_term_clear_screen(t);
+    t->r = 5;t->c = 7;
+    vt_term_putch(t, 'A');
+    vt_term_putch(t, 'B');
+    vt_term_putch(t, 'C');
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if(r != 5) check_grid_row(t, r, "                    ");
+    }
+    check_grid_row(t, 5, "       ABC          ");
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -352,11 +366,12 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    //test_scroll(&t);
-    //test_erase_in_display(&t);
-    //test_insert_characters(&t);
-    //test_delete_characters(&t);
-    test_erase_in_line(&t);
+    // test_scroll(&t);
+    // test_erase_in_display(&t);
+    // test_insert_characters(&t);
+    // test_delete_characters(&t);
+    // test_erase_in_line(&t);
+    test_putch(&t);
 
     printf("all ok\n");
     return 0;
