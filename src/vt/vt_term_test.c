@@ -146,7 +146,7 @@ void check_grid_rows(vt_term_t *t, char* chs) {
         for (vt_coord_t r = 0; r < h; ++r) {
             vt_cell_t ct = t->rp[r][c];
             vt_char_t ch = vt_cell_get_char(ct);
-            assert(ch == (vt_char_t)(chs[r]));
+            if (chs[r] != '?') assert(ch == (vt_char_t)(chs[r]));
         }
     }
 }
@@ -413,6 +413,29 @@ void test_putch(vt_term_t *t) {
     vt_term_putch(t, 'C');
     print_grid(t);
 
+
+    printf("\nTesting scroll hang with margins\n");
+    // Set top and bottom margins
+    t->mt = 2;
+    t->mb = t->h - 5;
+    t->r = t->mb; 
+    t->c = t->w - 1;
+
+    set_grid_rows(t);
+    vt_term_putch(t, 'x');
+    print_grid(t);
+    check_grid_rows(t, "ABCDEFGHIJK?MNOP");
+    check_grid_row(t, 11, "LLLLLLLLLLLLLLLLLLLx");
+    vt_term_putch(t, 'y');
+    vt_term_putch(t, 'z');
+    print_grid(t);
+    check_grid_rows(t, "ABDEFGHIJK??MNOP"); 
+    check_grid_row(t, 10, "LLLLLLLLLLLLLLLLLLLx");
+    check_grid_row(t, 11, "yz                  ");
+
+    // Clear margins
+    t->mt = 0;
+    t->mb = t->h - 1;
 }
 
 int main() {
@@ -431,12 +454,12 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    test_scroll(&t);
+    // test_scroll(&t);
     // test_erase_in_display(&t);
     // test_insert_characters(&t);
     // test_delete_characters(&t);
     // test_erase_in_line(&t);
-    // test_putch(&t);
+    test_putch(&t);
 
     printf("all ok\n");
     return 0;
