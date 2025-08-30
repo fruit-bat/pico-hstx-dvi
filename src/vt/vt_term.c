@@ -109,7 +109,7 @@ void vt_term_init(
     t->r = 0; // Cursor row
 
     // No margins
-    t->mt = 0; // Margin top
+    t->mt = 0;     // Margin top
     t->mb = h - 1; // Margin bottom
 
     // The default attributes
@@ -217,31 +217,33 @@ void vt_term_scroll_down(
 // n = 1: Erase from start of screen to cursor (including cursor position).
 // n = 2: Erase entire screen.
 void vt_term_erase_in_display(
-    vt_term_t *t,  // The terminal
-    uint32_t p0    // Parameter to specify the erase mode (0, 1, 2)
-) {
+    vt_term_t *t, // The terminal
+    uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
+)
+{
     // Default range: clear the entire screen
-    vt_coord_t b = 0;       // Start row (inclusive)
-    vt_coord_t e = t->h;    // End row (exclusive)
+    vt_coord_t b = 0;    // Start row (inclusive)
+    vt_coord_t e = t->h; // End row (exclusive)
 
     // Handle the different erase modes
-    switch (p0) {
-        case 0: 
-            // Erase from the cursor to the end of the screen
-            b = t->r + 1;  // Start clearing from the row after the cursor
-            vt_term_clear_line(t, t->r, t->c, t->w);  // Clear from cursor column to the end of the current row
-            break;
-        case 1: 
-            // Erase from the start of the screen to the cursor
-            e = t->r;  // End clearing at the row before the cursor
-            vt_term_clear_line(t, t->r, 0, t->c);  // Clear from the start of the current row to the cursor column
-            break;
-        case 2:  
-            // Erase the entire screen (default range is already set)
-            break;
-        default: 
-            // Invalid parameter, do nothing
-            return;
+    switch (p0)
+    {
+    case 0:
+        // Erase from the cursor to the end of the screen
+        b = t->r + 1;                            // Start clearing from the row after the cursor
+        vt_term_clear_line(t, t->r, t->c, t->w); // Clear from cursor column to the end of the current row
+        break;
+    case 1:
+        // Erase from the start of the screen to the cursor
+        e = t->r;                             // End clearing at the row before the cursor
+        vt_term_clear_line(t, t->r, 0, t->c); // Clear from the start of the current row to the cursor column
+        break;
+    case 2:
+        // Erase the entire screen (default range is already set)
+        break;
+    default:
+        // Invalid parameter, do nothing
+        return;
     }
 
     // Clear the lines in the specified range
@@ -249,15 +251,19 @@ void vt_term_erase_in_display(
 }
 
 void vt_term_insert_characters(
-    vt_term_t *t,  // The terminal
-    uint32_t n     // The number of characters to insert (note: 0 means 0)
-) {
-    if (n > t->w - t->c) n = t->w - t->c;
-    if (n == 0) return;
+    vt_term_t *t, // The terminal
+    uint32_t n    // The number of characters to insert (note: 0 means 0)
+)
+{
+    if (n > t->w - t->c)
+        n = t->w - t->c;
+    if (n == 0)
+        return;
     vt_coord_t to = t->w - 1;
     vt_coord_t fr = t->w - n - 1;
-    vt_cell_t* rp = t->rp[t->r];
-    while(fr > t->c) {
+    vt_cell_t *rp = t->rp[t->r];
+    while (fr > t->c)
+    {
         rp[to--] = rp[fr--];
     }
     rp[to] = rp[fr];
@@ -265,28 +271,63 @@ void vt_term_insert_characters(
 }
 
 void vt_term_delete_characters(
-    vt_term_t *t,  // The terminal
-    uint32_t n     // The number of characters to delete (note: 0 means 0)
-) {
-    if (n > t->w - t->c) n = t->w - t->c;
-    if (n == 0) return;
+    vt_term_t *t, // The terminal
+    uint32_t n    // The number of characters to delete (note: 0 means 0)
+)
+{
+    if (n > t->w - t->c)
+        n = t->w - t->c;
+    if (n == 0)
+        return;
     vt_coord_t to = t->c;
     vt_coord_t fr = t->c + n;
-    vt_cell_t* rp = t->rp[t->r];
-    while(fr < t->w) {
+    vt_cell_t *rp = t->rp[t->r];
+    while (fr < t->w)
+    {
         rp[to++] = rp[fr++];
     }
     vt_cell_attr_t a = vt_cell_get_attr(rp[t->w - n]); // Copied from libtmt; is this correct?
     vt_cell_t cb = vt_cell_combine(a, (vt_char_t)' ');
-    while(to < t->w) {
+    while (to < t->w)
+    {
         rp[to++] = cb;
+    }
+}
+/**
+ * @brief Erases part or all of the current line in the terminal based on the specified mode.
+ *
+ * This function erases characters in the current line of the terminal, starting from or up to the cursor position,
+ * depending on the value of the parameter `p0`:
+ *   - If `p0 == 0`: Erases from the cursor position to the end of the line.
+ *   - If `p0 == 1`: Erases from the beginning of the line up to and including the cursor position.
+ *   - If `p0 == 2`: Erases the entire line.
+ *
+ * @param t  Pointer to the terminal structure.
+ * @param p0 Erase mode (0: from cursor to end, 1: from start to cursor, 2: entire line).
+ */
+
+void vt_term_erase_in_line(
+    vt_term_t *t, // The terminal
+    uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
+)
+{
+    switch (p0)
+    {
+    case 0:
+        vt_term_clear_line(t, t->r, t->c, t->w);
+        break;
+    case 1:
+        vt_term_clear_line(t, t->r, 0, MIN(t->c + 1, t->w));
+        break;
+    case 2:
+        vt_term_clear_line(t, t->r, 0, t->w);
+        break;
     }
 }
 
 void vt_term_cursor_down(
     vt_term_t *t)
 {
-
 }
 
 void vt_term_cursor_up(

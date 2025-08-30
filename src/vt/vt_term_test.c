@@ -295,6 +295,26 @@ void test_delete_characters(vt_term_t *t) {
      */
 }
 
+void test_erase_in_line(vt_term_t *t) {
+
+    t->r = 5;
+    t->c = 7;
+    set_grid_cols(t);
+    vt_term_erase_in_line(t, 0);
+    print_grid(t);
+    check_grid_row(t, 5, "ABCDEFG             ");
+
+    set_grid_cols(t);
+    vt_term_erase_in_line(t, 1);
+    print_grid(t);
+    check_grid_row(t, 5, "        IJKLMNOPQRST");
+
+    set_grid_cols(t);
+    vt_term_erase_in_line(t, 2);
+    print_grid(t);
+    check_grid_row(t, 5, "                    ");
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -314,10 +334,10 @@ int main() {
     //test_scroll(&t);
     //test_erase_in_display(&t);
     //test_insert_characters(&t);
-    test_delete_characters(&t);
+    //test_delete_characters(&t);
+    test_erase_in_line(&t);
 
     printf("all ok\n");
     return 0;
 }   
-
 
