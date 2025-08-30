@@ -58,11 +58,32 @@ void print_grid(vt_term_t *t) {
     printf("\n");
 }
 
-void check_grid_blank(vt_cell_t* grid, vt_coord_t w, vt_coord_t h, vt_cell_t cb) {
+void check_grid_blank(vt_term_t *t) {
+    // Create a cell with default attributes and a space character
+    vt_cell_attr_t c1 = vt_cell_enc_attr(
+        VT_TERM_DEFAULT_FG,
+        VT_TERM_DEFAULT_BG,
+        VT_TERM_DEFAULT_FLAGS
+    );
+    vt_cell_t c3 = vt_cell_combine(c1, 32);
+    vt_coord_t w = t->w;
+    vt_coord_t h = t->h;    
     for (vt_coord_t c = 0; c < w; ++c) {
         for (vt_coord_t r = 0; r < h; ++r) {
-            vt_cell_t ct = grid[(r * w) + c];
-            assert(ct == cb);
+            vt_cell_t ct = t->rp[r][c];
+            assert(ct == c3);
+        }
+    }
+}
+
+void check_grid_rows(vt_term_t *t, char* chs) {
+    vt_coord_t w = t->w;
+    vt_coord_t h = t->h;    
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            vt_cell_t ct = t->rp[r][c];
+            vt_char_t ch = vt_cell_get_char(ct);
+            assert(ch == (vt_char_t)(chs[r]));
         }
     }
 }
@@ -84,17 +105,10 @@ int main() {
         VT_TERM_DEFAULT_BG,
         VT_TERM_DEFAULT_FLAGS
     );
-    vt_cell_t c3 = vt_cell_combine(c1, 32);
 
     // Check the screen is blank on start-up
     print_grid(&t);
-    check_grid_blank(&grid[0][0], w, h, c3);
-    for (vt_coord_t c = 0; c < w; ++c) {
-        for (vt_coord_t r = 0; r < h; ++r) {
-            vt_cell_t ct = grid[r][c];
-            assert(ct == c3);
-        }
-    }
+    check_grid_blank(&t);
 
     // Put characters in the grid so we can test scroll up
     // AAAAA...
@@ -102,19 +116,21 @@ int main() {
     // etc.
     for (vt_coord_t c = 0; c < w; ++c) {
         for (vt_coord_t r = 0; r < h; ++r) {
-            grid[r][c] = vt_cell_combine(c1, r + 'A');
+            t.rp[r][c] = vt_cell_combine(c1, r + 'A');
         }
-    }    
+    }   
     print_grid(&t);
+    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
 
     printf("\nScroll up 1 row\n");
     vt_term_scroll_up(&t, 0, 1);
+    check_grid_rows(&t, "BCDEFGHIJKLMNOP "); 
     print_grid(&t);
 
     printf("\nScroll up 100 rows\n");
     vt_term_scroll_up(&t, 0, 100);
     print_grid(&t);
-    check_grid_blank(&grid[0][0], w, h, c3);
+    check_grid_blank(&t);
 
     printf("all ok\n");
     return 0;
