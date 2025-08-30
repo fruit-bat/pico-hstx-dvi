@@ -262,6 +262,39 @@ void test_insert_characters(vt_term_t *t) {
     check_grid_row(t, 5, "ABCDEFGHIJKLMNOPQRS ");
 }
 
+void test_delete_characters(vt_term_t *t) {
+    t->r = 5;
+    t->c = 0;
+    set_grid_cols(t);
+    vt_term_delete_characters(t, 3);
+    print_grid(t);
+    check_grid_row(t, 5, "DEFGHIJKLMNOPQRST   ");
+
+    t->c = 5;
+    set_grid_cols(t);
+    vt_term_delete_characters(t, 3);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDEIJKLMNOPQRST   ");
+
+    t->c = 5;
+    set_grid_cols(t);
+    vt_term_delete_characters(t, 300);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDE               ");
+
+    t->c = t->w - 1;
+    set_grid_cols(t);
+    vt_term_delete_characters(t, 1);
+    print_grid( t);
+    check_grid_row(t, 5, "ABCDEFGHIJKLMNOPQRS ");
+
+    // TODO Check attributes
+    /* VT102 manual says the attribute for the newly empty characters
+     * should be the same as the last character moved left, which isn't
+     * what clearline() currently does.
+     */
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -280,7 +313,8 @@ int main() {
 
     //test_scroll(&t);
     //test_erase_in_display(&t);
-    test_insert_characters(&t);
+    //test_insert_characters(&t);
+    test_delete_characters(&t);
 
     printf("all ok\n");
     return 0;

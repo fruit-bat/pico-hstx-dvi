@@ -32,6 +32,9 @@
 #include "vt_term.h"
 #include "vt_cell.h"
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 void vt_term_reset_attr(
     vt_term_t *t // The terminal
 )
@@ -245,12 +248,9 @@ void vt_term_erase_in_display(
     vt_term_clear_lines(t, b, e - b);
 }
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
 void vt_term_insert_characters(
     vt_term_t *t,  // The terminal
-    uint32_t n     // The number of characters to insert
+    uint32_t n     // The number of characters to insert (note: 0 means 0)
 ) {
     if (n > t->w - t->c) n = t->w - t->c;
     if (n == 0) return;
@@ -264,9 +264,29 @@ void vt_term_insert_characters(
     vt_term_clear_line(t, t->r, t->c, t->c + n);
 }
 
+void vt_term_delete_characters(
+    vt_term_t *t,  // The terminal
+    uint32_t n     // The number of characters to delete (note: 0 means 0)
+) {
+    if (n > t->w - t->c) n = t->w - t->c;
+    if (n == 0) return;
+    vt_coord_t to = t->c;
+    vt_coord_t fr = t->c + n;
+    vt_cell_t* rp = t->rp[t->r];
+    while(fr < t->w) {
+        rp[to++] = rp[fr++];
+    }
+    vt_cell_attr_t a = vt_cell_get_attr(rp[t->w - n]); // Copied from libtmt; is this correct?
+    vt_cell_t cb = vt_cell_combine(a, (vt_char_t)' ');
+    while(to < t->w) {
+        rp[to++] = cb;
+    }
+}
+
 void vt_term_cursor_down(
     vt_term_t *t)
 {
+
 }
 
 void vt_term_cursor_up(
