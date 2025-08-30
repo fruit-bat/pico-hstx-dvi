@@ -252,7 +252,7 @@ void vt_term_insert_characters(
     vt_term_t *t,  // The terminal
     uint32_t n     // The number of characters to insert
 ) {
-    if (n > t->w - t->c - 1) n = t->w - t->c;
+    if (n > t->w - t->c) n = t->w - t->c;
     if (n == 0) return;
     vt_coord_t to = t->w - 1;
     vt_coord_t fr = t->w - n - 1;
