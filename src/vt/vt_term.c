@@ -43,7 +43,7 @@ void vt_term_reset_attr(
         VT_TERM_DEFAULT_FLAGS);
 }
 
-static void vt_term_clearline(
+static void vt_term_clear_line(
     vt_term_t *t,  // The terminal
     vt_coord_t ri, // Row index
     vt_coord_t sc, // The start column
@@ -72,7 +72,7 @@ static void vt_term_clear_lines(
         rc = t->h - rs;
     for (vt_coord_t i = 0; i < rc; ++i)
     {
-        vt_term_clearline(t, rs + i, 0, t->w);
+        vt_term_clear_line(t, rs + i, 0, t->w);
     }
 }
 
@@ -206,6 +206,43 @@ void vt_term_scroll_down(
         // Clear the lines that have been moved to the top
         vt_term_clear_lines(t, rs, n);
     }
+}
+
+// Erase in Display is a terminal control function (from ANSI escape codes, specifically ESC [ n J) that clears parts or all of the terminal screen, depending on the parameter n:
+//
+// n = 0: Erase from cursor to end of screen (including cursor position).
+// n = 1: Erase from start of screen to cursor (including cursor position).
+// n = 2: Erase entire screen.
+void vt_term_erase_in_display(
+    vt_term_t *t,  // The terminal
+    uint32_t p0    // Parameter to specify the erase mode (0, 1, 2)
+) {
+    // Default range: clear the entire screen
+    vt_coord_t b = 0;       // Start row (inclusive)
+    vt_coord_t e = t->h;    // End row (exclusive)
+
+    // Handle the different erase modes
+    switch (p0) {
+        case 0: 
+            // Erase from the cursor to the end of the screen
+            b = t->r + 1;  // Start clearing from the row after the cursor
+            vt_term_clear_line(t, t->r, t->c, t->w);  // Clear from cursor column to the end of the current row
+            break;
+        case 1: 
+            // Erase from the start of the screen to the cursor
+            e = t->r;  // End clearing at the row before the cursor
+            vt_term_clear_line(t, t->r, 0, t->c);  // Clear from the start of the current row to the cursor column
+            break;
+        case 2:  
+            // Erase the entire screen (default range is already set)
+            break;
+        default: 
+            // Invalid parameter, do nothing
+            return;
+    }
+
+    // Clear the lines in the specified range
+    vt_term_clear_lines(t, b, e - b);
 }
 
 void vt_term_cursor_down(

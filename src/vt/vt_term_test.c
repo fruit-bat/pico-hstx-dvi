@@ -109,6 +109,77 @@ void check_grid_rows(vt_term_t *t, char* chs) {
     }
 }
 
+void check_grid_row(vt_term_t *t, char* chs) {
+    vt_coord_t w = t->w;
+    vt_coord_t h = t->h;    
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            vt_cell_t ct = t->rp[r][c];
+            vt_char_t ch = vt_cell_get_char(ct);
+            assert(ch == (vt_char_t)(chs[c]));
+        }
+    }
+}
+
+void test_scroll(vt_term_t *t) {
+    // Put characters in the grid so we can test scroll up
+    // AAAAA...
+    // BBBBB...
+    // etc.
+    set_grid_rows(t);
+    print_grid(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+
+    printf("\nScroll up 1 row\n");
+    vt_term_scroll_up(t, 0, 1);
+    print_grid(t);
+    check_grid_rows(t, "BCDEFGHIJKLMNOP "); 
+
+    printf("\nScroll up 2 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_up(t, 0, 2);
+    print_grid(t);
+    check_grid_rows(t, "CDEFGHIJKLMNOP  "); 
+
+    printf("\nScroll up 100 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_up(t, 0, 100);
+    print_grid(t);
+    check_grid_blank(t);
+
+    printf("\nScroll down 1 row\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(t, 0, 1);
+    print_grid(t);
+    check_grid_rows(t, " ABCDEFGHIJKLMNO"); 
+
+    printf("\nScroll down 2 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(t, 0, 2);
+    print_grid(t);
+    check_grid_rows(t, "  ABCDEFGHIJKLMN"); 
+
+    printf("\nScroll down 100 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(t, 0, 100);
+    print_grid(t);
+    check_grid_blank(t);
+}
+
+void test_erase_in_display(vt_term_t *t) {
+    // Erase in Display is a terminal control function (from ANSI escape codes, specifically ESC [ n J) that clears parts or all of the terminal screen, depending on the parameter n:
+    //
+    // n = 0: Erase from cursor to end of screen (including cursor position).
+    // n = 1: Erase from start of screen to cursor (including cursor position).
+    // n = 2: Erase entire screen.
+    
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -124,55 +195,8 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    // Put characters in the grid so we can test scroll up
-    // AAAAA...
-    // BBBBB...
-    // etc.
-    set_grid_rows(&t);
-    print_grid(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-
-    printf("\nScroll up 1 row\n");
-    vt_term_scroll_up(&t, 0, 1);
-    print_grid(&t);
-    check_grid_rows(&t, "BCDEFGHIJKLMNOP "); 
-
-    printf("\nScroll up 2 rows\n");
-    set_grid_rows(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-    vt_term_scroll_up(&t, 0, 2);
-    print_grid(&t);
-    check_grid_rows(&t, "CDEFGHIJKLMNOP  "); 
-
-    printf("\nScroll up 100 rows\n");
-    set_grid_rows(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-    vt_term_scroll_up(&t, 0, 100);
-    print_grid(&t);
-    check_grid_blank(&t);
-
-    printf("\nScroll down 1 row\n");
-    set_grid_rows(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-    vt_term_scroll_down(&t, 0, 1);
-    print_grid(&t);
-    check_grid_rows(&t, " ABCDEFGHIJKLMNO"); 
-
-    printf("\nScroll down 2 rows\n");
-    set_grid_rows(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-    vt_term_scroll_down(&t, 0, 2);
-    print_grid(&t);
-    check_grid_rows(&t, "  ABCDEFGHIJKLMN"); 
-
-    printf("\nScroll down 100 rows\n");
-    set_grid_rows(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-    vt_term_scroll_down(&t, 0, 100);
-    print_grid(&t);
-    check_grid_blank(&t);
-
-
+    test_scroll(&t);
+    test_erase_in_display(&t);
 
     printf("all ok\n");
     return 0;
