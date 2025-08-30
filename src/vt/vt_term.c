@@ -381,6 +381,52 @@ void vt_term_repeat(
     }
 }
 
+void vt_term_reverse_nl(
+    vt_term_t *t // The terminal
+) {
+    t->hang = VT_HANG_NONE;
+
+    if (t->r == t->mt) {
+        vt_term_scroll_down(t, t->mt, 1);
+    }
+    else if (t->r > 0) {
+        t->r--;
+    }
+}
+
+void vt_term_nl(
+    vt_term_t *t // The terminal
+) {
+    if (t->hang != VT_HANG_NONE)
+    {
+        if (t->hang == VT_HANG_BOTTOM) {
+            vt_term_scroll_up(t, t->mt, 1);
+        }
+        t->hang = VT_HANG_NONE;
+        return;
+    }
+
+    if (t->r == t->mb) {
+        vt_term_scroll_up(t, t->mt, 1);
+    }
+    else if (t->r < (t -> h-1)) {
+        t->r++;
+    }
+}
+
+void vt_term_cr(
+    vt_term_t *t // The terminal
+) {
+    t->c = 0;
+    if (t->hang == VT_HANG_LINE)
+    {
+        t->hang = VT_HANG_NONE;
+        if (t->r > t->mt && t->r <= t->mb) {
+            t->r--;
+        }
+    }
+}
+
 void vt_term_cursor_down(
     vt_term_t *t
 ) {
