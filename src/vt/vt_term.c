@@ -176,7 +176,7 @@ void vt_term_scroll_down(
     if (rs > t->mb)
         return;
     // Don't scroll in the bottom margin
-    vt_coord_t h = t->mb - rs;
+    vt_coord_t h = t->mb - rs + 1;
     if (n >= h)
     {
         // If scrolling more than visible just clear the lines

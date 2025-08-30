@@ -137,10 +137,6 @@ int main() {
     print_grid(&t);
     check_grid_rows(&t, "BCDEFGHIJKLMNOP "); 
 
-    set_grid_rows(&t);
-    print_grid(&t);
-    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
-
     printf("\nScroll up 2 rows\n");
     set_grid_rows(&t);
     check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
@@ -154,6 +150,29 @@ int main() {
     vt_term_scroll_up(&t, 0, 100);
     print_grid(&t);
     check_grid_blank(&t);
+
+    printf("\nScroll down 1 row\n");
+    set_grid_rows(&t);
+    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(&t, 0, 1);
+    print_grid(&t);
+    check_grid_rows(&t, " ABCDEFGHIJKLMNO"); 
+
+    printf("\nScroll down 2 rows\n");
+    set_grid_rows(&t);
+    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(&t, 0, 2);
+    print_grid(&t);
+    check_grid_rows(&t, "  ABCDEFGHIJKLMN"); 
+
+    printf("\nScroll down 100 rows\n");
+    set_grid_rows(&t);
+    check_grid_rows(&t, "ABCDEFGHIJKLMNOP"); 
+    vt_term_scroll_down(&t, 0, 100);
+    print_grid(&t);
+    check_grid_blank(&t);
+
+
 
     printf("all ok\n");
     return 0;
