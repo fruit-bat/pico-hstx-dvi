@@ -43,7 +43,7 @@
 void print_grid(vt_term_t *t) {
     vt_coord_t w = t->w;
     vt_coord_t h = t->h;
-    for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
+    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf("-");
     printf("\n");
     for (vt_coord_t r = 0; r < h; ++r) {
         printf("|");
@@ -52,9 +52,30 @@ void print_grid(vt_term_t *t) {
             vt_char_t ch = vt_cell_get_char(ct);
             printf("%c", (uint8_t)ch);
         }
+        printf("|");
+        for (vt_coord_t c = 0; c < w; ++c) {
+            vt_cell_t ct = t->rp[r][c];
+            vt_cell_attr_t ca = vt_cell_get_attr(ct);
+            vt_cell_colour_t ci = vt_cell_fg_get(ca);
+            printf("%02X", (uint8_t)ci);
+        }
+        printf("|");
+        for (vt_coord_t c = 0; c < w; ++c) {
+            vt_cell_t ct = t->rp[r][c];
+            vt_cell_attr_t ca = vt_cell_get_attr(ct);
+            vt_cell_colour_t ci = vt_cell_bg_get(ca);
+            printf("%02X", (uint8_t)ci);
+        }
+        printf("|");
+        for (vt_coord_t c = 0; c < w; ++c) {
+            vt_cell_t ct = t->rp[r][c];
+            vt_cell_attr_t ca = vt_cell_get_attr(ct);
+            vt_cell_flags_t fl = vt_cell_flags_get(ca);
+            printf("%02X", (uint8_t)fl);
+        }
         printf("|\n");
     }
-    for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
+    for (vt_coord_t c = 0; c < w * 7 + 5; ++c) printf("-");
     printf("\n");
 }
 

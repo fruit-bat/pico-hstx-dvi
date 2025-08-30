@@ -84,6 +84,11 @@ static inline vt_cell_attr_t vt_cell_flags_clear(vt_cell_attr_t cell, vt_cell_fl
     return cell & ~(((uint32_t)flags) << 24);
 }
 
+static inline vt_cell_attr_t vt_cell_flags_get(vt_cell_attr_t cell)
+{
+    return cell >> 24;
+}
+
 static inline vt_char_t vt_cell_get_char(vt_cell_t cell) {
     return cell &0xff;
 } 

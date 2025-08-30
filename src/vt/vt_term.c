@@ -51,8 +51,7 @@ static void vt_term_clear_line(
     vt_coord_t ri, // Row index
     vt_coord_t sc, // The start column
     vt_coord_t ec  // The end column
-)
-{
+) {
     vt_cell_t c = vt_cell_combine(t->attr, (vt_char_t)' ');
     vt_cell_t *rp = t->rp[ri];
     if (ec > t->w)
@@ -67,8 +66,7 @@ static void vt_term_clear_lines(
     vt_term_t *t,  // The terminal
     vt_coord_t rs, // Row start
     vt_coord_t rc  // Row count
-)
-{
+) {
     if (rs >= t->h)
         return;
     if (rs + rc >= t->h)
@@ -81,16 +79,35 @@ static void vt_term_clear_lines(
 
 static inline void vt_term_clear_screen(
     vt_term_t *t // The terminal
-)
-{
+) {
     vt_term_clear_lines(t, 0, t->w);
 }
 
+// Write a character at the cursor
 static void vt_term_putch(
     vt_term_t *t, // The terminal
     vt_char_t ch)
 {
+    if (t->hang == VT_HANG_BOTTOM) {
+        vt_term_scroll_up(t, t->mt, 1);
+    }
+    t->hang = VT_HANG_NONE;
+
     t->rp[t->r][t->c] = vt_cell_combine(t->attr, ch);
+
+    if (t->c < t->w - 1) {
+        t->c++;
+    }
+    else {
+        t->hang = VT_HANG_LINE;
+        t->c = 0;
+        t->r++;
+    }
+
+    if ((t->hang != VT_HANG_NONE) && (t->r > t->mb)) {
+        t->r = t->mb;
+        t->hang = VT_HANG_BOTTOM;
+    }
 }
 
 void vt_term_init(
@@ -100,6 +117,12 @@ void vt_term_init(
     vt_coord_t h     // Terminal height in characters
 )
 {
+    // Clear down any flags
+    t->flags = 0;
+
+    // Clear the delayed scroll
+    t->hang = VT_HANG_NONE;
+
     // Set the terminal size
     t->w = w; // Terminal width
     t->h = h; // Terminal height
@@ -344,6 +367,18 @@ void vt_term_set_fgci(
     vt_cell_colour_t fgci
 ) {
     t->attr = vt_cell_fg_set(t->attr, fgci);
+}
+
+void vt_term_repeat(
+    vt_term_t *t, // The terminal
+    uint32_t n    // The number of characters to repeat
+) {
+    if (!t->c) return;
+    vt_cell_t *rp = t->rp[t->r];
+    vt_char_t ch = rp[t->c - 1];
+    for (vt_coord_t i = 0; i < n; i++) {
+        vt_term_putch(t, ch);
+    }
 }
 
 void vt_term_cursor_down(

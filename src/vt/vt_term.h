@@ -40,6 +40,33 @@ extern "C"
 #define VT_TERM_DEFAULT_FG 1
 #define VT_TERM_DEFAULT_FLAGS VT_CELL_FLAGS_NORMAL
 
+// VT100-derived terminals have a wrap behavior where the cursor "sticks"
+// at the end of a line instead of immediately wrapping.  This allows you
+// to use the last column without getting extra blank lines or
+// unintentionally scrolling the screen.  The logic we implement for it
+// is not exactly like that of a real VT100, but it seems to be
+// sufficient for things to work as expected in the use cases and with
+// the terminfo files I've tested with.  Specifically, I call the case
+// where the cursor has advanced exactly one position past the rightmost
+// column "hanging".  A rough description of the current algorithm is
+// that there are two cases which each have two sub-cases:
+// 1. You're hanging onto the next line below.  That is, you're not at
+//    the bottom of the screen/scrolling region.
+//    1a. If you receive a newline, hanging mode is canceled and nothing
+//        else happens.  In particular, you do *not* advanced to the next
+//        line.  You're already *at* the start of the "next" line.
+//    2b. If you receive a printable character, just cancel hanging mode.
+// 2. You're hanging past the bottom of the screen/scrolling region.
+//    2a. If you receive a newline or printable character, scroll the
+//        screen up one line and cancel hanging.
+//    2b. If you receive a cursor reposition or whatever, cancel hanging.
+// Below, hang is 0 if not hanging, or 1 or 2 as described above.
+typedef enum {
+    VT_HANG_NONE   = 0,
+    VT_HANG_LINE   = 1,
+    VT_HANG_BOTTOM = 2
+} vt_term_hang_t;
+
 typedef struct 
 {
     vt_coord_t mt; // Margin top row
@@ -50,6 +77,8 @@ typedef struct
     vt_coord_t h; // Terminal height in characters
     vt_cell_t* rp[VT_SCREEN_MAX_ROWS]; // Row pointers
     vt_cell_attr_t attr; // The current attributes
+    uint32_t flags;
+    vt_term_hang_t hang; // Delayed scroll handling
 
 } vt_term_t;
 
@@ -58,6 +87,12 @@ void vt_term_init(
     vt_cell_t* grid, // Cell grid for the display
     vt_coord_t w, // Terminal width in characters
     vt_coord_t h  // Terminal height in characters
+);
+
+void vt_term_scroll_up(
+    vt_term_t *t,  // The terminal
+    vt_coord_t rs, // The start row
+    vt_coord_t n   // Number of rows to scroll
 );
 
 #ifdef __cplusplus
