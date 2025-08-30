@@ -39,6 +39,23 @@
 #include <string.h>
 #include <assert.h>
 
+// Print out the characters in the grid so we can see what is going on
+void print_grid(vt_cell_t* grid, vt_coord_t w, vt_coord_t h) {
+    for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
+    printf("\n");
+    for (vt_coord_t r = 0; r < h; ++r) {
+        printf("|");
+        for (vt_coord_t c = 0; c < w; ++c) {
+            vt_cell_t ct = grid[(r * w) + c];
+            vt_char_t ch = vt_cell_get_char(ct);
+            printf("%c", (uint8_t)ch);
+        }
+        printf("|\n");
+    }
+    for (vt_coord_t c = 0; c < w + 2; ++c) printf("-");
+    printf("\n");
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -50,6 +67,7 @@ int main() {
     assert(t.w == w);
     assert(t.h == h);
 
+    // Create a cell with default attributes and a space character
     vt_cell_attr_t c1 = vt_cell_enc_attr(
         VT_TERM_DEFAULT_FG,
         VT_TERM_DEFAULT_BG,
@@ -57,12 +75,26 @@ int main() {
     );
     vt_cell_t c3 = vt_cell_combine(c1, 32);
 
+    // Check the screen is blank on start-up
+    print_grid(&grid[0][0], w, h);
     for (vt_coord_t c = 0; c < w; ++c) {
         for (vt_coord_t r = 0; r < h; ++r) {
             vt_cell_t ct = grid[r][c];
             assert(ct == c3);
         }
     }
+
+    // Put characters in the grid so we can test scroll up
+    // AAAAA...
+    // BBBBB...
+    // etc.
+    for (vt_coord_t c = 0; c < w; ++c) {
+        for (vt_coord_t r = 0; r < h; ++r) {
+            grid[r][c] = vt_cell_combine(c1, r + 'A');
+        }
+    }    
+    print_grid(&grid[0][0], w, h);
+
     printf("all ok\n");
     return 0;
 }   
