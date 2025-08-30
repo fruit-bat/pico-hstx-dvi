@@ -208,6 +208,45 @@ void test_scroll(vt_term_t *t) {
     vt_term_scroll_down(t, 0, 100);
     print_grid(t);
     check_grid_blank(t);
+
+    // Set top and bottom margins
+    t->mt = 2;
+    t->mb = t->h - 5;
+
+    set_grid_rows(t);
+    vt_term_scroll_up(t, t->mt, 1);
+    print_grid(t);
+    check_grid_rows(t, "ABDEFGHIJKL MNOP"); 
+
+    set_grid_rows(t);
+    vt_term_scroll_up(t, t->mt, 2);
+    print_grid(t);
+    check_grid_rows(t, "ABEFGHIJKL  MNOP"); 
+
+    set_grid_rows(t);
+    vt_term_scroll_up(t, t->mt, 10);
+    print_grid(t);
+    check_grid_rows(t, "AB          MNOP"); 
+
+    set_grid_rows(t);
+    vt_term_scroll_down(t, t->mt, 1);
+    print_grid(t);
+    check_grid_rows(t, "AB CDEFGHIJKMNOP"); 
+
+    set_grid_rows(t);
+    vt_term_scroll_down(t, t->mt, 2);
+    print_grid(t);
+    check_grid_rows(t, "AB  CDEFGHIJMNOP"); 
+
+    set_grid_rows(t);
+    vt_term_scroll_down(t, t->mt, 10);
+    print_grid(t);
+    check_grid_rows(t, "AB          MNOP"); 
+
+    // Clear margins
+    t->mt = 0;
+    t->mb = t->h - 1;
+
 }
 
 void test_erase_in_display(vt_term_t *t) {
@@ -392,12 +431,12 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    // test_scroll(&t);
+    test_scroll(&t);
     // test_erase_in_display(&t);
     // test_insert_characters(&t);
     // test_delete_characters(&t);
     // test_erase_in_line(&t);
-    test_putch(&t);
+    // test_putch(&t);
 
     printf("all ok\n");
     return 0;
