@@ -38,10 +38,28 @@
  * 
  * ./a.out
  *
+ * 
+
+Shell 1)
+
+fifo=/tmp/myfifo
+rm -f "$fifo"
+mkfifo "$fifo"
+pty=$(socat -d -d PTY,raw,echo=0 FILE:"$fifo",ignoreeof 2>&1 | \
+awk -F' ' '/PTY is/ {print $NF; exit}')
+echo "Run: tio $pty"
+
+Shell 2)
+a.out < /tmp/myfifo
+
+Shell 3)
+tio /tmp/myfifo
+
+* 
  */
 #include "vt_emu.h"
 #include "vt_term_test_utils.h"
-#include "stdio.h"
+#include <stdio.h>
 int main() {
 
     const vt_coord_t w = 20;
@@ -54,6 +72,7 @@ int main() {
 
     char ch;
     while((ch = getchar()) != EOF) {
+        printf("character %d\n", ch);
         vt_emu_put_ch(&e, ch);
         print_grid(&e.term);
     }
