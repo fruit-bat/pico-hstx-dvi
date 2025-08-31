@@ -62,6 +62,15 @@ tio /tmp/myfifo
 #include <stdio.h>
 #include <assert.h>
 
+// ESC[H	moves cursor to home position (0, 0)
+// ESC[{line};{column}H
+// ESC[{line};{column}f	moves cursor to line #, column #
+// ESC[#A	moves cursor up # lines
+// ESC[#B	moves cursor down # lines
+// ESC[#C	moves cursor right # columns
+// ESC[#D	moves cursor left # columns
+// ESC[#E	moves cursor to beginning of next line, # lines down
+// ESC[#F	moves cursor to beginning of previous line, # lines up
 void test_cursor(vt_emu_t* e) {
     vt_emu_reset(e);
     assert(e->term.r == 0);
@@ -75,6 +84,20 @@ void test_cursor(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[H");
     assert(e->term.r == 0);
     assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[7B");
+    assert(e->term.r == 7);
+    assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[13C");
+    assert(e->term.r == 7);
+    assert(e->term.c == 13);
+    vt_emu_put_str(e, (vt_char_t*)"\033[3A");
+    assert(e->term.r == 4);
+    assert(e->term.c == 13);
+    vt_emu_put_str(e, (vt_char_t*)"\033[8D");
+    assert(e->term.r == 4);
+    assert(e->term.c == 5);
+
+
 }
 
 void test_stdin(vt_emu_t* e) {

@@ -81,7 +81,7 @@ void vt_emu_put_ch(
         break;
     case VT_A_C0_BS:       // Backspace
         DEBUG("VT_A_C0_BS\n");
-        vt_term_cursor_left(t);
+        vt_term_cursor_left(t,1);
         break;
     case VT_A_C0_HT:       // Horizontal Tab  
         DEBUG("VT_A_C0_HT\n");
@@ -157,22 +157,30 @@ void vt_emu_put_ch(
     case VT_A_RESTORE_CUR: // VT100 Restore Cursor Position (ESC 8)
         DEBUG("VT_A_RESTORE_CUR\n");
         break;
-    case VT_A_CUU:         // CUU - Cursor Up
-        DEBUG("VT_A_CUU\n");
-        vt_term_cursor_up(t);
+    case VT_A_CUU: {        // CUU - Cursor Up
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_CUU %lu\n", n);
+        vt_term_cursor_up(t, n);
         break;
-    case VT_A_CUD:         // CUD - Cursor Down
-        DEBUG("VT_A_CUD\n");
-        vt_term_cursor_down(t);
+    }
+    case VT_A_CUD: {       // CUD - Cursor Down
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_CUD %lu\n", n);
+        vt_term_cursor_down(t, n);
         break;
-    case VT_A_CUF:         // CUF - Cursor Forward
-        DEBUG("VT_A_CUF\n");
-        vt_term_cursor_right(t);
+    }
+    case VT_A_CUF: {        // CUF - Cursor Forward
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_CUF %lu\n", n);
+        vt_term_cursor_right(t, n);
         break;
-    case VT_A_CUB:         // CUB - Cursor Back
-        DEBUG("VT_A_CUB\n");
-        vt_term_cursor_left(t);
+    }
+    case VT_A_CUB: {         // CUB - Cursor Back
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_CUB %lu\n", n);
+        vt_term_cursor_left(t, n);
         break;
+    }
     case VT_A_CNL:         // CNL - Cursor Next Line    
         DEBUG("VT_A_CNL\n");
         break;

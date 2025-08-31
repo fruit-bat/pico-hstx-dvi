@@ -443,27 +443,31 @@ void vt_term_cr(
 }
 
 void vt_term_cursor_down(
-    vt_term_t *t
+    vt_term_t *t,
+    vt_coord_t n
 ) {
-    if (t->r > 0) t->r--;
+    t->r = t->r + n >= t->h ? t->h - 1 : t->r + n;
 }
 
 void vt_term_cursor_up(
-    vt_term_t *t
+    vt_term_t *t,
+    vt_coord_t n
 ) {
-    if (t->r < t->h - 1) t->r++;
+    t->r = t->r >= n ? t->r - n : 0;
 }
 
 void vt_term_cursor_left(
-    vt_term_t *t
+    vt_term_t *t,
+    vt_coord_t n
 ) {
-    if (t->c > 0) t->c--;
+    t->c = t->c >= n ? t->c - n : 0;
 }
 
 void vt_term_cursor_right(
-    vt_term_t *t
+    vt_term_t *t,
+    vt_coord_t n
 ) {
-    if (t->c < t->w - 1) t->c++;
+    t->c = t->c + n >= t->w ? t->w - 1 : t->c + n;
 }
 
 #ifdef VT_BUILD_TEST
