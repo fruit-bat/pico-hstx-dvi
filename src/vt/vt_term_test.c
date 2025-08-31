@@ -449,15 +449,37 @@ void test_cr(vt_term_t *t) {
     // Set top and bottom margins
     t->mt = 2;
     t->mb = t->h - 5;
+
     t->r = t->mb; 
     t->c = t->w - 1;
-
     set_grid_rows(t);
     vt_term_putch(t, 'x');
     printf("hang = %d\n", t->hang);
     vt_term_cr(t);
     print_grid(t);
     assert(t->hang == VT_HANG_BOTTOM);
+    check_grid_rows(t, "ABCDEFGHIJK?MNOP");
+    check_grid_row(t, 11, "LLLLLLLLLLLLLLLLLLLx");
+    vt_term_putch(t, 'y');
+    vt_term_putch(t, 'z');
+    print_grid(t);
+    check_grid_rows(t, "ABDEFGHIJK??MNOP"); 
+    check_grid_row(t, 10, "LLLLLLLLLLLLLLLLLLLx");
+    check_grid_row(t, 11, "yz                  ");
+
+    t->r = t->mb; 
+    t->c = 0;
+    set_grid_rows(t);
+    vt_term_putch(t, 'x');
+    vt_term_cr(t);
+    print_grid(t);
+    check_grid_rows(t, "ABCDEFGHIJK?MNOP");
+    check_grid_row(t, 11, "xLLLLLLLLLLLLLLLLLLL");
+    vt_term_putch(t, 'y');
+    vt_term_putch(t, 'z');
+    print_grid(t);
+    check_grid_rows(t, "ABCDEFGHIJK?MNOP");
+    check_grid_row(t, 11, "yzLLLLLLLLLLLLLLLLLL");
 }
 
 int main() {
