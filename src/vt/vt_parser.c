@@ -349,9 +349,10 @@ const vt_state_t* vt_parser_put_str(vt_parser_t *p, vt_char_t* s) {
     return last;
 }
 
-vt_a_t vt_parser_action(vt_parser_t *p) {
-    return (p == NULL) || (p->state == NULL) || ((p->state->f & VT_F_FINAL) ==0)
+const vt_a_t vt_parser_action_from_state(const vt_state_t *s) {
+    return (s == NULL) || ((s->f & VT_F_FINAL) ==0)
         ? VT_A_NONE
-        : p->state->n;
+        : s->n;
 }
+
 

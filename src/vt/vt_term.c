@@ -84,7 +84,7 @@ static inline void vt_term_clear_screen(
 }
 
 // Write a character at the cursor
-static void vt_term_putch(
+void vt_term_putch(
     vt_term_t *t, // The terminal
     vt_char_t ch
 ) {

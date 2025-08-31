@@ -95,6 +95,19 @@ void vt_term_scroll_up(
     vt_coord_t n   // Number of rows to scroll
 );
 
+void vt_term_putch(
+    vt_term_t *t, // The terminal
+    vt_char_t ch
+);
+
+void vt_term_nl(
+    vt_term_t *t // The terminal
+);
+
+void vt_term_cr(
+    vt_term_t *t // The terminal
+);
+
 #ifdef __cplusplus
 }
 #endif
