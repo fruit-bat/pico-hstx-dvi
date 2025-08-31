@@ -110,11 +110,9 @@ void vt_term_putch(
     }
 }
 
-void vt_term_init(
-    vt_term_t *t,    // The terminal
-    vt_cell_t *grid, // Cell grid for the display
-    vt_coord_t w,    // Terminal width in characters
-    vt_coord_t h     // Terminal height in characters
+
+void vt_term_reset(
+    vt_term_t* t  // The terminal
 ) {
     // Clear down any flags
     t->flags = 0;
@@ -122,20 +120,30 @@ void vt_term_init(
     // Clear the delayed scroll
     t->hang = VT_HANG_NONE;
 
-    // Set the terminal size
-    t->w = w; // Terminal width
-    t->h = h; // Terminal height
-
     // Cursor top left
     t->c = 0; // Cursor column
     t->r = 0; // Cursor row
 
     // No margins
     t->mt = 0;     // Margin top
-    t->mb = h - 1; // Margin bottom
+    t->mb = t->h - 1; // Margin bottom
 
     // The default attributes
     vt_term_reset_attr(t);
+
+    // Clear the screen
+    vt_term_clear_screen(t);
+}
+
+void vt_term_init(
+    vt_term_t *t,    // The terminal
+    vt_cell_t *grid, // Cell grid for the display
+    vt_coord_t w,    // Terminal width in characters
+    vt_coord_t h     // Terminal height in characters
+) {
+    // Set the terminal size
+    t->w = w; // Terminal width
+    t->h = h; // Terminal height
 
     // TODO perhaps these should be passed in?
     // Initialize the row pointers
@@ -145,8 +153,7 @@ void vt_term_init(
         grid += w;
     }
 
-    // Clear the screen
-    vt_term_clear_screen(t);
+    vt_term_reset(t);
 }
 
 void vt_term_scroll_up(

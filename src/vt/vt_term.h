@@ -89,6 +89,10 @@ void vt_term_init(
     vt_coord_t h  // Terminal height in characters
 );
 
+void vt_term_reset(
+    vt_term_t* t  // The terminal
+);
+
 void vt_term_scroll_up(
     vt_term_t *t,  // The terminal
     vt_coord_t rs, // The start row
