@@ -440,7 +440,7 @@ void test_putch(vt_term_t *t) {
 
 void test_reverse_nl(vt_term_t *t) {
 
-    printf("\nTesting nl margins\n");
+    printf("\nTesting reverse nl margins\n");
     // Set top and bottom margins
     t->mt = 2;
     t->mb = t->h - 5;
@@ -479,6 +479,45 @@ void test_reverse_nl(vt_term_t *t) {
 }
 
 void test_nl(vt_term_t *t) {
+    printf("\nTesting nl margins\n");
+    // Set top and bottom margins
+    t->mt = 2;
+    t->mb = t->h - 5;
+
+    t->r = t->mb; 
+    t->c = t->w - 1;
+    set_grid_rows(t);
+    vt_term_putch(t, 'x');
+    printf("hang = %d\n", t->hang);
+    vt_term_nl(t);
+    print_grid(t);
+    printf("hang = %d\n", t->hang);
+    assert(t->hang == 0);
+    check_grid_rows(t, "ABDEFGHIJK? MNOP");
+    check_grid_row(t, 10, "LLLLLLLLLLLLLLLLLLLx");
+    vt_term_putch(t, 'y');
+    vt_term_putch(t, 'z');
+    print_grid(t);
+    check_grid_rows(t, "ABDEFGHIJK??MNOP");
+    check_grid_row(t, 10, "LLLLLLLLLLLLLLLLLLLx");
+    check_grid_row(t, 11, "yz                  ");
+
+    t->r = t->mt; 
+    t->c = 2;
+    set_grid_rows(t);
+    vt_term_putch(t, 'x');
+    vt_term_nl(t);
+    print_grid(t);
+    vt_term_putch(t, 'y');
+    vt_term_putch(t, 'z');
+    print_grid(t);
+    check_grid_rows(t, "AB??EFGHIJKLMNOP");
+    check_grid_row(t, 2, "CCxCCCCCCCCCCCCCCCCC");
+    check_grid_row(t, 3, "DDDyzDDDDDDDDDDDDDDD");
+
+    // Clear margins
+    t->mt = 0;
+    t->mb = t->h - 1;
 }
 
 void test_cr(vt_term_t *t) {
@@ -539,15 +578,15 @@ int main() {
     print_grid(&t);
     check_grid_blank(&t);
 
-    // test_scroll(&t);
-    // test_erase_in_display(&t);
-    // test_insert_characters(&t);
-    // test_delete_characters(&t);
-    // test_erase_in_line(&t);
-    // test_putch(&t);
+    test_scroll(&t);
+    test_erase_in_display(&t);
+    test_insert_characters(&t);
+    test_delete_characters(&t);
+    test_erase_in_line(&t);
+    test_putch(&t);
     test_reverse_nl(&t);
-    // test_nl(&t);
-    // test_cr(&t);
+    test_nl(&t);
+    test_cr(&t);
 
     printf("all ok\n");
     return 0;

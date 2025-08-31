@@ -408,7 +408,7 @@ void vt_term_nl(
     if (t->r == t->mb) {
         vt_term_scroll_up(t, t->mt, 1);
     }
-    else if (t->r < (t -> h-1)) {
+    else if (t->r < (t->h - 1)) {
         t->r++;
     }
 }
