@@ -86,8 +86,8 @@ static inline void vt_term_clear_screen(
 // Write a character at the cursor
 static void vt_term_putch(
     vt_term_t *t, // The terminal
-    vt_char_t ch)
-{
+    vt_char_t ch
+) {
     if (t->hang == VT_HANG_BOTTOM) {
         vt_term_scroll_up(t, t->mt, 1);
     }
@@ -115,8 +115,7 @@ void vt_term_init(
     vt_cell_t *grid, // Cell grid for the display
     vt_coord_t w,    // Terminal width in characters
     vt_coord_t h     // Terminal height in characters
-)
-{
+) {
     // Clear down any flags
     t->flags = 0;
 

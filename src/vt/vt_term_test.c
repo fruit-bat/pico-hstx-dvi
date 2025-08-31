@@ -438,6 +438,28 @@ void test_putch(vt_term_t *t) {
     t->mb = t->h - 1;
 }
 
+void test_reverse_nl(vt_term_t *t) {
+}
+
+void test_nl(vt_term_t *t) {
+}
+
+void test_cr(vt_term_t *t) {
+    printf("\nTesting cr margins\n");
+    // Set top and bottom margins
+    t->mt = 2;
+    t->mb = t->h - 5;
+    t->r = t->mb; 
+    t->c = t->w - 1;
+
+    set_grid_rows(t);
+    vt_term_putch(t, 'x');
+    printf("hang = %d\n", t->hang);
+    vt_term_cr(t);
+    print_grid(t);
+    assert(t->hang == VT_HANG_BOTTOM);
+}
+
 int main() {
     const vt_coord_t w = 20;
     const vt_coord_t h = 16;
@@ -459,7 +481,10 @@ int main() {
     // test_insert_characters(&t);
     // test_delete_characters(&t);
     // test_erase_in_line(&t);
-    test_putch(&t);
+    // test_putch(&t);
+    // test_reverse_nl(&t);
+    // test_nl(&t);
+    test_cr(&t);
 
     printf("all ok\n");
     return 0;
