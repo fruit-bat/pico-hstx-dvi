@@ -108,6 +108,42 @@ void vt_term_cr(
     vt_term_t *t // The terminal
 );
 
+void vt_term_cursor_down(
+    vt_term_t *t
+);
+
+void vt_term_cursor_up(
+    vt_term_t *t
+);
+
+void vt_term_cursor_left(
+    vt_term_t *t
+);
+
+void vt_term_cursor_right(
+    vt_term_t *t
+);
+
+// Erase in Display is a terminal control function (from ANSI escape codes, specifically ESC [ n J) that clears parts or all of the terminal screen, depending on the parameter n:
+//
+// n = 0: Erase from cursor to end of screen (including cursor position).
+// n = 1: Erase from start of screen to cursor (including cursor position).
+// n = 2: Erase entire screen.
+void vt_term_erase_in_display(
+    vt_term_t *t, // The terminal
+    uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
+);
+
+// Erase in Display is a terminal control function (from ANSI escape codes, specifically ESC [ n J) that clears parts or all of the terminal screen, depending on the parameter n:
+//
+// n = 0: Erase from cursor to end of screen (including cursor position).
+// n = 1: Erase from start of screen to cursor (including cursor position).
+// n = 2: Erase entire screen.
+void vt_term_erase_in_line(
+    vt_term_t *t, // The terminal
+    uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
+);
+
 #ifdef __cplusplus
 }
 #endif

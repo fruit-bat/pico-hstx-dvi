@@ -429,11 +429,25 @@ void vt_term_cr(
 void vt_term_cursor_down(
     vt_term_t *t
 ) {
+    if (t->r > 0) t->r--;
 }
 
 void vt_term_cursor_up(
     vt_term_t *t
 ) {
+    if (t->r < t->h - 1) t->r++;
+}
+
+void vt_term_cursor_left(
+    vt_term_t *t
+) {
+    if (t->c > 0) t->c--;
+}
+
+void vt_term_cursor_right(
+    vt_term_t *t
+) {
+    if (t->c < t->w - 1) t->c++;
 }
 
 #ifdef VT_BUILD_TEST
