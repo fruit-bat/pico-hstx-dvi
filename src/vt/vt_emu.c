@@ -22,6 +22,17 @@ void vt_emu_init(
     );
 }
 
+void vt_emu_reset(
+    vt_emu_t *e
+) {
+    vt_parser_reset(
+        &e->parser
+    );
+    vt_term_reset(
+        &e->term
+    );
+}
+
 uint32_t vt_emu_get_p0(vt_parser_t* p, uint32_t i) {
     return p->n_params <= i ? 0 : p->params[i];
 }
@@ -168,9 +179,14 @@ void vt_emu_put_ch(
     case VT_A_CPL:         // CPL - Cursor Previous Line
         DEBUG("VT_A_CPL\n");
         break;
-    case VT_A_CUP:         // CUP - Cursor Position
-        DEBUG("VT_A_CUP\n");
+    case VT_A_HVP:         // HVP - Horizontal Vertical Position
+    case VT_A_CUP: {       // CUP - Cursor Position
+        const uint32_t r = vt_emu_get_p0(p, 0);
+        const uint32_t c = vt_emu_get_p0(p, 1);
+        DEBUG("VT_A_CUP/VT_A_HVP %lu, %lu\n", r, c);
+        vt_term_cursor_set(t, r, c);
         break;
+    }
     case VT_A_CHA:         // CHA - Cursor Horizontal Absolute 
         DEBUG("VT_A_CHA\n");
         break;
@@ -185,9 +201,6 @@ void vt_emu_put_ch(
         DEBUG("VT_A_EL\n");
         vt_term_erase_in_line(t, vt_emu_get_p0(p, 0));
         break;    
-    case VT_A_HVP:         // HVP - Horizontal Vertical Position
-        DEBUG("VT_A_HVP\n");
-        break;
     case VT_A_SGR:         // Select Graphic Rendition
         DEBUG("VT_A_SGR\n");
         break;

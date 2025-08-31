@@ -156,6 +156,15 @@ void vt_term_init(
     vt_term_reset(t);
 }
 
+void vt_term_cursor_set(
+    vt_term_t *t,
+    vt_coord_t r,
+    vt_coord_t c
+) {
+    t->r = MIN(r, t->h - 1);
+    t->c = MIN(c, t->w - 1);
+}
+
 void vt_term_scroll_up(
     vt_term_t *t,  // The terminal
     vt_coord_t rs, // The start row

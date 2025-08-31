@@ -46,13 +46,19 @@ void vt_emu_init(
     vt_coord_t w,    // Terminal width in characters
     vt_coord_t h     // Terminal height in characters
 );
+
 void vt_emu_put_ch(
     vt_emu_t *e, 
     vt_char_t ch
 );
+
 void vt_emu_put_str(
     vt_emu_t *e, 
     vt_char_t* s
+);
+
+void vt_emu_reset(
+    vt_emu_t *e
 );
 
 #ifdef __cplusplus

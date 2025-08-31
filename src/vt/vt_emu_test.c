@@ -60,6 +60,34 @@ tio /tmp/myfifo
 #include "vt_emu.h"
 #include "vt_term_test_utils.h"
 #include <stdio.h>
+#include <assert.h>
+
+void test_cursor(vt_emu_t* e) {
+    vt_emu_reset(e);
+    assert(e->term.r == 0);
+    assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
+    assert(e->term.r == 4);
+    assert(e->term.c == 5);
+    vt_emu_put_str(e, (vt_char_t*)"\033[7;13f");
+    assert(e->term.r == 7);
+    assert(e->term.c == 13);
+    vt_emu_put_str(e, (vt_char_t*)"\033[H");
+    assert(e->term.r == 0);
+    assert(e->term.c == 0);
+}
+
+void test_stdin(vt_emu_t* e) {
+    setvbuf(stdin, NULL, _IONBF, 0);
+
+    char ch;
+    while((ch = getchar()) != EOF) {
+        printf("character %d\n", ch);
+        vt_emu_put_ch(e, ch);
+        print_grid(&e->term);
+    }
+}
+
 int main() {
 
     const vt_coord_t w = 20;
@@ -68,12 +96,8 @@ int main() {
     vt_emu_t e;
     vt_emu_init(&e, (vt_cell_t*)grid, w, h);
 
-    setvbuf(stdin, NULL, _IONBF, 0);
+    test_cursor(&e);
+    // test_stdin(&e);
 
-    char ch;
-    while((ch = getchar()) != EOF) {
-        printf("character %d\n", ch);
-        vt_emu_put_ch(&e, ch);
-        print_grid(&e.term);
-    }
+    printf("All OK\n");
 }
