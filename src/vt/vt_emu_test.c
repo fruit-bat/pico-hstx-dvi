@@ -71,6 +71,13 @@ tio /tmp/myfifo
 // ESC[#D	moves cursor left # columns
 // ESC[#E	moves cursor to beginning of next line, # lines down
 // ESC[#F	moves cursor to beginning of previous line, # lines up
+// ESC[#G	moves cursor to column #
+// ESC[6n	request cursor position (reports as ESC[#;#R)
+// ESC M	moves cursor one line up, scrolling if needed
+// ESC 7	save cursor position (DEC)
+// ESC 8	restores the cursor to the last saved position (DEC)
+// ESC[s	save cursor position (SCO)
+// ESC[u	restores the cursor to the last saved position (SCO)
 void test_cursor(vt_emu_t* e) {
     vt_emu_reset(e);
     assert(e->term.r == 0);
