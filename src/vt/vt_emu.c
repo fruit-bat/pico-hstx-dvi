@@ -134,6 +134,7 @@ void vt_emu_put_ch(
         break;
     case VT_A_RI:          // VT100 Reverse Index (ESC M)
         DEBUG("VT_A_RI\n");
+        vt_term_reverse_nl(t);
         break;
     case VT_A_SS2:         // VT100 Single Shift 2 (ESC N)
         DEBUG("VT_A_SS2\n");
@@ -203,9 +204,12 @@ void vt_emu_put_ch(
         vt_term_cursor_set(t, r, c);
         break;
     }
-    case VT_A_CHA:         // CHA - Cursor Horizontal Absolute 
-        DEBUG("VT_A_CHA\n");
+    case VT_A_CHA: {        // CHA - Cursor Horizontal Absolute 
+        const uint32_t c = vt_emu_get_p0(p, 0);
+        DEBUG("VT_A_CHA %lu\n", c);
+        vt_term_cursor_set_col(t, c);
         break;
+    }
     case VT_A_CHT:         // CHT - Cursor Horizontal Tabulation
         DEBUG("VT_A_CHT\n");
         break;

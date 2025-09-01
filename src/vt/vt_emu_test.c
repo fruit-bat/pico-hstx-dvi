@@ -115,6 +115,14 @@ void test_cursor(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[2F");
     assert(e->term.r == 4);
     assert(e->term.c == 0);
+    // Reverse index
+    vt_emu_put_str(e, (vt_char_t*)"\033M");
+    assert(e->term.r == 3);
+    assert(e->term.c == 0);
+    // Change horizontal attribute
+    vt_emu_put_str(e, (vt_char_t*)"\033[11G");
+    assert(e->term.r == 3);
+    assert(e->term.c == 11);    
 }
 
 void test_stdin(vt_emu_t* e) {

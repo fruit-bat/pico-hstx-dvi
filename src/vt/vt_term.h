@@ -138,6 +138,16 @@ void vt_term_cursor_set(
     vt_coord_t c
 );
 
+void vt_term_cursor_set_col(
+    vt_term_t *t,
+    vt_coord_t c
+);
+
+void vt_term_cursor_set_row(
+    vt_term_t *t,
+    vt_coord_t r
+);
+
 void vt_term_next_line_down(
     vt_term_t *t,
     vt_coord_t n
@@ -166,6 +176,11 @@ void vt_term_erase_in_display(
 void vt_term_erase_in_line(
     vt_term_t *t, // The terminal
     uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
+);
+
+// ESC M - reverse index / reverse new line
+void vt_term_reverse_nl(
+    vt_term_t *t // The terminal
 );
 
 #ifdef __cplusplus

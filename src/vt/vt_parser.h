@@ -92,7 +92,7 @@ typedef enum {
     VT_A_CNL,         // CNL - Cursor Next Line
     VT_A_CPL,         // CPL - Cursor Previous Line (ESC [nF)
     VT_A_CUP,         // CUP - Cursor Position
-    VT_A_CHA,         // CHA - Cursor Horizontal Absolute 
+    VT_A_CHA,         // CHA - Cursor Horizontal Absolute (ESC [nG)
     VT_A_CHT,         // CHT - Cursor Horizontal Tabulation
     VT_A_ED,          // ED  - Erase in Display
     VT_A_EL,          // EL  - Erase in Line
