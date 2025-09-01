@@ -69,18 +69,22 @@ typedef enum {
 
 typedef struct 
 {
+    vt_coord_t w; // Terminal width in characters
+    vt_coord_t h; // Terminal height in characters
     vt_coord_t mt; // Margin top row
     vt_coord_t mb; // Margin bottom row
     vt_coord_t r; // Cursor row
     vt_coord_t c; // Cursor column
-    vt_coord_t w; // Terminal width in characters
-    vt_coord_t h; // Terminal height in characters
-    vt_cell_t* rp[VT_SCREEN_MAX_ROWS]; // Row pointers
     vt_cell_attr_t attr; // The current attributes
-    uint32_t flags;
+    vt_coord_t s_r; // Cursor row
+    vt_coord_t s_c; // Cursor column    
+    vt_cell_attr_t s_attr; // The current attributes
     vt_term_hang_t hang; // Delayed scroll handling
+    uint32_t flags;
+    vt_cell_t* rp[VT_SCREEN_MAX_ROWS]; // Row pointers
 
 } vt_term_t;
+
 
 void vt_term_init(
     vt_term_t* t, // The terminal
@@ -90,6 +94,14 @@ void vt_term_init(
 );
 
 void vt_term_reset(
+    vt_term_t* t  // The terminal
+);
+
+void vt_term_save_cursor(
+    vt_term_t* t  // The terminal
+);
+
+void vt_term_restore_cursor(
     vt_term_t* t  // The terminal
 );
 

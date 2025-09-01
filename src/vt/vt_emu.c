@@ -156,9 +156,11 @@ void vt_emu_put_ch(
         break;
     case VT_A_SAVE_CUR:    // VT100 Save Cursor Position (ESC 7)
         DEBUG("VT_A_SAVE_CUR\n");
+        vt_term_save_cursor(t);
         break;
     case VT_A_RESTORE_CUR: // VT100 Restore Cursor Position (ESC 8)
         DEBUG("VT_A_RESTORE_CUR\n");
+        vt_term_restore_cursor(t);
         break;
     case VT_A_CUU: {        // CUU - Cursor Up
         const uint32_t n = vt_emu_get_p1(p, 0);

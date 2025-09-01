@@ -125,14 +125,33 @@ void vt_term_reset(
     t->r = 0; // Cursor row
 
     // No margins
-    t->mt = 0;     // Margin top
-    t->mb = t->h - 1; // Margin bottom
+    t->mt = 0;        // Margin top (exclusive)
+    t->mb = t->h - 1; // Margin bottom (exclusive)
 
     // The default attributes
     vt_term_reset_attr(t);
 
+    // Save the cursor
+    vt_term_save_cursor(t);
+
     // Clear the screen
     vt_term_clear_screen(t);
+}
+
+void vt_term_save_cursor(
+    vt_term_t* t  // The terminal
+) {
+    t->s_r = t->r;
+    t->s_c = t->c;
+    t->s_attr = t->attr;
+}
+
+void vt_term_restore_cursor(
+    vt_term_t* t  // The terminal
+) {
+    t->r = t->s_r;
+    t->c = t->s_c;
+    t->attr = t->s_attr;
 }
 
 void vt_term_init(
