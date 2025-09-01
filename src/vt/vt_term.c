@@ -470,6 +470,22 @@ void vt_term_cursor_right(
     t->c = t->c + n >= t->w ? t->w - 1 : t->c + n;
 }
 
+void vt_term_next_line_down(
+    vt_term_t *t,
+    vt_coord_t n
+) {
+    t->c = 0;
+    t->r = t->r + n >= t->h ? t->h - 1 : t->r + n;
+}
+
+void vt_term_next_line_up(
+    vt_term_t *t,
+    vt_coord_t n
+) {
+    t->c = 0;
+    t->r = t->r >= n ? t->r - n : 0;
+}
+
 #ifdef VT_BUILD_TEST
 #include "vt_term_test.c"
 #endif

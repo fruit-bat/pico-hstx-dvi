@@ -138,6 +138,16 @@ void vt_term_cursor_set(
     vt_coord_t c
 );
 
+void vt_term_next_line_down(
+    vt_term_t *t,
+    vt_coord_t n
+);
+
+void vt_term_next_line_up(
+    vt_term_t *t,
+    vt_coord_t n
+);
+
 // Erase in Display is a terminal control function (from ANSI escape codes, specifically ESC [ n J) that clears parts or all of the terminal screen, depending on the parameter n:
 //
 // n = 0: Erase from cursor to end of screen (including cursor position).

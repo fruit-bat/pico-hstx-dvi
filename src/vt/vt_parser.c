@@ -170,7 +170,7 @@ const vt_state_t vt_states_csi_f[] = {
     {'F',          VT_A_CPL,          VT_F_FINAL}, // ESC [nF
     {'f',          VT_A_HVP,          VT_F_FINAL}, // ESC [nf
     {'G',          VT_A_CHA,          VT_F_FINAL}, // ESC [nG          
-    {'H',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nH
+    {'H',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nH 
     {'J',          VT_A_ED,           VT_F_FINAL}, // ESC [nJ
     {'K',          VT_A_EL,           VT_F_FINAL}, // ESC [nK
     {'S',          VT_A_SU,           VT_F_FINAL}, // ESC [nS

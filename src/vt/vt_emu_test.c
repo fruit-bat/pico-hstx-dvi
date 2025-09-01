@@ -103,8 +103,18 @@ void test_cursor(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[8D");
     assert(e->term.r == 4);
     assert(e->term.c == 5);
-
-
+    vt_emu_put_str(e, (vt_char_t*)"\033[E");
+    assert(e->term.r == 5);
+    assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[2E");
+    assert(e->term.r == 7);
+    assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[F");
+    assert(e->term.r == 6);
+    assert(e->term.c == 0);
+    vt_emu_put_str(e, (vt_char_t*)"\033[2F");
+    assert(e->term.r == 4);
+    assert(e->term.c == 0);
 }
 
 void test_stdin(vt_emu_t* e) {

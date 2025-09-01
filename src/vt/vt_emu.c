@@ -124,9 +124,11 @@ void vt_emu_put_ch(
     case VT_A_IND:         // VT100 Index (ESC D)
         DEBUG("VT_A_IND\n");
         break;
-    case VT_A_NEL:         // VT100 Next Line (ESC E)
-        DEBUG("VT_A_NEL\n");
+    case VT_A_NEL: {        // VT100 Next Line (ESC E)
+        DEBUG("VT_A_NEL");
+        // TODO investigate behaviour
         break;
+    }
     case VT_A_HTS:         // VT100 Horizontal Tab Set (ESC H)
         DEBUG("VT_A_HTS\n");
         break;
@@ -181,12 +183,18 @@ void vt_emu_put_ch(
         vt_term_cursor_left(t, n);
         break;
     }
-    case VT_A_CNL:         // CNL - Cursor Next Line    
-        DEBUG("VT_A_CNL\n");
+    case VT_A_CNL: {       // CNL - Cursor Next Line
+        const uint32_t n = vt_emu_get_p1(p, 0);        
+        DEBUG("VT_A_CNL %lu\n", n);
+        vt_term_next_line_down(t, n);    
         break;
-    case VT_A_CPL:         // CPL - Cursor Previous Line
-        DEBUG("VT_A_CPL\n");
+    }
+    case VT_A_CPL: {        // CPL - Cursor Previous Line
+        const uint32_t n = vt_emu_get_p1(p, 0);        
+        DEBUG("VT_A_CPL %lu\n", n);
+        vt_term_next_line_up(t, n);
         break;
+    }
     case VT_A_HVP:         // HVP - Horizontal Vertical Position
     case VT_A_CUP: {       // CUP - Cursor Position
         const uint32_t r = vt_emu_get_p0(p, 0);
