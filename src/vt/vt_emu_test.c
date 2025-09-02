@@ -26,18 +26,7 @@
  */
 /* Build instructions:
  *
-
- cc -Wall \
- vt_cell.c \
- vt_emu.c \
- vt_term_test_utils.c \
- vt_parser.c \
- vt_term.c \
- vt_emu_test.c 
-  
- * 
- * ./a.out
- *
+ * ./vt_emu_test.sh
  * 
 
 Shell 1)
@@ -63,7 +52,7 @@ tio /tmp/myfifo
 #include <assert.h>
 
 // ESC[H	moves cursor to home position (0, 0)
-// ESC[{line};{column}H
+// ESC[{line};{column}H moves cursor to line #, column #
 // ESC[{line};{column}f	moves cursor to line #, column #
 // ESC[#A	moves cursor up # lines
 // ESC[#B	moves cursor down # lines
@@ -82,47 +71,79 @@ void test_cursor(vt_emu_t* e) {
     vt_emu_reset(e);
     assert(e->term.r == 0);
     assert(e->term.c == 0);
+    // ESC[{line};{column}H moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
     assert(e->term.r == 4);
     assert(e->term.c == 5);
+    // ESC[{line};{column}f	moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[7;13f");
     assert(e->term.r == 7);
     assert(e->term.c == 13);
+    // ESC[H	moves cursor to home position (0, 0)
     vt_emu_put_str(e, (vt_char_t*)"\033[H");
     assert(e->term.r == 0);
     assert(e->term.c == 0);
+    // ESC[#B	moves cursor down # lines
     vt_emu_put_str(e, (vt_char_t*)"\033[7B");
     assert(e->term.r == 7);
     assert(e->term.c == 0);
+    // ESC[#C	moves cursor right # columns
     vt_emu_put_str(e, (vt_char_t*)"\033[13C");
     assert(e->term.r == 7);
     assert(e->term.c == 13);
+    // ESC[#A	moves cursor up # lines
     vt_emu_put_str(e, (vt_char_t*)"\033[3A");
     assert(e->term.r == 4);
     assert(e->term.c == 13);
+    // ESC[#D	moves cursor left # columns
     vt_emu_put_str(e, (vt_char_t*)"\033[8D");
     assert(e->term.r == 4);
     assert(e->term.c == 5);
+    // ESC[#E	moves cursor to beginning of next line, # lines down
     vt_emu_put_str(e, (vt_char_t*)"\033[E");
     assert(e->term.r == 5);
     assert(e->term.c == 0);
+    // ESC[#E	moves cursor to beginning of next line, # lines down
     vt_emu_put_str(e, (vt_char_t*)"\033[2E");
     assert(e->term.r == 7);
     assert(e->term.c == 0);
+    // ESC[#F	moves cursor to beginning of previous line, # lines up
     vt_emu_put_str(e, (vt_char_t*)"\033[F");
     assert(e->term.r == 6);
     assert(e->term.c == 0);
+    // ESC[#F	moves cursor to beginning of previous line, # lines up
     vt_emu_put_str(e, (vt_char_t*)"\033[2F");
     assert(e->term.r == 4);
     assert(e->term.c == 0);
-    // Reverse index
+    // ESC M	moves cursor one line up, scrolling if needed
     vt_emu_put_str(e, (vt_char_t*)"\033M");
     assert(e->term.r == 3);
     assert(e->term.c == 0);
     // Change horizontal attribute
     vt_emu_put_str(e, (vt_char_t*)"\033[11G");
     assert(e->term.r == 3);
-    assert(e->term.c == 11);    
+    assert(e->term.c == 11);
+    // Save & Restore ESC7, ESC8
+    assert(e->term.r == 3);
+    assert(e->term.c == 11);
+    vt_emu_put_str(e, (vt_char_t*)"\0337");
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
+    assert(e->term.r == 4);
+    assert(e->term.c == 5);
+    vt_emu_put_str(e, (vt_char_t*)"\0338");
+    assert(e->term.r == 3);
+    assert(e->term.c == 11);
+    // Save & Restore ESC[s, ESC[u]
+    assert(e->term.r == 3);
+    assert(e->term.c == 11);
+    vt_emu_put_str(e, (vt_char_t*)"\033[s");
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
+    assert(e->term.r == 4);
+    assert(e->term.c == 5);
+    vt_emu_put_str(e, (vt_char_t*)"\033[u");
+    assert(e->term.r == 3);
+    assert(e->term.c == 11);
+
 }
 
 void test_stdin(vt_emu_t* e) {
