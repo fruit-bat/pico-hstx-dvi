@@ -161,6 +161,7 @@ void test_cursor(vt_emu_t* e) {
 void test_erase(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
+    
     set_grid_cols(t);
     print_grid(t);
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
@@ -196,7 +197,7 @@ void test_erase(vt_emu_t* e) {
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "                    ");
-        if (r == 4) check_grid_row(t, r, "     FGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "      GHIJKLMNOPQRST");
         if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
     }
 
@@ -208,9 +209,72 @@ void test_erase(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[2J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
-        if (r <  4) check_grid_row(t, r, "                    ");
+        check_grid_row(t, r, "                    ");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[2J	erase entire screen
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[3J");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        check_grid_row(t, r, "                    ");
+    }
+
+
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[K	erase in line (same as ESC[0K)
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[K");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "ABCDE               ");
+        if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[0K	erase from cursor to end of line
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[0K");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "ABCDE               ");
+        if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[1K	erase start of line to the cursor
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[1K");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "      GHIJKLMNOPQRST");
+        if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[2K	erase the entire line
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[2K");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
         if (r == 4) check_grid_row(t, r, "                    ");
-        if (r >  4) check_grid_row(t, r, "                    ");
+        if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
     }
 }
 

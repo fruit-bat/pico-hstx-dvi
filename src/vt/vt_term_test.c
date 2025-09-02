@@ -280,7 +280,7 @@ void test_erase_in_display(vt_term_t *t) {
     for(vt_coord_t r = 0; r < 10; ++r) {
         check_grid_row(t, r, "                    ");
     }
-    check_grid_row(t, 10, "       KKKKKKKKKKKKK");
+    check_grid_row(t, 10, "        KKKKKKKKKKKK");
     check_grid_row(t, 11, "LLLLLLLLLLLLLLLLLLLL");
     check_grid_row(t, 12, "MMMMMMMMMMMMMMMMMMMM");
     check_grid_row(t, 13, "NNNNNNNNNNNNNNNNNNNN");

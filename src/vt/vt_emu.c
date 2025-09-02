@@ -215,14 +215,18 @@ void vt_emu_put_ch(
     case VT_A_CHT:         // CHT - Cursor Horizontal Tabulation
         DEBUG("VT_A_CHT\n");
         break;
-    case VT_A_ED:          // ED  - Erase in Display
-        DEBUG("VT_A_ED\n");
-        vt_term_erase_in_display(t, vt_emu_get_p0(p, 0));
+    case VT_A_ED: {         // ED  - Erase in Display
+        const uint32_t n = vt_emu_get_p0(p, 0);
+        DEBUG("VT_A_ED %lu\n", n);
+        vt_term_erase_in_display(t, n);
         break;
-    case VT_A_EL:          // EL  - Erase in Line
-        DEBUG("VT_A_EL\n");
-        vt_term_erase_in_line(t, vt_emu_get_p0(p, 0));
-        break;    
+    }
+    case VT_A_EL: {         // EL  - Erase in Line
+        const uint32_t n = vt_emu_get_p0(p, 0);
+        DEBUG("VT_A_EL %lu\n", n);
+        vt_term_erase_in_line(t, n);
+        break;
+    }
     case VT_A_SGR:         // Select Graphic Rendition
         DEBUG("VT_A_SGR\n");
         break;

@@ -307,10 +307,14 @@ void vt_term_erase_in_display(
     case 1:
         // Erase from the start of the screen to the cursor
         e = t->r;                             // End clearing at the row before the cursor
-        vt_term_clear_line(t, t->r, 0, t->c); // Clear from the start of the current row to the cursor column
+        vt_term_clear_line(t, t->r, 0, t->c + 1); // Clear from the start of the current row to the cursor column
         break;
     case 2:
         // Erase the entire screen (default range is already set)
+        break;
+    case 3:
+        // Erase the entire screen (default range is already set)
+        // Also erase and scrollback lines (not implemented at present)
         break;
     default:
         // Invalid parameter, do nothing
