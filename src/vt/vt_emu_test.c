@@ -51,6 +51,9 @@ tio /tmp/myfifo
 #include <stdio.h>
 #include <assert.h>
 
+// TODO
+// ESC[6n	request cursor position (reports as ESC[#;#R)
+
 // ESC[H	moves cursor to home position (0, 0)
 // ESC[{line};{column}H moves cursor to line #, column #
 // ESC[{line};{column}f	moves cursor to line #, column #
@@ -61,99 +64,165 @@ tio /tmp/myfifo
 // ESC[#E	moves cursor to beginning of next line, # lines down
 // ESC[#F	moves cursor to beginning of previous line, # lines up
 // ESC[#G	moves cursor to column #
-// ESC[6n	request cursor position (reports as ESC[#;#R)
 // ESC M	moves cursor one line up, scrolling if needed
 // ESC 7	save cursor position (DEC)
 // ESC 8	restores the cursor to the last saved position (DEC)
 // ESC[s	save cursor position (SCO)
 // ESC[u	restores the cursor to the last saved position (SCO)
 void test_cursor(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+
     vt_emu_reset(e);
-    assert(e->term.r == 0);
-    assert(e->term.c == 0);
+    assert(t->r == 0);
+    assert(t->c == 0);
     // ESC[{line};{column}H moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(e->term.r == 4);
-    assert(e->term.c == 5);
+    assert(t->r == 4);
+    assert(t->c == 5);
     // ESC[{line};{column}f	moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[7;13f");
-    assert(e->term.r == 7);
-    assert(e->term.c == 13);
+    assert(t->r == 7);
+    assert(t->c == 13);
     // ESC[H	moves cursor to home position (0, 0)
     vt_emu_put_str(e, (vt_char_t*)"\033[H");
-    assert(e->term.r == 0);
-    assert(e->term.c == 0);
+    assert(t->r == 0);
+    assert(t->c == 0);
     // ESC[#B	moves cursor down # lines
     vt_emu_put_str(e, (vt_char_t*)"\033[7B");
-    assert(e->term.r == 7);
-    assert(e->term.c == 0);
+    assert(t->r == 7);
+    assert(t->c == 0);
     // ESC[#C	moves cursor right # columns
     vt_emu_put_str(e, (vt_char_t*)"\033[13C");
-    assert(e->term.r == 7);
-    assert(e->term.c == 13);
+    assert(t->r == 7);
+    assert(t->c == 13);
     // ESC[#A	moves cursor up # lines
     vt_emu_put_str(e, (vt_char_t*)"\033[3A");
-    assert(e->term.r == 4);
-    assert(e->term.c == 13);
+    assert(t->r == 4);
+    assert(t->c == 13);
     // ESC[#D	moves cursor left # columns
     vt_emu_put_str(e, (vt_char_t*)"\033[8D");
-    assert(e->term.r == 4);
-    assert(e->term.c == 5);
+    assert(t->r == 4);
+    assert(t->c == 5);
     // ESC[#E	moves cursor to beginning of next line, # lines down
     vt_emu_put_str(e, (vt_char_t*)"\033[E");
-    assert(e->term.r == 5);
-    assert(e->term.c == 0);
+    assert(t->r == 5);
+    assert(t->c == 0);
     // ESC[#E	moves cursor to beginning of next line, # lines down
     vt_emu_put_str(e, (vt_char_t*)"\033[2E");
-    assert(e->term.r == 7);
-    assert(e->term.c == 0);
+    assert(t->r == 7);
+    assert(t->c == 0);
     // ESC[#F	moves cursor to beginning of previous line, # lines up
     vt_emu_put_str(e, (vt_char_t*)"\033[F");
-    assert(e->term.r == 6);
-    assert(e->term.c == 0);
+    assert(t->r == 6);
+    assert(t->c == 0);
     // ESC[#F	moves cursor to beginning of previous line, # lines up
     vt_emu_put_str(e, (vt_char_t*)"\033[2F");
-    assert(e->term.r == 4);
-    assert(e->term.c == 0);
+    assert(t->r == 4);
+    assert(t->c == 0);
     // ESC M	moves cursor one line up, scrolling if needed
     vt_emu_put_str(e, (vt_char_t*)"\033M");
-    assert(e->term.r == 3);
-    assert(e->term.c == 0);
+    assert(t->r == 3);
+    assert(t->c == 0);
     // Change horizontal attribute
     vt_emu_put_str(e, (vt_char_t*)"\033[11G");
-    assert(e->term.r == 3);
-    assert(e->term.c == 11);
+    assert(t->r == 3);
+    assert(t->c == 11);
     // Save & Restore ESC7, ESC8
-    assert(e->term.r == 3);
-    assert(e->term.c == 11);
+    assert(t->r == 3);
+    assert(t->c == 11);
     vt_emu_put_str(e, (vt_char_t*)"\0337");
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(e->term.r == 4);
-    assert(e->term.c == 5);
+    assert(t->r == 4);
+    assert(t->c == 5);
     vt_emu_put_str(e, (vt_char_t*)"\0338");
-    assert(e->term.r == 3);
-    assert(e->term.c == 11);
+    assert(t->r == 3);
+    assert(t->c == 11);
     // Save & Restore ESC[s, ESC[u]
-    assert(e->term.r == 3);
-    assert(e->term.c == 11);
+    assert(t->r == 3);
+    assert(t->c == 11);
     vt_emu_put_str(e, (vt_char_t*)"\033[s");
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(e->term.r == 4);
-    assert(e->term.c == 5);
+    assert(t->r == 4);
+    assert(t->c == 5);
     vt_emu_put_str(e, (vt_char_t*)"\033[u");
-    assert(e->term.r == 3);
-    assert(e->term.c == 11);
+    assert(t->r == 3);
+    assert(t->c == 11);
+}
 
+// ESC[J	erase in display (same as ESC[0J)
+// ESC[0J	erase from cursor until end of screen
+// ESC[1J	erase from cursor to beginning of screen
+// ESC[2J	erase entire screen
+// ESC[3J	erase saved lines
+// ESC[K	erase in line (same as ESC[0K)
+// ESC[0K	erase from cursor to end of line
+// ESC[1K	erase start of line to the cursor
+// ESC[2K	erase the entire line
+void test_erase(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[J	erase in display (same as ESC[0J)
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[J");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "ABCDE               ");
+        if (r >  4) check_grid_row(t, r, "                    ");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[J	erase in display (same as ESC[0J)
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[0J");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+        if (r == 4) check_grid_row(t, r, "ABCDE               ");
+        if (r >  4) check_grid_row(t, r, "                    ");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[1J	erase from cursor to beginning of screen
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[1J");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "                    ");
+        if (r == 4) check_grid_row(t, r, "     FGHIJKLMNOPQRST");
+        if (r >  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
+    }
+
+    set_grid_cols(t);
+    print_grid(t);
+    check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
+    // ESC[{line};{column}H moves cursor to line #, column #
+    // ESC[2J	erase entire screen
+    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[2J");
+    print_grid(t);
+    for(vt_coord_t r = 0; r < t->h; ++r) {
+        if (r <  4) check_grid_row(t, r, "                    ");
+        if (r == 4) check_grid_row(t, r, "                    ");
+        if (r >  4) check_grid_row(t, r, "                    ");
+    }
 }
 
 void test_stdin(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
     setvbuf(stdin, NULL, _IONBF, 0);
 
     char ch;
     while((ch = getchar()) != EOF) {
         printf("character %d\n", ch);
         vt_emu_put_ch(e, ch);
-        print_grid(&e->term);
+        print_grid(t);
     }
 }
 
@@ -166,6 +235,7 @@ int main() {
     vt_emu_init(&e, (vt_cell_t*)grid, w, h);
 
     test_cursor(&e);
+    test_erase(&e);
     // test_stdin(&e);
 
     printf("All OK\n");
