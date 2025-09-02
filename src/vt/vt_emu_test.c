@@ -278,6 +278,23 @@ void test_erase(vt_emu_t* e) {
     }
 }
 
+// ESC[1;34;{...}m		Set graphics modes for cell, separated by semicolon (;).
+// ESC[0m		reset all modes (styles and colors)
+// ESC[1m	ESC[22m	set bold mode.
+// ESC[2m	ESC[22m	set dim/faint mode.
+// ESC[3m	ESC[23m	set italic mode.
+// ESC[4m	ESC[24m	set underline mode.
+// ESC[5m	ESC[25m	set blinking mode
+// ESC[7m	ESC[27m	set inverse/reverse mode
+// ESC[8m	ESC[28m	set hidden/invisible mode
+// ESC[9m	ESC[29m	set strikethrough mode.
+void test_colour_modes(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+
+    // Todo
+}
+
 void test_stdin(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -300,6 +317,7 @@ int main() {
 
     test_cursor(&e);
     test_erase(&e);
+    test_colour_modes(&e);
     // test_stdin(&e);
 
     printf("All OK\n");
