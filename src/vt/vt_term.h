@@ -195,6 +195,31 @@ void vt_term_reverse_nl(
     vt_term_t *t // The terminal
 );
 
+void vt_term_flags_add(
+    vt_term_t *t,
+    vt_cell_flags_t f
+);
+
+void vt_term_flags_clear(
+    vt_term_t *t,
+    vt_cell_flags_t f
+);
+
+void vt_term_set_fgci(
+    vt_term_t *t,
+    vt_cell_colour_t fgci
+);
+
+void vt_term_set_bgci(
+    vt_term_t *t,
+    vt_cell_colour_t bgci
+);
+
+void vt_term_repeat(
+    vt_term_t *t, // The terminal
+    uint32_t n    // The number of characters to repeat
+);
+
 #ifdef __cplusplus
 }
 #endif

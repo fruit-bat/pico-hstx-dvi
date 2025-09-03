@@ -33,13 +33,25 @@ extern "C"
 {
 #endif
 
-#define VT_CELL_FLAGS_NORMAL    (0x00)
-#define VT_CELL_FLAGS_BOLD      (0x01)
-#define VT_CELL_FLAGS_DIM       (0x02)
-#define VT_CELL_FLAGS_UNDERLINE (0x04)
-#define VT_CELL_FLAGS_BLINK     (0x08)
-#define VT_CELL_FLAGS_REVERSE   (0x10)
-#define VT_CELL_FLAGS_INVISIBLE (0x20)
+// Set      Reset   Action
+// ESC[0m		    reset all modes (styles and colors)
+// ESC[1m	ESC[22m	set bold mode.
+// ESC[2m	ESC[22m	set dim/faint mode.
+// ESC[3m	ESC[23m	set italic mode.
+// ESC[4m	ESC[24m	set underline mode.
+// ESC[5m	ESC[25m	set blinking mode
+// ESC[7m	ESC[27m	set inverse/reverse mode
+// ESC[8m	ESC[28m	set hidden/invisible mode
+// ESC[9m	ESC[29m	set strikethrough mode.
+#define VT_CELL_FLAGS_NORMAL        (0)
+#define VT_CELL_FLAGS_BOLD          (1<<0)
+#define VT_CELL_FLAGS_DIM           (1<<1)
+#define VT_CELL_FLAGS_ITALIC        (1<<2)
+#define VT_CELL_FLAGS_UNDERLINE     (1<<3)
+#define VT_CELL_FLAGS_BLINK         (1<<4)
+#define VT_CELL_FLAGS_REVERSE       (1<<5)
+#define VT_CELL_FLAGS_INVISIBLE     (1<<6)
+#define VT_CELL_FLAGS_STRIKETHROUGH (1<<7)
 
 typedef uint32_t vt_cell_t;
 typedef uint32_t vt_cell_attr_t;

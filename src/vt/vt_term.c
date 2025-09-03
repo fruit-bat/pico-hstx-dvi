@@ -421,6 +421,13 @@ void vt_term_set_fgci(
     t->attr = vt_cell_fg_set(t->attr, fgci);
 }
 
+void vt_term_set_bgci(
+    vt_term_t *t,
+    vt_cell_colour_t bgci
+) {
+    t->attr = vt_cell_bg_set(t->attr, bgci);
+}
+
 void vt_term_repeat(
     vt_term_t *t, // The terminal
     uint32_t n    // The number of characters to repeat
