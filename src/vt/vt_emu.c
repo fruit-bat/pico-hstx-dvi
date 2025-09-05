@@ -384,9 +384,10 @@ void vt_emu_put_ch(
         vt_term_cursor_set_col(t, c);
         break;
     }
-    case VT_A_CHT:         // CHT - Cursor Horizontal Tabulation
+    case VT_A_CHT: {        // CHT - Cursor Horizontal Tabulation
         DEBUG("VT_A_CHT\n");
         break;
+    }
     case VT_A_ED: {         // ED  - Erase in Display
         const uint32_t n = vt_emu_get_p0(p, 0);
         DEBUG("VT_A_ED %lu\n", n);
@@ -397,6 +398,12 @@ void vt_emu_put_ch(
         const uint32_t n = vt_emu_get_p0(p, 0);
         DEBUG("VT_A_EL %lu\n", n);
         vt_term_erase_in_line(t, n);
+        break;
+    }
+    case VT_A_ICH: {         // EL  - Insert characters
+        const uint32_t n = vt_emu_get_p0(p, 0);
+        DEBUG("VT_A_ICH %lu\n", n);
+        vt_term_insert_characters(t, n);
         break;
     }
     case VT_A_SGR:         // Select Graphic Rendition

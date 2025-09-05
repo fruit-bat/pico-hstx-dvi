@@ -439,7 +439,7 @@ void test_colours(vt_emu_t* e) {
             vt_cell_colour_t fg = i * 16 + j;
             vt_cell_colour_t bg = 255 - fg;
             snprintf(&buf, 32, "\033[38;5;%d;48;5;%dm%c", fg, bg, 'a' + i );
-            vt_emu_put_str(e, &buf);
+            vt_emu_put_str(e, (vt_char_t*)&buf);
             const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][j]);
             const vt_cell_colour_t fgci = vt_cell_fg_get(attr);
             const vt_cell_colour_t bgci = vt_cell_bg_get(attr);
@@ -448,6 +448,23 @@ void test_colours(vt_emu_t* e) {
         }
         vt_emu_put_ch(e, 13);
     }
+}
+
+// ESC[@
+void test_insert(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+
+    t->c = 5;
+    set_grid_cols(t);
+    vt_emu_put_str(e, (vt_char_t*)"\033[3@");
+    print_grid( t);
+    check_grid_row(t, 0, "ABCDE   FGHIJKLMNOPQ");
+}
+
+void test_scroll(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
 }
 
 void test_stdin(vt_emu_t* e) {
@@ -473,7 +490,8 @@ int main() {
     // test_cursor(&e);
     // test_erase(&e);
     // test_cell_modes(&e);
-    test_colours(&e);
+    // test_colours(&e);
+    test_insert(&e);
     // test_stdin(&e);
 
     printf("All OK\n");

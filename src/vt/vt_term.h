@@ -190,6 +190,11 @@ void vt_term_erase_in_line(
     uint32_t p0   // Parameter to specify the erase mode (0, 1, 2)
 );
 
+void vt_term_insert_characters(
+    vt_term_t *t, // The terminal
+    uint32_t n   // number of characters
+);
+
 // ESC M - reverse index / reverse new line
 void vt_term_reverse_nl(
     vt_term_t *t // The terminal

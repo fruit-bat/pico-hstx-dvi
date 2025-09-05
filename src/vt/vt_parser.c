@@ -179,6 +179,7 @@ const vt_state_t vt_states_csi_f[] = {
     {'r',          VT_A_DECSTBM,      VT_F_FINAL}, // ESC [t;r
     {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
     {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
+    {'@',          VT_A_ICH,          VT_F_FINAL}, // ESC [n@          - Insert characters
 };
 const vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b

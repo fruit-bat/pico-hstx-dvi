@@ -96,6 +96,7 @@ typedef enum {
     VT_A_CHT,         // CHT - Cursor Horizontal Tabulation
     VT_A_ED,          // ED  - Erase in Display
     VT_A_EL,          // EL  - Erase in Line
+    VT_A_ICH,         // IL  - Insert characters
     VT_A_HVP,         // HVP - Horizontal Vertical Position
     VT_A_SGR,         // Select Graphic Rendition
     VT_A_DECSTBM,     // Set Top and Bottom Margins
