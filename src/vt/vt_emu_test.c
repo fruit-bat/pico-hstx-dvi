@@ -428,6 +428,26 @@ void test_colours(vt_emu_t* e) {
         const vt_cell_colour_t ci = vt_cell_bg_get(attr);
         assert(ci == r2[i]);
     }
+
+    // ESC Code Sequence	Description
+    // ESC[38;5;{ID}m	Set foreground color.
+    // ESC[48;5;{ID}m	Set background color.
+    vt_emu_reset(e);
+    char buf[32];
+    for(int i = 0; i <= 15; ++i) {
+        for(int j = 0; j <= 15; ++j) {
+            vt_cell_colour_t fg = i * 16 + j;
+            vt_cell_colour_t bg = 255 - fg;
+            snprintf(&buf, 32, "\033[38;5;%d;48;5;%dm%c", fg, bg, 'a' + i );
+            vt_emu_put_str(e, &buf);
+            const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][j]);
+            const vt_cell_colour_t fgci = vt_cell_fg_get(attr);
+            const vt_cell_colour_t bgci = vt_cell_bg_get(attr);
+            assert(fg == fgci);
+            assert(bg == bgci);
+        }
+        vt_emu_put_ch(e, 13);
+    }
 }
 
 void test_stdin(vt_emu_t* e) {
