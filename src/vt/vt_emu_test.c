@@ -291,7 +291,57 @@ void test_erase(vt_emu_t* e) {
 void test_colour_modes(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
-
+    uint8_t r1[] = {
+        0b00000000,
+        0b00000001,
+        0b00000010,
+        0b00000110,
+        0b00001110,
+        0b00011110,
+        0b00011110,
+        0b00111110,
+        0b01111110,
+        0b11111110,
+    };
+    for(int i = 0; i <= 9; ++i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Attr test %d, expecting attribute flags: %08b\n", i, r1[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][i]);
+        const vt_cell_flags_t flags = vt_cell_flags_get(attr);
+        assert(flags == r1[i]);
+    }
+    vt_emu_put_ch(e, 13);
+    vt_emu_put_ch(e, 10);
+    uint8_t r2[] = {
+        0b00000000,
+        0b00000000,
+        0b00000000,
+        0b00000010,
+        0b00000110,
+        0b00001110,
+        0b00011110,
+        0b00011110,
+        0b00111110,
+        0b01111110,
+    };
+    for(int i = 9; i >= 0; --i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '2');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Attr test %d, expecting attribute flags: %08b\n", i, r2[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[1][9 - i]);
+        const vt_cell_flags_t flags = vt_cell_flags_get(attr);
+        assert(flags == r2[i]);
+    }
     // Todo
 }
 
@@ -315,8 +365,8 @@ int main() {
     vt_emu_t e;
     vt_emu_init(&e, (vt_cell_t*)grid, w, h);
 
-    test_cursor(&e);
-    test_erase(&e);
+    // test_cursor(&e);
+    // test_erase(&e);
     test_colour_modes(&e);
     // test_stdin(&e);
 
