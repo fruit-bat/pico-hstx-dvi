@@ -344,19 +344,20 @@ void test_cell_modes(vt_emu_t* e) {
     }
 }
 
-// Color Name	Foreground Color Code	Background Color Code
-// Black        30	                    40
-// Red	        31	                    41
-// Green	    32	                    42
-// Yellow	    33	                    43
-// Blue	        34	                    44
-// Magenta	    35	                    45
-// Cyan	        36	                    46
-// White	    37	                    47
-// Default	    39	                    49
+
 void test_colours(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
+    // Color Name	Foreground Color Code	Background Color Code
+    // Black        30	                    40
+    // Red	        31	                    41
+    // Green	    32	                    42
+    // Yellow	    33	                    43
+    // Blue	        34	                    44
+    // Magenta	    35	                    45
+    // Cyan	        36	                    46
+    // White	    37	                    47
+    // Default	    39	                    49
     uint8_t r1[] = {0, 1, 2, 3, 4, 5, 6, 7};
     for(int i = 0; i <= 7; ++i) {
         vt_emu_put_ch(e, 27);
@@ -365,7 +366,7 @@ void test_colours(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Foreground colour test %d, expecting celour: %08b\n", i, r1[i]);
+        printf("Foreground colour test %d, expecting colour: %08b\n", i, r1[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][i]);
         const vt_cell_colour_t ci = vt_cell_fg_get(attr);
@@ -380,11 +381,52 @@ void test_colours(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Foreground colour test %d, expecting celour: %08b\n", i, r1[i]);
+        printf("Foreground colour test %d, expecting colour: %08b\n", i, r1[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[1][i]);
         const vt_cell_colour_t ci = vt_cell_bg_get(attr);
         assert(ci == r1[i]);
+    }
+    // Color Name	    Foreground Color Code	Background Color Code
+    // Bright Black	    90	                    100
+    // Bright Red	    91	                    101
+    // Bright Green	    92	                    102
+    // Bright Yellow	93	                    103
+    // Bright Blue	    94	                    104
+    // Bright Magenta	95	                    105
+    // Bright Cyan	    96	                    106
+    // Bright White	    97	                    107
+    vt_emu_put_ch(e, 13);
+    vt_emu_put_ch(e, 10);
+    uint8_t r2[] = {8, 9, 10, 11, 12, 13, 14, 15};
+    for(int i = 0; i <= 7; ++i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '9');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Foreground bright colour test %d, expecting colour: %08b\n", i, r2[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[2][i]);
+        const vt_cell_colour_t ci = vt_cell_fg_get(attr);
+        assert(ci == r2[i]);
+    }
+    vt_emu_put_ch(e, 13);
+    vt_emu_put_ch(e, 10);
+    for(int i = 0; i <= 7; ++i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '1');
+        vt_emu_put_ch(e, '0');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Foreground bright colour test %d, expecting colour: %08b\n", i, r2[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[3][i]);
+        const vt_cell_colour_t ci = vt_cell_bg_get(attr);
+        assert(ci == r2[i]);
     }
 }
 
