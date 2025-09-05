@@ -381,7 +381,7 @@ void test_colours(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Foreground colour test %d, expecting colour: %08b\n", i, r1[i]);
+        printf("Background colour test %d, expecting colour: %08b\n", i, r1[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[1][i]);
         const vt_cell_colour_t ci = vt_cell_bg_get(attr);
@@ -422,7 +422,7 @@ void test_colours(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Foreground bright colour test %d, expecting colour: %08b\n", i, r2[i]);
+        printf("Background bright colour test %d, expecting colour: %08b\n", i, r2[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[3][i]);
         const vt_cell_colour_t ci = vt_cell_bg_get(attr);

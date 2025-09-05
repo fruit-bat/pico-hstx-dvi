@@ -39,7 +39,11 @@ uint32_t vt_emu_get_p0(vt_parser_t* p, uint32_t i) {
 
 uint32_t vt_emu_get_p1(vt_parser_t* p, uint32_t i) {
     return p->n_params <= i || p->params[i] == 0 ? 1 : p->params[i];
-}//
+
+
+}
+
+//
 // ESC[1;34;{...}m		Set graphics modes for cell, separated by semicolon (;).
 // ESC[0m		reset all modes (styles and colors)
 // ESC[1m	ESC[22m	set bold mode.
@@ -91,6 +95,7 @@ static void vt_emu_sgr(vt_emu_t* const e) {
     for (uint32_t i = 0; i < p->n_params; ++i) {
         const uint32_t q = p->params[i];
         if ((q < 10) || (q >= 20 && q < 30)) {
+            //
             // ESC[0m		reset all modes (styles and colors)
             // ESC[1m	ESC[22m	set bold mode.
             // ESC[2m	ESC[22m	set dim/faint mode.
@@ -138,45 +143,71 @@ static void vt_emu_sgr(vt_emu_t* const e) {
             }
         }
 
-        if (q >= 30) {
+        //
+        // Color Name	Foreground Color Code	Background Color Code
+        // Black        30	                    40
+        // Red	        31	                    41
+        // Green	    32	                    42
+        // Yellow	    33	                    43
+        // Blue	        34	                    44
+        // Magenta	    35	                    45
+        // Cyan	        36	                    46
+        // White	    37	                    47
+        // Default	    39	                    49
+        if (q >= 30 && q < 50) {
+            const int fg = q < 40;
+            const int z = fg ? q - 30 : q - 40;
+            if (z < 8) {
+                if (fg) {
+                    vt_term_set_fgci(t, z);
+                }
+                else {
+                    vt_term_set_bgci(t, z);
+                }        
+            }
+            else if (z == 8) {
+                if ((p->n_params > i + 2) && (p->params[i + 1] == 5)) {
+                    const uint32_t x = p->params[i + 2];
+                    if (fg) {
+                        vt_term_set_fgci(t, x & 0xff);
+                    }
+                    else {
+                        vt_term_set_bgci(t, x & 0xff);
+                    }
+                }
+                i += 2;
+            }
+            else if (z == 9) {
+                if (fg) {
+                    vt_term_set_fgci(t, VT_TERM_DEFAULT_FG);
+                }
+                else {
+                    vt_term_set_bgci(t, VT_TERM_DEFAULT_FG);
+                }
+            }
+        }
 
-            if (q <= 37) {
-                vt_term_set_fgci(t, q - 30);
-            }
-            else if (q == 38) {
-                if ((p->n_params > i + 2) && (p->params[i + 1] == 5)) {
-                    const uint32_t x = p->params[i + 2];
-                    vt_term_set_fgci(t, x & 0xff);
+        //
+        // Color Name	    Foreground Color Code	Background Color Code
+        // Bright Black	    90	                    100
+        // Bright Red	    91	                    101
+        // Bright Green	    92	                    102
+        // Bright Yellow	93	                    103
+        // Bright Blue	    94	                    104
+        // Bright Magenta	95	                    105
+        // Bright Cyan	    96	                    106
+        // Bright White	    97	                    107
+        //
+        if (q >= 90 && q < 110) {
+            const int fg = q < 100;
+            const int z = fg ? q - 90 : q - 100;
+            if (z < 8) {
+                if (fg) {
+                    vt_term_set_fgci(t, z + 8);
                 }
-                i += 2;
-            }
-            else if (q == 39) {
-                vt_term_set_fgci(t, VT_TERM_DEFAULT_FG);
-            }
-            else if (q <= 47) {
-                vt_term_set_bgci(t, q - 40);
-            }
-            else if (q == 48) {
-                if ((p->n_params > i + 2) && (p->params[i + 1] == 5)) {
-                    const uint32_t x = p->params[i + 2];
-                    vt_term_set_bgci(t, x & 0xff);
-                }
-                i += 2;
-            }
-            else if (q == 49) {
-                vt_term_set_bgci(t, VT_TERM_DEFAULT_BG);
-            }
-            else if (q <= 89) {
-                // ??
-            }
-            else if (q <= 97) {
-                vt_term_set_fgci(t, q - 90 + 8);
-            }
-            else if (q <= 99) {
-                // ??
-            }
-            else if (q <= 107) {
-                vt_term_set_bgci(t, q - 100 + 8);
+                else {
+                    vt_term_set_bgci(t, z + 8);
+                }        
             }
         }
     }
