@@ -406,10 +406,11 @@ void vt_emu_put_ch(
         vt_term_insert_characters(t, n);
         break;
     }
-    case VT_A_SGR:         // Select Graphic Rendition
+    case VT_A_SGR: {        // Select Graphic Rendition
         DEBUG("VT_A_SGR\n");
         vt_emu_sgr(e);
         break;
+    }
     case VT_A_DECSTBM:     // Set Top and Bottom Margins
         DEBUG("VT_A_DECSTBM\n");
         break;
@@ -443,6 +444,14 @@ void vt_emu_put_ch(
     case VT_A_OSC:         // General OSC string handling
         DEBUG("VT_A_OSC\n");
         break;
+    case VT_A_DEC_SP_ON: { // Turn on DEC special graphics (box brawing)
+        DEBUG("VT_A_DEC_SP_ON\n");
+        break;
+    }
+    case VT_A_DEC_SP_OFF: { // Turn off DEC special graphics (box brawing)
+        DEBUG("VT_A_DEC_SP_OFF\n");
+        break;
+    }
     case VT_A_NONE:         // Do nothing!
         DEBUG("VT_A_NONE\n");
         break;

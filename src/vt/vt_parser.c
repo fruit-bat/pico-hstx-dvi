@@ -99,6 +99,7 @@ typedef enum {
     VT_G_OSC_T,
     VT_G_OSC_C,
     VT_G_OSC_D,
+    VT_G_ESC_OB,
 } vt_g_t;
 
 const vt_state_t vt_states_ground[] = {
@@ -148,6 +149,7 @@ const vt_state_t vt_states_esc[] = {
     {'_',          VT_A_APC,          VT_F_FINAL},   // ESC _
     {'7',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC 7
     {'8',          VT_A_RESTORE_CUR,  VT_F_FINAL},   // ESC 8
+    {'(',          VT_G_ESC_OB,       VT_F_NEXT_CH}, // ESC (
 };
 const vt_state_t vt_states_csi[] = {
     {'s',          VT_A_SAVE_CUR,     VT_F_FINAL},   // ESC [s
@@ -211,6 +213,12 @@ const vt_state_t vt_states_osc_d[] = {
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ANY,     VT_G_OSC_D,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character  
 };
+// ESC(
+const vt_state_t vt_states_esc_ob[] = {
+    {'0',          VT_A_DEC_SP_ON,    VT_F_FINAL}, // Turn on DEC special graphics (box brawing)
+    {'B',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
+};
+
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
 
@@ -232,6 +240,7 @@ const vt_state_t* vt_state_grp[] = {
     STATE_PTR(vt_states_osc_t),
     STATE_PTR(vt_states_osc_c),
     STATE_PTR(vt_states_osc_d),
+    STATE_PTR(vt_states_esc_ob),
 };
 
 #define COUNT_ARR(X) ((sizeof (X))/(sizeof (X)[0]))
@@ -254,6 +263,7 @@ const uint8_t vt_state_grp_len[] = {
     COUNT_ARR(vt_states_osc_t),
     COUNT_ARR(vt_states_osc_c),
     COUNT_ARR(vt_states_osc_d),
+    COUNT_ARR(vt_states_esc_ob),
 };
 
 void vt_parser_reset(vt_parser_t *p) {

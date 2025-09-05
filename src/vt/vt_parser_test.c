@@ -246,6 +246,10 @@ int main() {
         assert(p.osc_param_len == 20);
         assert(strcmp((char*)(p.osc_param), ";https://example.com") == 0);
     }
+
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033(0")->n == VT_A_DEC_SP_ON);
+    assert(vt_parser_put_str(&p, (vt_char_t*)"\033(B")->n == VT_A_DEC_SP_OFF);
+
     printf("all ok\n");
     return 0;
 }   

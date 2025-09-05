@@ -438,7 +438,7 @@ void test_colours(vt_emu_t* e) {
         for(int j = 0; j <= 15; ++j) {
             vt_cell_colour_t fg = i * 16 + j;
             vt_cell_colour_t bg = 255 - fg;
-            snprintf(&buf, 32, "\033[38;5;%d;48;5;%dm%c", fg, bg, 'a' + i );
+            snprintf((char*)&buf, 32, "\033[38;5;%d;48;5;%dm%c", fg, bg, 'a' + i );
             vt_emu_put_str(e, (vt_char_t*)&buf);
             const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][j]);
             const vt_cell_colour_t fgci = vt_cell_fg_get(attr);

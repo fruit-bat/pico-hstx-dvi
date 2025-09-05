@@ -106,6 +106,10 @@ typedef enum {
     VT_A_SU,          // Scroll Up
     VT_A_SD,          // Scroll Down
 
+    // https://en.wikipedia.org/wiki/DEC_Special_Graphics
+    VT_A_DEC_SP_ON,   // DEC special graphics on (box drawing characters)
+    VT_A_DEC_SP_OFF,  // DEC special graphics off (lower case letters)
+
     VT_A_XPALS,       // Linux set pallet 
     VT_A_XPALR,       // Linux reset pallet
 
