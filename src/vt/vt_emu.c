@@ -76,16 +76,16 @@ static void vt_emu_sgr(vt_emu_t* const e) {
     vt_term_t* const t = &e->term;
     vt_parser_t* const p = &e->parser;
     const static vt_cell_flags_t zfb[] = {
-        0b00000000,
-        0b00000001,
-        0b00000010,
-        0b00000100,
-        0b00001000,
-        0b00010000,
-        0b00000000,
-        0b00100000,
-        0b01000000,
-        0b10000000,
+        VT_CELL_FLAGS_NORMAL         ,
+        VT_CELL_FLAGS_BOLD           ,
+        VT_CELL_FLAGS_DIM            ,
+        VT_CELL_FLAGS_ITALIC         ,
+        VT_CELL_FLAGS_UNDERLINE      ,
+        VT_CELL_FLAGS_BLINK          ,
+        VT_CELL_FLAGS_NORMAL         ,
+        VT_CELL_FLAGS_REVERSE        ,
+        VT_CELL_FLAGS_INVISIBLE      ,
+        VT_CELL_FLAGS_STRIKETHROUGH  ,
     };
 
     for (uint32_t i = 0; i < p->n_params; ++i) {
