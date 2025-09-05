@@ -37,13 +37,22 @@
 
 void vt_term_reset_attr(
     vt_term_t *t // The terminal
-)
-{
+) {
     // The default attributes
     t->attr = vt_cell_enc_attr(
         VT_TERM_DEFAULT_FG,
         VT_TERM_DEFAULT_BG,
         VT_TERM_DEFAULT_FLAGS);
+}
+
+void vt_term_margin_set(
+    vt_term_t* t, // The terminal
+    vt_coord_t mt, // Margin top row
+    vt_coord_t mb // Margin bottom row
+) {
+    if (mt >= mb || mb >= t->h) return;
+    t->mt = mt;
+    t->mb = mb;
 }
 
 static void vt_term_clear_line(

@@ -85,6 +85,11 @@ typedef struct
 
 } vt_term_t;
 
+void vt_term_margin_set(
+    vt_term_t* t, // The terminal
+    vt_coord_t mt, // Margin top row
+    vt_coord_t mb // Margin bottom row
+);
 
 void vt_term_init(
     vt_term_t* t, // The terminal
@@ -109,6 +114,16 @@ void vt_term_scroll_up(
     vt_term_t *t,  // The terminal
     vt_coord_t rs, // The start row
     vt_coord_t n   // Number of rows to scroll
+);
+
+void vt_term_scroll_down(
+    vt_term_t *t,  // The terminal
+    vt_coord_t rs, // The start row
+    vt_coord_t n   // Number of rows to scroll
+);
+
+void vt_term_reset_attr(
+    vt_term_t *t // The terminal
 );
 
 void vt_term_putch(

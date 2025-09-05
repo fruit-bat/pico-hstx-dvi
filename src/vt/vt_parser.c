@@ -213,12 +213,13 @@ const vt_state_t vt_states_osc_d[] = {
     {VT_M_ST,      VT_A_OSC,          VT_F_FINAL}, // OSC terminator
     {VT_M_ANY,     VT_G_OSC_D,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character  
 };
-// ESC(
-const vt_state_t vt_states_esc_ob[] = {
+const vt_state_t vt_states_esc_ob[] = { // ESC(
     {'0',          VT_A_DEC_SP_ON,    VT_F_FINAL}, // Turn on DEC special graphics (box brawing)
+    {'A',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
     {'B',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
+    {'1',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
+    {'2',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
 };
-
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
 

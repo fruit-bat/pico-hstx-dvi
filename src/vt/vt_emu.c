@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define DEBUG(...) printf(__VA_ARGS__)
+typedef unsigned long ul;
 
 void vt_emu_init(
     vt_emu_t* e,     // Emulator
@@ -106,8 +107,8 @@ static void vt_emu_sgr(vt_emu_t* const e) {
             // ESC[8m	ESC[28m	set hidden/invisible mode
             // ESC[9m	ESC[29m	set strikethrough mode.
             //
-            const set = q < 20;
-            const z = set ? q : q - 20;
+            const int set = q < 20;
+            const uint32_t z = set ? q : q - 20;
             switch(z) {
                 case 0: {
                     if (set) vt_term_reset_attr(t); 
@@ -336,37 +337,37 @@ void vt_emu_put_ch(
         break;
     case VT_A_CUU: {        // CUU - Cursor Up
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_CUU %lu\n", n);
+        DEBUG("VT_A_CUU %lu\n", (ul)n);
         vt_term_cursor_up(t, n);
         break;
     }
     case VT_A_CUD: {       // CUD - Cursor Down
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_CUD %lu\n", n);
+        DEBUG("VT_A_CUD %lu\n", (ul)n);
         vt_term_cursor_down(t, n);
         break;
     }
     case VT_A_CUF: {        // CUF - Cursor Forward
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_CUF %lu\n", n);
+        DEBUG("VT_A_CUF %lu\n", (ul)n);
         vt_term_cursor_right(t, n);
         break;
     }
     case VT_A_CUB: {         // CUB - Cursor Back
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_CUB %lu\n", n);
+        DEBUG("VT_A_CUB %lu\n", (ul)n);
         vt_term_cursor_left(t, n);
         break;
     }
     case VT_A_CNL: {       // CNL - Cursor Next Line
         const uint32_t n = vt_emu_get_p1(p, 0);        
-        DEBUG("VT_A_CNL %lu\n", n);
+        DEBUG("VT_A_CNL %lu\n", (ul)n);
         vt_term_next_line_down(t, n);    
         break;
     }
     case VT_A_CPL: {        // CPL - Cursor Previous Line
         const uint32_t n = vt_emu_get_p1(p, 0);        
-        DEBUG("VT_A_CPL %lu\n", n);
+        DEBUG("VT_A_CPL %lu\n", (ul)n);
         vt_term_next_line_up(t, n);
         break;
     }
@@ -374,13 +375,13 @@ void vt_emu_put_ch(
     case VT_A_CUP: {       // CUP - Cursor Position
         const uint32_t r = vt_emu_get_p0(p, 0);
         const uint32_t c = vt_emu_get_p0(p, 1);
-        DEBUG("VT_A_CUP/VT_A_HVP %lu, %lu\n", r, c);
+        DEBUG("VT_A_CUP/VT_A_HVP %lu, %lu\n", (ul)r, (ul)c);
         vt_term_cursor_set(t, r, c);
         break;
     }
     case VT_A_CHA: {        // CHA - Cursor Horizontal Absolute 
         const uint32_t c = vt_emu_get_p0(p, 0);
-        DEBUG("VT_A_CHA %lu\n", c);
+        DEBUG("VT_A_CHA %lu\n", (ul)c);
         vt_term_cursor_set_col(t, c);
         break;
     }
@@ -390,19 +391,19 @@ void vt_emu_put_ch(
     }
     case VT_A_ED: {         // ED  - Erase in Display
         const uint32_t n = vt_emu_get_p0(p, 0);
-        DEBUG("VT_A_ED %lu\n", n);
+        DEBUG("VT_A_ED %lu\n", (ul)n);
         vt_term_erase_in_display(t, n);
         break;
     }
     case VT_A_EL: {         // EL  - Erase in Line
         const uint32_t n = vt_emu_get_p0(p, 0);
-        DEBUG("VT_A_EL %lu\n", n);
+        DEBUG("VT_A_EL %lu\n", (ul)n);
         vt_term_erase_in_line(t, n);
         break;
     }
     case VT_A_ICH: {         // EL  - Insert characters
         const uint32_t n = vt_emu_get_p0(p, 0);
-        DEBUG("VT_A_ICH %lu\n", n);
+        DEBUG("VT_A_ICH %lu\n", (ul)n);
         vt_term_insert_characters(t, n);
         break;
     }
@@ -411,9 +412,13 @@ void vt_emu_put_ch(
         vt_emu_sgr(e);
         break;
     }
-    case VT_A_DECSTBM:     // Set Top and Bottom Margins
-        DEBUG("VT_A_DECSTBM\n");
+    case VT_A_DECSTBM: {    // Set Top and Bottom Margins
+        const uint32_t mt = vt_emu_get_p1(p, 0) - 1;
+        const uint32_t mb = p->n_params > 1 ? vt_emu_get_p1(p, 1) - 1 : t->h - 1;
+        DEBUG("VT_A_DECSTBM %lu, %lu\n", (ul)mt, (ul)mb);
+        vt_term_margin_set(t, mt, mb);
         break;
+    }
     case VT_A_DA:          // Device Attributes
         DEBUG("VT_A_DA\n");
         break;
@@ -425,13 +430,13 @@ void vt_emu_put_ch(
         break;
     case VT_A_SU: {         // Scroll Up
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_SU %ld\n", n);
+        DEBUG("VT_A_SU %lu\n", (ul)n);
         vt_term_scroll_up(t, t->mt, n);
         break;
     }
     case VT_A_SD: {         // Scroll Down
         const uint32_t n = vt_emu_get_p1(p, 0);
-        DEBUG("VT_A_SD %ld\n", n);
+        DEBUG("VT_A_SD %lu\n", (ul)n);
         vt_term_scroll_down(t, t->mt, n);
         break;
     }

@@ -499,6 +499,19 @@ void test_scroll(vt_emu_t* e) {
     check_grid_rows(t, "  ABCDEFGHIJKLMN"); 
 }
 
+void test_margin(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+
+    printf("Test setting margin\n");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;10r");
+    assert(t->mt == 4);
+    assert(t->mb == 9);
+    vt_emu_put_str(e, (vt_char_t*)"\033[r");
+    assert(t->mt == 0);
+    assert(t->mb == t->h - 1);
+}
+
 void test_stdin(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -524,7 +537,8 @@ int main() {
     // test_cell_modes(&e);
     // test_colours(&e);
     // test_insert(&e);
-    test_scroll(&e);
+    // test_scroll(&e);
+    test_margin(&e);
     // test_stdin(&e);
 
     printf("All OK\n");
