@@ -110,25 +110,24 @@ static void vt_emu_sgr(vt_emu_t* const e) {
                 }
                 case 1: {
                     if (set) {
-                        vt_term_flags_add(t, 1);   // Set bold
-                        vt_term_flags_clear(t, 2); // Clear faint                        
+                        vt_term_flags_add(t, VT_CELL_FLAGS_BOLD);   // Set bold
+                        vt_term_flags_clear(t, VT_CELL_FLAGS_DIM); // Clear faint                        
                     }
                     break;
                 }
                 case 2: {
                     if (set) {
-                        vt_term_flags_add(t, 2);   // Set faint
-                        vt_term_flags_clear(t, 1); // Clear bold
+                        vt_term_flags_add(t, VT_CELL_FLAGS_DIM);   // Set faint
+                        vt_term_flags_clear(t, VT_CELL_FLAGS_BOLD); // Clear bold
                     }
                     else {
-                        vt_term_flags_clear(t, 1); // Clear bold
-                        vt_term_flags_clear(t, 2); // Clear faint                        
+                        vt_term_flags_clear(t, VT_CELL_FLAGS_BOLD); // Clear bold
+                        vt_term_flags_clear(t, VT_CELL_FLAGS_DIM); // Clear faint                        
                     }
                     break;       
                 }
                 default: {
                     if (set) {
-                        printf("Using flag %08b for z of %d\n", zfb[z], z);
                         vt_term_flags_add(t, zfb[z]);
                     } 
                     else {
