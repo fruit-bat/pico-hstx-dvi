@@ -462,9 +462,41 @@ void test_insert(vt_emu_t* e) {
     check_grid_row(t, 0, "ABCDE   FGHIJKLMNOPQ");
 }
 
+// CSI n S	SU	Scroll Up	Scroll whole page up by n (default 1) lines. New lines are added at the bottom. (not ANSI.SYS)
+// CSI n T	SD	Scroll Down	Scroll whole page down by n (default 1) lines. New lines are added at the top. (not ANSI.SYS)
 void test_scroll(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
+
+    set_grid_rows(t);
+    print_grid(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+
+    printf("\nScroll up 1 row\n");
+    vt_emu_put_str(e, (vt_char_t*)"\033[S");
+    print_grid(t);
+    check_grid_rows(t, "BCDEFGHIJKLMNOP "); 
+
+    printf("\nScroll up 2 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_emu_put_str(e, (vt_char_t*)"\033[2S");
+    print_grid(t);
+    check_grid_rows(t, "CDEFGHIJKLMNOP  "); 
+
+    printf("\nScroll down 1 row\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_emu_put_str(e, (vt_char_t*)"\033[T");
+    print_grid(t);
+    check_grid_rows(t, " ABCDEFGHIJKLMNO"); 
+
+    printf("\nScroll down 2 rows\n");
+    set_grid_rows(t);
+    check_grid_rows(t, "ABCDEFGHIJKLMNOP"); 
+    vt_emu_put_str(e, (vt_char_t*)"\033[2T");
+    print_grid(t);
+    check_grid_rows(t, "  ABCDEFGHIJKLMN"); 
 }
 
 void test_stdin(vt_emu_t* e) {
@@ -491,7 +523,8 @@ int main() {
     // test_erase(&e);
     // test_cell_modes(&e);
     // test_colours(&e);
-    test_insert(&e);
+    // test_insert(&e);
+    test_scroll(&e);
     // test_stdin(&e);
 
     printf("All OK\n");

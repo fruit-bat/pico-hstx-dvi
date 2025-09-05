@@ -422,12 +422,18 @@ void vt_emu_put_ch(
     case VT_A_SM:          // Set Mode
         DEBUG("VT_A_SM\n");
         break;
-    case VT_A_SU:          // Scroll Up
-        DEBUG("VT_A_SU\n");
+    case VT_A_SU: {         // Scroll Up
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_SU %ld\n", n);
+        vt_term_scroll_up(t, t->mt, n);
         break;
-    case VT_A_SD:          // Scroll Down
-        DEBUG("VT_A_SD\n");
+    }
+    case VT_A_SD: {         // Scroll Down
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_SD %ld\n", n);
+        vt_term_scroll_down(t, t->mt, n);
         break;
+    }
     case VT_A_XPALS:       // Linux set pallet 
         DEBUG("VT_A_XPALS\n");
         break;
