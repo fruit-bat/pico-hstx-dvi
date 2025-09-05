@@ -288,7 +288,7 @@ void test_erase(vt_emu_t* e) {
 // ESC[7m	ESC[27m	set inverse/reverse mode
 // ESC[8m	ESC[28m	set hidden/invisible mode
 // ESC[9m	ESC[29m	set strikethrough mode.
-void test_colour_modes(vt_emu_t* e) {
+void test_cell_modes(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
     uint8_t r1[] = {
@@ -309,7 +309,7 @@ void test_colour_modes(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Attr test %d, expecting attribute flags: %08b\n", i, r1[i]);
+        printf("Attr set test %d, expecting attribute flags: %08b\n", i, r1[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][i]);
         const vt_cell_flags_t flags = vt_cell_flags_get(attr);
@@ -336,13 +336,56 @@ void test_colour_modes(vt_emu_t* e) {
         vt_emu_put_ch(e, '0' + i);
         vt_emu_put_ch(e, 'm');
         vt_emu_put_ch(e, 'a' + i);
-        printf("Attr test %d, expecting attribute flags: %08b\n", i, r2[i]);
+        printf("Attr clear test %d, expecting attribute flags: %08b\n", i, r2[i]);
         print_grid(t);
         const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[1][9 - i]);
         const vt_cell_flags_t flags = vt_cell_flags_get(attr);
         assert(flags == r2[i]);
     }
-    // Todo
+}
+
+// Color Name	Foreground Color Code	Background Color Code
+// Black        30	                    40
+// Red	        31	                    41
+// Green	    32	                    42
+// Yellow	    33	                    43
+// Blue	        34	                    44
+// Magenta	    35	                    45
+// Cyan	        36	                    46
+// White	    37	                    47
+// Default	    39	                    49
+void test_colours(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+    uint8_t r1[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    for(int i = 0; i <= 7; ++i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '3');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Foreground colour test %d, expecting celour: %08b\n", i, r1[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[0][i]);
+        const vt_cell_colour_t ci = vt_cell_fg_get(attr);
+        assert(ci == r1[i]);
+    }
+    vt_emu_put_ch(e, 13);
+    vt_emu_put_ch(e, 10);
+    for(int i = 0; i <= 7; ++i) {
+        vt_emu_put_ch(e, 27);
+        vt_emu_put_ch(e, '[');
+        vt_emu_put_ch(e, '4');
+        vt_emu_put_ch(e, '0' + i);
+        vt_emu_put_ch(e, 'm');
+        vt_emu_put_ch(e, 'a' + i);
+        printf("Foreground colour test %d, expecting celour: %08b\n", i, r1[i]);
+        print_grid(t);
+        const vt_cell_attr_t attr = vt_cell_get_attr(t->rp[1][i]);
+        const vt_cell_colour_t ci = vt_cell_bg_get(attr);
+        assert(ci == r1[i]);
+    }
 }
 
 void test_stdin(vt_emu_t* e) {
@@ -367,7 +410,8 @@ int main() {
 
     // test_cursor(&e);
     // test_erase(&e);
-    test_colour_modes(&e);
+    // test_cell_modes(&e);
+    test_colours(&e);
     // test_stdin(&e);
 
     printf("All OK\n");
