@@ -533,7 +533,14 @@ void test_tabs(vt_emu_t* e) {
     printf("Test tabs\n");
     print_tabs(&e->tabs);
 
-
+    vt_emu_put_str(e, (vt_char_t*)"\033[I");
+    assert(t->c == 8);
+    vt_emu_put_str(e, (vt_char_t*)"\x09");
+    assert(t->c == 16);
+    vt_emu_put_str(e, (vt_char_t*)"\033[Z");
+    assert(t->c == 8);
+    vt_emu_put_ch(e, 'a');
+    
 }
 
 void test_stdin(vt_emu_t* e) {

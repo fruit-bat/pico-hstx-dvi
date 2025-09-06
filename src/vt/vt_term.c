@@ -538,7 +538,3 @@ void vt_term_next_line_up(
     t->c = 0;
     t->r = t->r >= n ? t->r - n : 0;
 }
-
-#ifdef VT_BUILD_TEST
-#include "vt_term_test.c"
-#endif

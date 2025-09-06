@@ -266,9 +266,17 @@ void vt_emu_put_ch(
         DEBUG("VT_A_C0_BS\n");
         vt_term_cursor_left(t,1);
         break;
-    case VT_A_C0_HT:       // Horizontal Tab  
+    case VT_A_HTF:
+    case VT_A_C0_HT: {      // Horizontal Tab forward
         DEBUG("VT_A_C0_HT\n");
+        t->c = vt_tabs_next(&e->tabs, t->c);
         break;
+    }
+    case VT_A_HTB: {       // Horizontal Tab backwards
+        DEBUG("VT_A_HTB\n");
+        t->c = vt_tabs_prev(&e->tabs, t->c);
+        break;
+    }
     case VT_A_C0_LF:       // Line Feed
         DEBUG("VT_A_C0_LF\n");
         vt_term_nl(t);
