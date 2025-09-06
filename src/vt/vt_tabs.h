@@ -51,12 +51,14 @@ extern "C"
 
     vt_coord_t vt_tabs_next(
         vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The cursor column
+        vt_coord_t c,  // The cursor column,
+        uint32_t n     // The number of tabs to move
     );
 
     vt_coord_t vt_tabs_prev(
         vt_tabs_t *t,  // The tabs structure
-        vt_coord_t c   // The cursor column
+        vt_coord_t c,  // The cursor column
+        uint32_t n     // The number of tabs to move
     );
 
     bool vt_tabs_is_tab(

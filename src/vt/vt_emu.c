@@ -266,15 +266,17 @@ void vt_emu_put_ch(
         DEBUG("VT_A_C0_BS\n");
         vt_term_cursor_left(t,1);
         break;
-    case VT_A_HTF:
-    case VT_A_C0_HT: {      // Horizontal Tab forward
-        DEBUG("VT_A_C0_HT\n");
-        t->c = vt_tabs_next(&e->tabs, t->c);
+    case VT_A_CHT:
+    case VT_A_C0_HT: {      // CHT - Cursor Horizontal Tabulation, Horizontal Tab 
+        DEBUG("VT_A_CHT/VT_A_C0_HT\n");
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        t->c = vt_tabs_next(&e->tabs, t->c, n);
         break;
     }
     case VT_A_HTB: {       // Horizontal Tab backwards
         DEBUG("VT_A_HTB\n");
-        t->c = vt_tabs_prev(&e->tabs, t->c);
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        t->c = vt_tabs_prev(&e->tabs, t->c, n);
         break;
     }
     case VT_A_C0_LF:       // Line Feed
@@ -401,10 +403,6 @@ void vt_emu_put_ch(
         const uint32_t c = vt_emu_get_p0(p, 0);
         DEBUG("VT_A_CHA %lu\n", (ul)c);
         vt_term_cursor_set_col(t, c);
-        break;
-    }
-    case VT_A_CHT: {        // CHT - Cursor Horizontal Tabulation
-        DEBUG("VT_A_CHT\n");
         break;
     }
     case VT_A_ED: {         // ED  - Erase in Display

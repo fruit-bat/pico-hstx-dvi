@@ -71,7 +71,7 @@ void vt_tabs_clear_all(
     for (vt_coord_t i = 0; i < t->w; i++) _vt_tabs_clear_tab(t, i);
 }
 
-vt_coord_t vt_tabs_next(
+static vt_coord_t vt_tabs_next_one(
     vt_tabs_t *t, // The tabs structure
     vt_coord_t c  // The cursor column
 ) {
@@ -83,13 +83,39 @@ vt_coord_t vt_tabs_next(
     return c;
 }
 
-vt_coord_t vt_tabs_prev(
+vt_coord_t vt_tabs_next(
+    vt_tabs_t *t, // The tabs structure
+    vt_coord_t c, // The cursor column
+    uint32_t n     // The number of tabs to move
+) {
+    while(n--) {
+        vt_coord_t ct = vt_tabs_next_one(t, c);
+        if (c == ct) return ct;
+        c = ct;
+    }
+    return c;
+}
+
+static vt_coord_t vt_tabs_prev_one(
     vt_tabs_t *t, // The tabs structure
     vt_coord_t c  // The cursor column
 ) {
     for(vt_coord_t i = c; i > 0; --i) {
         const vt_coord_t s = i - 1;
         if(_vt_tabs_is_tab(t, s)) return s;
+    }
+    return c;
+}
+
+vt_coord_t vt_tabs_prev(
+    vt_tabs_t *t, // The tabs structure
+    vt_coord_t c, // The cursor column
+    uint32_t n     // The number of tabs to move
+) {
+    while(n--) {
+        vt_coord_t ct = vt_tabs_prev_one(t, c);
+        if (c == ct) return ct;
+        c = ct;
     }
     return c;
 }

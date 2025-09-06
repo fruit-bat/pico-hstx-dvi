@@ -170,21 +170,21 @@ const vt_state_t vt_states_csi_f[] = {
     {'D',          VT_A_CUB,          VT_F_FINAL}, // ESC [nD
     {'E',          VT_A_CNL,          VT_F_FINAL}, // ESC [nE          
     {'F',          VT_A_CPL,          VT_F_FINAL}, // ESC [nF
-    {'f',          VT_A_HVP,          VT_F_FINAL}, // ESC [nf
     {'G',          VT_A_CHA,          VT_F_FINAL}, // ESC [nG          
     {'H',          VT_A_CUP,          VT_F_FINAL}, // ESC [n;nH 
+    {'I',          VT_A_CHT,          VT_F_FINAL}, // ESC [nI          - Horizonal tab forward
     {'J',          VT_A_ED,           VT_F_FINAL}, // ESC [nJ
     {'K',          VT_A_EL,           VT_F_FINAL}, // ESC [nK
     {'S',          VT_A_SU,           VT_F_FINAL}, // ESC [nS
     {'T',          VT_A_SD,           VT_F_FINAL}, // ESC [nT
+    {'Z',          VT_A_HTB,          VT_F_FINAL}, // ESC [nZ          - Horizontal tab backward
+    {'f',          VT_A_HVP,          VT_F_FINAL}, // ESC [nf
+    {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
+    {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
     {'m',          VT_A_SGR,          VT_F_FINAL}, // ESC [n;n;...m
     {'r',          VT_A_DECSTBM,      VT_F_FINAL}, // ESC [t;r
-    {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
-    {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
     {'@',          VT_A_ICH,          VT_F_FINAL}, // ESC [n@          - Insert characters
     {'b',          VT_A_REP,          VT_F_FINAL}, // ESC [nr          - Repeat character
-    {'I',          VT_A_HTF,          VT_F_FINAL}, // ESC [Ir          - Horizonal tab forward
-    {'Z',          VT_A_HTB,          VT_F_FINAL}, // ESC [Zr          - Horizontal tab backward
 };
 const vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b

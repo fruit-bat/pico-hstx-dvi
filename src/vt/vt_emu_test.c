@@ -522,11 +522,11 @@ void test_repeat_character(vt_emu_t* e) {
     print_grid(t);
     check_grid_row(t, 0, "aa                  ");
     vt_emu_put_str(e, (vt_char_t*)"\033[3b");
-    print_grid(t);
+    print_grid(t);//      01234567890123456789
     check_grid_row(t, 0, "aaaaa               ");
 }
 
-void test_tabs(vt_emu_t* e) {
+void test_horizontal_tabs(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
 
@@ -539,6 +539,15 @@ void test_tabs(vt_emu_t* e) {
     assert(t->c == 16);
     vt_emu_put_str(e, (vt_char_t*)"\033[Z");
     assert(t->c == 8);
+    vt_emu_put_ch(e, '\r');
+    vt_emu_put_str(e, (vt_char_t*)"\033[2I");
+    assert(t->c == 16);
+    vt_emu_put_str(e, (vt_char_t*)"\033[0;19H");
+    vt_emu_put_str(e, (vt_char_t*)"\033[2Z");
+    assert(t->c == 8);
+
+
+
     vt_emu_put_ch(e, 'a');
     
 }
@@ -571,7 +580,7 @@ int main() {
     // test_scroll(&e);
     // test_margin(&e);
     // test_repeat_character(&e);
-    test_tabs(&e);
+    test_horizontal_tabs(&e);
     // test_stdin(&e);
 
     printf("All OK\n");

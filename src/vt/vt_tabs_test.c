@@ -55,12 +55,16 @@ int main() {
         assert(vt_tabs_is_tab(&t, i) == (expected[i] == '*'));
     }
 
-    assert(vt_tabs_next(&t, 12) == 15);
-    assert(vt_tabs_next(&t, 15) == 15);
-    assert(vt_tabs_next(&t, 0) == 5);
-    assert(vt_tabs_prev(&t, 8) == 5);
-    assert(vt_tabs_prev(&t, 5) == 0);
-    assert(vt_tabs_prev(&t, 0) == 0);
+    assert(vt_tabs_next(&t, 12, 1) == 15);
+    assert(vt_tabs_next(&t, 15, 1) == 15);
+    assert(vt_tabs_next(&t, 0, 1) == 5);
+    assert(vt_tabs_next(&t, 0, 2) == 10);
+    assert(vt_tabs_prev(&t, 8, 1) == 5);
+    assert(vt_tabs_prev(&t, 5, 1) == 0);
+    assert(vt_tabs_prev(&t, 0, 1) == 0);
+    assert(vt_tabs_prev(&t, 8, 5) == 0);
+    assert(vt_tabs_next(&t, 8, 5) == 15);
+    assert(vt_tabs_prev(&t, 15, 2) == 5);
 
     vt_tabs_clear_all(&t);
 
@@ -68,8 +72,8 @@ int main() {
         assert(!vt_tabs_is_tab(&t, i));
     }
 
-    assert(vt_tabs_prev(&t, 8) == 8);
-    assert(vt_tabs_next(&t, 8) == 8);
+    assert(vt_tabs_prev(&t, 8, 1) == 8);
+    assert(vt_tabs_next(&t, 8, 1) == 8);
 
     printf("all ok\n");
     return 0;
