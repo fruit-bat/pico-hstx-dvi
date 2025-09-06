@@ -106,6 +106,9 @@ typedef enum {
     VT_A_SU,          // Scroll Up
     VT_A_SD,          // Scroll Down
     VT_A_REP,         // Repeat
+    VT_A_HTF,         // ESC [Ir          - Horizonal tab forward
+    VT_A_HTB,         // ESC [Zr          - Horizontal tab backward
+
 
     // https://en.wikipedia.org/wiki/DEC_Special_Graphics
     VT_A_DEC_SP_ON,   // DEC special graphics on (box drawing characters)

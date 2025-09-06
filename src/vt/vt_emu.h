@@ -29,6 +29,7 @@
 #include "vt_types.h"
 #include "vt_parser.h"
 #include "vt_term.h"
+#include "vt_tabs.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -38,6 +39,7 @@ extern "C"
 typedef struct {
     vt_parser_t parser;
     vt_term_t term;
+    vt_tabs_t tabs;
 } vt_emu_t;
 
 void vt_emu_init(

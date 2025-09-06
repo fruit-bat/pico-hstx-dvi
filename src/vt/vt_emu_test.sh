@@ -6,4 +6,5 @@
  vt_parser.c \
  vt_term.c \
  vt_emu_test.c \
+ vt_tabs.c \
  && ./a.out 

@@ -21,6 +21,11 @@ void vt_emu_init(
         w,
         h
     );
+    vt_tabs_init(
+        &e->tabs,
+        w,
+        8
+    );
 }
 
 void vt_emu_reset(
@@ -32,6 +37,11 @@ void vt_emu_reset(
     vt_term_reset(
         &e->term
     );
+    vt_tabs_init(
+        &e->tabs,
+        e->term.w,
+        8
+    );    
 }
 
 uint32_t vt_emu_get_p0(vt_parser_t* p, uint32_t i) {
@@ -455,11 +465,11 @@ void vt_emu_put_ch(
     case VT_A_OSC:         // General OSC string handling
         DEBUG("VT_A_OSC\n");
         break;
-    case VT_A_DEC_SP_ON: { // Turn on DEC special graphics (box brawing)
+    case VT_A_DEC_SP_ON: { // Turn on DEC special graphics (box drawing)
         DEBUG("VT_A_DEC_SP_ON\n");
         break;
     }
-    case VT_A_DEC_SP_OFF: { // Turn off DEC special graphics (box brawing)
+    case VT_A_DEC_SP_OFF: { // Turn off DEC special graphics (box drawing)
         DEBUG("VT_A_DEC_SP_OFF\n");
         break;
     }

@@ -183,6 +183,8 @@ const vt_state_t vt_states_csi_f[] = {
     {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
     {'@',          VT_A_ICH,          VT_F_FINAL}, // ESC [n@          - Insert characters
     {'b',          VT_A_REP,          VT_F_FINAL}, // ESC [nr          - Repeat character
+    {'I',          VT_A_HTF,          VT_F_FINAL}, // ESC [Ir          - Horizonal tab forward
+    {'Z',          VT_A_HTB,          VT_F_FINAL}, // ESC [Zr          - Horizontal tab backward
 };
 const vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b
@@ -215,11 +217,11 @@ const vt_state_t vt_states_osc_d[] = {
     {VT_M_ANY,     VT_G_OSC_D,        VT_F_COL_OSC|VT_F_NEXT_CH} // Collect OSC character  
 };
 const vt_state_t vt_states_esc_ob[] = { // ESC(
-    {'0',          VT_A_DEC_SP_ON,    VT_F_FINAL}, // Turn on DEC special graphics (box brawing)
-    {'A',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
-    {'B',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
-    {'1',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
-    {'2',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box brawing)
+    {'0',          VT_A_DEC_SP_ON,    VT_F_FINAL}, // Turn on DEC special graphics (box drawing)
+    {'A',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box drawing)
+    {'B',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box drawing)
+    {'1',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box drawing)
+    {'2',          VT_A_DEC_SP_OFF,   VT_F_FINAL}, // Turn off DEC special graphics (box drawing)
 };
 
 #define STATE_PTR(X) ((vt_state_t*)X) 
