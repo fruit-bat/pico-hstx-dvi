@@ -512,6 +512,20 @@ void test_margin(vt_emu_t* e) {
     assert(t->mb == t->h - 1);
 }
 
+void test_repeat_character(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+
+    printf("Test repeat character\n");
+    vt_emu_put_ch(e, 'a');
+    vt_emu_put_str(e, (vt_char_t*)"\033[b");
+    print_grid(t);
+    check_grid_row(t, 0, "aa                  ");
+    vt_emu_put_str(e, (vt_char_t*)"\033[3b");
+    print_grid(t);
+    check_grid_row(t, 0, "aaaaa               ");
+}
+
 void test_stdin(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -538,7 +552,8 @@ int main() {
     // test_colours(&e);
     // test_insert(&e);
     // test_scroll(&e);
-    test_margin(&e);
+    // test_margin(&e);
+    test_repeat_character(&e);
     // test_stdin(&e);
 
     printf("All OK\n");

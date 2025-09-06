@@ -105,6 +105,7 @@ typedef enum {
     VT_A_SM,          // Set Mode
     VT_A_SU,          // Scroll Up
     VT_A_SD,          // Scroll Down
+    VT_A_REP,         // Repeat
 
     // https://en.wikipedia.org/wiki/DEC_Special_Graphics
     VT_A_DEC_SP_ON,   // DEC special graphics on (box drawing characters)

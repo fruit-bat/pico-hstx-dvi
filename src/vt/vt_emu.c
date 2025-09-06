@@ -440,6 +440,12 @@ void vt_emu_put_ch(
         vt_term_scroll_down(t, t->mt, n);
         break;
     }
+    case VT_A_REP: {         // Repeat character
+        const uint32_t n = vt_emu_get_p1(p, 0);
+        DEBUG("VT_A_REP %lu\n", (ul)n);
+        vt_term_repeat(t, n);
+        break;
+    }
     case VT_A_XPALS:       // Linux set pallet 
         DEBUG("VT_A_XPALS\n");
         break;
