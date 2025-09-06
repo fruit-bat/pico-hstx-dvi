@@ -107,6 +107,7 @@ typedef enum {
     VT_A_SD,          // Scroll Down
     VT_A_REP,         // Repeat
     VT_A_HTB,         // ESC [Zr          - Horizontal tab backward
+    VT_A_HTC,         // ESC [g           - Clear horizontal tabs
 
 
     // https://en.wikipedia.org/wiki/DEC_Special_Graphics

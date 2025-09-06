@@ -178,13 +178,14 @@ const vt_state_t vt_states_csi_f[] = {
     {'S',          VT_A_SU,           VT_F_FINAL}, // ESC [nS
     {'T',          VT_A_SD,           VT_F_FINAL}, // ESC [nT
     {'Z',          VT_A_HTB,          VT_F_FINAL}, // ESC [nZ          - Horizontal tab backward
+    {'b',          VT_A_REP,          VT_F_FINAL}, // ESC [nr          - Repeat character
     {'f',          VT_A_HVP,          VT_F_FINAL}, // ESC [nf
+    {'g',          VT_A_HTC,          VT_F_FINAL}, // ESC [ng          - Clear horizontal tabs
     {'h',          VT_A_SM,           VT_F_FINAL}, // ESC [?n;h
     {'l',          VT_A_RM,           VT_F_FINAL}, // ESC [?n;l
     {'m',          VT_A_SGR,          VT_F_FINAL}, // ESC [n;n;...m
     {'r',          VT_A_DECSTBM,      VT_F_FINAL}, // ESC [t;r
     {'@',          VT_A_ICH,          VT_F_FINAL}, // ESC [n@          - Insert characters
-    {'b',          VT_A_REP,          VT_F_FINAL}, // ESC [nr          - Repeat character
 };
 const vt_state_t vt_states_osc[] = {
     {'P',          VT_G_OSC_P1,       VT_F_NEXT_CH},  // Linux set pallet ESC ] P n r r g g b b

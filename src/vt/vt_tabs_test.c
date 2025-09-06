@@ -26,9 +26,7 @@
  */
 /* Build instructions:
  *
- * cc -Wall vt_tabs.c vt_tabs_test.c 
- * 
- * ./a.out
+ * ./vt_tabs_test.sh
  *
  */
 #include <stdint.h>

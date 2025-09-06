@@ -327,6 +327,19 @@ void vt_emu_put_ch(
         vt_tabs_set_tab(&e->tabs, t->c);
         break;
     }
+    case VT_A_HTC: {       // Clear horizontal tabs
+        const uint32_t n = vt_emu_get_p0(p, 0);
+        DEBUG("VT_A_HTC %lu\n", (ul)n);
+        switch(n) {
+            // TODO What does 0,1,2 do ?
+            case 3:
+                vt_tabs_clear_all(&e->tabs);
+                break;
+            default:
+                break;
+        }
+        break;
+    } 
     case VT_A_RI:          // VT100 Reverse Index (ESC M)
         DEBUG("VT_A_RI\n");
         vt_term_reverse_nl(t);

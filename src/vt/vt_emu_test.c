@@ -553,6 +553,15 @@ void test_horizontal_tabs(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[Z");
     assert(t->c == 9);
 
+    // Clear all tabs
+    printf("Test clear all tabs\n");
+    vt_emu_put_str(e, (vt_char_t*)"\033[3g");
+    print_tabs(&e->tabs);
+    vt_emu_put_str(e, (vt_char_t*)"\033[I");
+    assert(t->c == 9);
+    vt_emu_put_str(e, (vt_char_t*)"\033[Z");
+    assert(t->c == 9);    
+
 }
 
 void test_stdin(vt_emu_t* e) {

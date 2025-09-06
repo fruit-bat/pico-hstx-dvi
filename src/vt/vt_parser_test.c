@@ -26,9 +26,7 @@
  */
 /* Build instructions:
  *
- * cc -Wall vt_parser.c vt_parser_test.c 
- * 
- * ./a.out
+ * ./vt_parser_test.sh
  *
  */
 #include <stdint.h>
