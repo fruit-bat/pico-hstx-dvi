@@ -6,6 +6,14 @@
 #include <assert.h>
 #include "vt_term_test_utils.h"
 
+void print_tabs(vt_tabs_t* tabs) {
+    printf("tabs: [");
+    for(vt_coord_t i = 0; i < tabs->w; ++i) {
+        printf("%c", (vt_tabs_is_tab(tabs, i) ? 'T' : ' '));
+    }
+    printf("]\n");
+}
+
 // Print out the characters in the grid so we can see what is going on
 void print_grid(vt_term_t *t) {
     vt_coord_t w = t->w;
@@ -96,8 +104,8 @@ void set_grid_cols(vt_term_t *t) {
     vt_coord_t h = t->h;    
 
     // Put characters in the grid so we can test scroll up
-    // AAAAA...
-    // BBBBB...
+    // ABCDE...
+    // ABCDE...
     // etc.
     for (vt_coord_t c = 0; c < w; ++c) {
         for (vt_coord_t r = 0; r < h; ++r) {

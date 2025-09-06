@@ -526,6 +526,16 @@ void test_repeat_character(vt_emu_t* e) {
     check_grid_row(t, 0, "aaaaa               ");
 }
 
+void test_tabs(vt_emu_t* e) {
+    vt_term_t* const t = &e->term;
+    vt_emu_reset(e);
+
+    printf("Test tabs\n");
+    print_tabs(&e->tabs);
+
+
+}
+
 void test_stdin(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -553,7 +563,8 @@ int main() {
     // test_insert(&e);
     // test_scroll(&e);
     // test_margin(&e);
-    test_repeat_character(&e);
+    // test_repeat_character(&e);
+    test_tabs(&e);
     // test_stdin(&e);
 
     printf("All OK\n");

@@ -29,11 +29,14 @@
 #include "vt_types.h"
 #include "vt_cell.h"
 #include "vt_term.h"
+#include "vt_tabs.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+void print_tabs(vt_tabs_t* tabs);
 
 void print_grid(vt_term_t *t);
 

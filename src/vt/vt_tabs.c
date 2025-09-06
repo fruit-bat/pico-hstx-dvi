@@ -26,7 +26,6 @@
  */
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include "vt_tabs.h"
