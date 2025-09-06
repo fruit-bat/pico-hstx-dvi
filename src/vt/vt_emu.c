@@ -322,9 +322,11 @@ void vt_emu_put_ch(
         // TODO investigate behaviour
         break;
     }
-    case VT_A_HTS:         // VT100 Horizontal Tab Set (ESC H)
-        DEBUG("VT_A_HTS\n");
+    case VT_A_HTS: {        // VT100 Horizontal Tab Set (ESC H)
+        DEBUG("VT_A_HTS %lu\n", (ul)t->c);
+        vt_tabs_set_tab(&e->tabs, t->c);
         break;
+    }
     case VT_A_RI:          // VT100 Reverse Index (ESC M)
         DEBUG("VT_A_RI\n");
         vt_term_reverse_nl(t);

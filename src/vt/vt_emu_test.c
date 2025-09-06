@@ -546,10 +546,13 @@ void test_horizontal_tabs(vt_emu_t* e) {
     vt_emu_put_str(e, (vt_char_t*)"\033[2Z");
     assert(t->c == 8);
 
-
-
     vt_emu_put_ch(e, 'a');
-    
+    vt_emu_put_str(e, (vt_char_t*)"\033H");
+    print_tabs(&e->tabs);
+    vt_emu_put_ch(e, 'b');
+    vt_emu_put_str(e, (vt_char_t*)"\033[Z");
+    assert(t->c == 9);
+
 }
 
 void test_stdin(vt_emu_t* e) {
