@@ -37,7 +37,19 @@
 #include <string.h>
 #include <assert.h>
 
+typedef unsigned long lu;
+
+void vt_pallet_make_cb(
+    void *d,
+    uint32_t i,
+    uint32_t r,
+    uint32_t g,
+    uint32_t b
+) {
+    printf("%lu %03lu %03lu %03lu\n", (lu)i, (lu)r, (lu)g, (lu)b);
+}
+
 int main() {
 
-    vt_pallet_make_256();
+    vt_pallet_make_256(0, vt_pallet_make_cb);
 }

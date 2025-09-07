@@ -27,22 +27,11 @@
 
 #include "vt_pallet.h"
 
-typedef unsigned long lu;
-
-void vt_pallet_make_cb(
-    void *d,
-    uint32_t i,
-    uint32_t r,
-    uint32_t g,
-    uint32_t b
-) {
-    printf("%lu %03lu %03lu %03lu\n", (lu)i, (lu)r, (lu)g, (lu)b);
-}
-
-// RGBA8880
 // https://en.wikipedia.org/wiki/ANSI_escape_code
-void vt_pallet_make_256() {
-    void *d;
+void vt_pallet_make_256(
+    void *d,
+    vt_pallet_make_cb_t cb
+) {
 
     // 0 - 7  Standard colours
     // 8 - 15 Bright colours

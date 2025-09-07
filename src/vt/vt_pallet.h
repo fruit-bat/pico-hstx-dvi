@@ -33,20 +33,18 @@ extern "C"
 {
 #endif
 
-typedef enum{
-    VT_COLOR_DEFAULT = 255,
-    VT_COLOR_BLACK = 0,
-    VT_COLOR_RED,
-    VT_COLOR_GREEN,
-    VT_COLOR_YELLOW,
-    VT_COLOR_BLUE,
-    VT_COLOR_MAGENTA,
-    VT_COLOR_CYAN,
-    VT_COLOR_WHITE,
-    VT_COLOR_MAX
-} vt_color_t;
+typedef void (*vt_pallet_make_cb_t)(
+    void *d,
+    uint32_t i,
+    uint32_t r,
+    uint32_t g,
+    uint32_t b
+);
 
-void vt_pallet_make_256();
+void vt_pallet_make_256(
+    void *d,
+    vt_pallet_make_cb_t cb
+);
 
 #ifdef __cplusplus
 }
