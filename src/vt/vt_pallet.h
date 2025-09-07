@@ -42,7 +42,7 @@ typedef void (*vt_pallet_make_cb_t)(
     uint32_t b
 );
 
-void vt_pallet_make_256(
+void vt_pallet_make_256_colours(
     void *d,
     vt_pallet_make_cb_t cb
 );

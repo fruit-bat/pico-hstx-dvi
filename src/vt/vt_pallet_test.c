@@ -41,7 +41,7 @@ typedef unsigned long lu;
 
 void vt_pallet_make_cb(
     void *d,
-    uint32_t i,
+    vt_cell_colour_t i,
     uint32_t r,
     uint32_t g,
     uint32_t b
@@ -51,5 +51,5 @@ void vt_pallet_make_cb(
 
 int main() {
 
-    vt_pallet_make_256(0, vt_pallet_make_cb);
+    vt_pallet_make_256_colours(0, vt_pallet_make_cb);
 }

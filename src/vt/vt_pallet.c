@@ -28,9 +28,9 @@
 #include "vt_pallet.h"
 
 // https://en.wikipedia.org/wiki/ANSI_escape_code
-void vt_pallet_make_256(
+void vt_pallet_make_256_colours(
     void *d,
-    vt_pallet_make_cb_t cb
+    vt_pallet_make_cb_t vt_pallet_make_cb
 ) {
     // colors 0 - 7  Standard colours
     // colors 8 - 15 Bright colours
