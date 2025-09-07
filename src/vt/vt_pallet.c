@@ -32,9 +32,8 @@ void vt_pallet_make_256(
     void *d,
     vt_pallet_make_cb_t cb
 ) {
-
-    // 0 - 7  Standard colours
-    // 8 - 15 Bright colours
+    // colors 0 - 7  Standard colours
+    // colors 8 - 15 Bright colours
     static uint8_t p16[16][3] = {
         {0,  0,  0  }, // Black
         {170,0,  0  }, // Red
@@ -57,7 +56,7 @@ void vt_pallet_make_256(
     for(uint8_t i = 0; i < 16; ++i) {
         vt_pallet_make_cb(
             d, 
-            i, 
+            (vt_cell_colour_t)i, 
             p16[i][0], 
             p16[i][1], 
             p16[i][2]
@@ -71,7 +70,7 @@ void vt_pallet_make_256(
                 uint32_t i = 16 + (r * 36) + (g * 6) + b;
                 vt_pallet_make_cb(
                     d, 
-                    i, 
+                    (vt_cell_colour_t)i, 
                     r ? r * 40 + 55 : 0, 
                     g ? g * 40 + 55 : 0, 
                     b ? b * 40 + 55 : 0
@@ -86,7 +85,7 @@ void vt_pallet_make_256(
         uint8_t l = j * 10 + 8;
         vt_pallet_make_cb(
             d, 
-            i, 
+            (vt_cell_colour_t)i, 
             l, 
             l, 
             l

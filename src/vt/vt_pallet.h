@@ -27,6 +27,7 @@
  */
 #include <stdint.h>
 #include "vt_types.h"
+#include "vt_cell.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -35,7 +36,7 @@ extern "C"
 
 typedef void (*vt_pallet_make_cb_t)(
     void *d,
-    uint32_t i,
+    vt_cell_colour_t i,
     uint32_t r,
     uint32_t g,
     uint32_t b
