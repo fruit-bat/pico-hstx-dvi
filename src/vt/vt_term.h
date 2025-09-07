@@ -240,6 +240,15 @@ void vt_term_repeat(
     uint32_t n    // The number of characters to repeat
 );
 
+void vt_term_delete_characters(
+    vt_term_t *t, // The terminal
+    uint32_t n    // The number of characters to delete (note: 0 means 0)
+);
+
+void vt_term_clear_screen(
+    vt_term_t *t // The terminal
+);
+
 #ifdef __cplusplus
 }
 #endif

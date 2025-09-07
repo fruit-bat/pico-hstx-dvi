@@ -86,7 +86,7 @@ static void vt_term_clear_lines(
     }
 }
 
-static inline void vt_term_clear_screen(
+void vt_term_clear_screen(
     vt_term_t *t // The terminal
 ) {
     vt_term_clear_lines(t, 0, t->w);
