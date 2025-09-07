@@ -1,4 +1,3 @@
-#pragma once
 /* Copyright (c) 2025 fruit-bat
  * All rights reserved.
  *
@@ -25,30 +24,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/* Build instructions:
+ *
+ * ./vt_tabs_test.sh
+ *
+ */
 #include <stdint.h>
-#include "vt_types.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include "vt_pallet.h"
+#include <string.h>
+#include <assert.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+int main() {
 
-typedef enum{
-    VT_COLOR_DEFAULT = 255,
-    VT_COLOR_BLACK = 0,
-    VT_COLOR_RED,
-    VT_COLOR_GREEN,
-    VT_COLOR_YELLOW,
-    VT_COLOR_BLUE,
-    VT_COLOR_MAGENTA,
-    VT_COLOR_CYAN,
-    VT_COLOR_WHITE,
-    VT_COLOR_MAX
-} vt_color_t;
-
-void vt_pallet_make_256();
-
-#ifdef __cplusplus
+    vt_pallet_make_256();
 }
-#endif 
-
