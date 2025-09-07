@@ -55,16 +55,20 @@ void __not_in_flash_func(hstx_dvi_vt_render_frame)(uint32_t frame_index) {
     const bool blink = (frame_index & 63) < 32; // Blink every second for 32 frames
     vt_cell_t** srps = (vt_cell_t**)&vt_emu.term.rp;
     hstx_dvi_pixel_t fgbg[2];
+    const vt_coord_t cc = vt_emu.term.c;
+    const vt_coord_t cr = vt_emu.term.r;
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
+        const uint32_t row = k>>3;
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        vt_cell_t* srp = srps[k>>3];
+        vt_cell_t* srp = srps[row];
         for (uint32_t j = 0; j < CHAR_COLS; j++) {
             const vt_cell_t s = srp[j];
             const uint32_t e = vt_cell_get_char(s) - FONT_FIRST_ASCII;
             const vt_cell_attr_t attr = vt_cell_get_attr(s);
             const vt_cell_flags_t flags = vt_cell_flags_get(attr);
-            const bool rev1 = (flags & VT_CELL_FLAGS_BLINK) && blink;
-            const bool rev2 = (flags & VT_CELL_FLAGS_REVERSE);
+            const bool cup = row == cr && j == cc;
+            const bool rev1 = ((flags & VT_CELL_FLAGS_BLINK) || cup) && blink;
+            const bool rev2 = (flags & VT_CELL_FLAGS_REVERSE) || cup;
             if (rev1 != rev2) {
                 fgbg[0] = _pallet[vt_cell_fg_get(s)];
                 fgbg[1] = _pallet[vt_cell_bg_get(s)];

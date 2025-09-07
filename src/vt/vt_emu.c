@@ -104,7 +104,7 @@ static void vt_emu_sgr(vt_emu_t* const e) {
     };
 
     for (uint32_t i = 0; i < p->n_params; ++i) {
-        const uint32_t q = p->params[i];
+        const uint32_t q = vt_emu_get_p0(p, i);
         if ((q < 10) || (q >= 20 && q < 30)) {
             //
             // ESC[0m		reset all modes (styles and colors)
