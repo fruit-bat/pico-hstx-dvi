@@ -23,6 +23,11 @@ static hstx_dvi_pixel_t _pallet[256];
 static vt_cell_t _screen[CHAR_ROWS][CHAR_COLS];
 static vt_emu_t vt_emu;
 
+
+vt_emu_t* __not_in_flash_func(hstx_dvi_vt_emu_get)() {
+    return &vt_emu;
+}
+
 static void vt_pallet_make_cb(
     void *d,
     vt_cell_colour_t i,

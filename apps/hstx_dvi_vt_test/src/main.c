@@ -36,9 +36,12 @@ int main(void)
 
     // 
 
-    
+    vt_emu_t* e = hstx_dvi_vt_emu_get();
+
     while(1) {
-        __wfi();
+        char ch = getchar();
+        if (ch) vt_emu_put_ch(e, ch); 
+        //__wfi();
     }
 }
 
