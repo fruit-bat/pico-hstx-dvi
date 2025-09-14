@@ -36,7 +36,7 @@ static int vt_in_chars(char *buf, int length) {
 
 static struct stdio_driver vt_driver = {
     .out_chars = vt_out_chars,
-    .crlf_enabled = PICO_STDIO_DEFAULT_CRLF
+   // .crlf_enabled = PICO_STDIO_DEFAULT_CRLF
 
 //    .in_chars = vt_in_chars
 };

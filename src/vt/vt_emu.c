@@ -3,7 +3,8 @@
 #include "vt_emu.h"
 #include <stdio.h>
 
-#define DEBUG(...) printf(__VA_ARGS__)
+//#define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...) 
 typedef unsigned long ul;
 
 void vt_emu_init(
@@ -282,6 +283,7 @@ void vt_emu_put_ch(
     case VT_A_C0_LF:       // Line Feed
         DEBUG("VT_A_C0_LF\n");
         vt_term_nl(t);
+        vt_term_cr(t);
         break;
     case VT_A_C0_VT:       // Vertical Tab
         DEBUG("\n");
@@ -411,13 +413,13 @@ void vt_emu_put_ch(
         const uint32_t r = vt_emu_get_p0(p, 0);
         const uint32_t c = vt_emu_get_p0(p, 1);
         DEBUG("VT_A_CUP/VT_A_HVP %lu, %lu\n", (ul)r, (ul)c);
-        vt_term_cursor_set(t, r, c);
+        vt_term_cursor_set(t, r == 0 ? 0 : r - 1, c == 0 ? 0 : c - 1);
         break;
     }
     case VT_A_CHA: {        // CHA - Cursor Horizontal Absolute 
         const uint32_t c = vt_emu_get_p0(p, 0);
         DEBUG("VT_A_CHA %lu\n", (ul)c);
-        vt_term_cursor_set_col(t, c);
+        vt_term_cursor_set_col(t, c == 0 ? 0 : c - 1);
         break;
     }
     case VT_A_ED: {         // ED  - Erase in Display

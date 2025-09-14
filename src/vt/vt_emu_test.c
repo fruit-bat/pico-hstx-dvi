@@ -77,12 +77,12 @@ void test_cursor(vt_emu_t* e) {
     assert(t->c == 0);
     // ESC[{line};{column}H moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(t->r == 4);
-    assert(t->c == 5);
+    assert(t->r == 3);
+    assert(t->c == 4);
     // ESC[{line};{column}f	moves cursor to line #, column #
     vt_emu_put_str(e, (vt_char_t*)"\033[7;13f");
-    assert(t->r == 7);
-    assert(t->c == 13);
+    assert(t->r == 6);
+    assert(t->c == 12);
     // ESC[H	moves cursor to home position (0, 0)
     vt_emu_put_str(e, (vt_char_t*)"\033[H");
     assert(t->r == 0);
@@ -126,27 +126,27 @@ void test_cursor(vt_emu_t* e) {
     // Change horizontal attribute
     vt_emu_put_str(e, (vt_char_t*)"\033[11G");
     assert(t->r == 3);
-    assert(t->c == 11);
+    assert(t->c == 10);
     // Save & Restore ESC7, ESC8
     assert(t->r == 3);
-    assert(t->c == 11);
+    assert(t->c == 10);
     vt_emu_put_str(e, (vt_char_t*)"\0337");
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(t->r == 4);
-    assert(t->c == 5);
+    assert(t->r == 3);
+    assert(t->c == 4);
     vt_emu_put_str(e, (vt_char_t*)"\0338");
     assert(t->r == 3);
-    assert(t->c == 11);
+    assert(t->c == 10);
     // Save & Restore ESC[s, ESC[u]
     assert(t->r == 3);
-    assert(t->c == 11);
+    assert(t->c == 10);
     vt_emu_put_str(e, (vt_char_t*)"\033[s");
     vt_emu_put_str(e, (vt_char_t*)"\033[4;5H");
-    assert(t->r == 4);
-    assert(t->c == 5);
+    assert(t->r == 3);
+    assert(t->c == 4);
     vt_emu_put_str(e, (vt_char_t*)"\033[u");
     assert(t->r == 3);
-    assert(t->c == 11);
+    assert(t->c == 10);
 }
 
 // ESC[J	erase in display (same as ESC[0J)
@@ -162,12 +162,13 @@ void test_erase(vt_emu_t* e) {
     vt_term_t* const t = &e->term;
     vt_emu_reset(e);
     
+    printf("Test Erase\n");
     set_grid_cols(t);
     print_grid(t);
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[J	erase in display (same as ESC[0J)
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[J");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -180,7 +181,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[J	erase in display (same as ESC[0J)
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[0J");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[0J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -193,7 +194,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[1J	erase from cursor to beginning of screen
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[1J");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[1J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "                    ");
@@ -206,7 +207,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[2J	erase entire screen
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[2J");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[2J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         check_grid_row(t, r, "                    ");
@@ -217,7 +218,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[2J	erase entire screen
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[3J");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[3J");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         check_grid_row(t, r, "                    ");
@@ -230,7 +231,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[K	erase in line (same as ESC[0K)
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[K");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[K");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -243,7 +244,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[0K	erase from cursor to end of line
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[0K");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[0K");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -256,7 +257,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[1K	erase start of line to the cursor
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[1K");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[1K");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -269,7 +270,7 @@ void test_erase(vt_emu_t* e) {
     check_grid_row(t, 4, "ABCDEFGHIJKLMNOPQRST");
     // ESC[{line};{column}H moves cursor to line #, column #
     // ESC[2K	erase the entire line
-    vt_emu_put_str(e, (vt_char_t*)"\033[4;5H\033[2K");
+    vt_emu_put_str(e, (vt_char_t*)"\033[5;6H\033[2K");
     print_grid(t);
     for(vt_coord_t r = 0; r < t->h; ++r) {
         if (r <  4) check_grid_row(t, r, "ABCDEFGHIJKLMNOPQRST");
@@ -584,14 +585,14 @@ int main() {
     vt_emu_t e;
     vt_emu_init(&e, (vt_cell_t*)grid, w, h);
 
-    // test_cursor(&e);
-    // test_erase(&e);
-    // test_cell_modes(&e);
-    // test_colours(&e);
-    // test_insert(&e);
-    // test_scroll(&e);
-    // test_margin(&e);
-    // test_repeat_character(&e);
+    test_cursor(&e);
+    test_erase(&e);
+    test_cell_modes(&e);
+    test_colours(&e);
+    test_insert(&e);
+    test_scroll(&e);
+    test_margin(&e);
+    test_repeat_character(&e);
     test_horizontal_tabs(&e);
     // test_stdin(&e);
 
