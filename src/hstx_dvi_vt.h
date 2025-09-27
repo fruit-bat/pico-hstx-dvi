@@ -2,7 +2,7 @@
 
 #include "pico/stdlib.h"
 #include "hstx_dvi_core.h"
-#include "vt/vt_emu.h"
+#include "vt_emu.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -294,7 +294,7 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
     dma_channel_start(DMACH_PING);
 }
 
-void hstx_dvi_fill_row(hstx_dvi_row_t* r, hstx_dvi_pixel_t p) {
+void __not_in_flash_func(hstx_dvi_fill_row)(hstx_dvi_row_t* r, hstx_dvi_pixel_t p) {
     uint32_t *x = (uint32_t*)r;
 #if MODE_BYTES_PER_PIXEL == 1
     const uint32_t w = hstx_dvi_row_enc_pixel_quad(p, p, p, p);

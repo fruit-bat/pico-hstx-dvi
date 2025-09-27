@@ -18,9 +18,6 @@
 #include <string.h>
 #include "pico/sem.h"
 
-#include "vt/vt_pallet.h"
-
-
 int main(void)
 {
     // Initialize stdio and GPIO 25 for the onboard LED

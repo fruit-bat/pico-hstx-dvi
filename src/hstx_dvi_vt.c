@@ -7,8 +7,8 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
-#include "vt/vt_emu.h"
-#include "vt/vt_pallet.h"
+#include "vt_emu.h"
+#include "vt_pallet.h"
 
 #include "font_inv.h"
 #define FONT_CHAR_WIDTH 8
@@ -38,7 +38,7 @@ static void vt_pallet_make_cb(
     _pallet[i] = hstx_dvi_pixel_rgb(r,g,b);
 }
 
-void __not_in_flash_func(hstx_dvi_vt_init)() {
+void hstx_dvi_vt_init() {
 
     // Setup the pallet
     vt_pallet_make_256_colours(0, vt_pallet_make_cb);

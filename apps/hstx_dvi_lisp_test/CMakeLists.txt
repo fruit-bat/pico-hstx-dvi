@@ -21,7 +21,7 @@ target_link_libraries(hstx_dvi_lisp_test
   pico_sync
   pico_hstx_dvi
   pico_hstx_dvi_vt
-  vtlib
+  pico_vtlib
 )
 
 # create map/bin/hex file etc.

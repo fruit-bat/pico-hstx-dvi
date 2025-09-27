@@ -19,6 +19,7 @@ add_library(pico_hstx_dvi_vt INTERFACE)
 target_sources(pico_hstx_dvi_vt INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_vt.c
 )
+target_link_libraries(pico_hstx_dvi_vt INTERFACE pico_vtlib)
 
 add_library(pico_hstx_dvi_tmt INTERFACE)
 
@@ -33,13 +34,4 @@ target_include_directories(pico_hstx_dvi INTERFACE
     src
 )
 
-add_library(vtlib INTERFACE)
-
-target_sources(vtlib INTERFACE
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_parser.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_term.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_tabs.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_pallet.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_emu.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/vt/vt_cell.c
-)
+add_subdirectory(${PICO_FOLDER}/pico-vt "${CMAKE_CURRENT_BINARY_DIR}/pico-vt")
