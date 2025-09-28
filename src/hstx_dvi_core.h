@@ -7,6 +7,43 @@
 extern "C" {
 #endif
 
+
+/*
+
+Resolution: 800x480
+Aspect Ratio: 5:3
+Pixel Clock: ~32-33 MHz
+Horizontal Timings:
+Active Pixels: 800
+Front Porch: 40
+Sync Width: 48
+Back Porch: 24 or 88
+Vertical Timings:
+Active Lines: 480
+Front Porch: 13
+Sync Width: 3
+Back Porch: 3
+Polarity: Often negative polarity (0 for horizontal, 0 for vertical)
+Interlacing: Progressive (0)
+Refresh Rate: 60Hz 
+
+*/
+
+#define MODE_H_SYNC_POLARITY 0
+#define MODE_H_FRONT_PORCH   40
+#define MODE_H_SYNC_WIDTH    48
+#define MODE_H_BACK_PORCH    88
+#define MODE_H_ACTIVE_PIXELS 800
+
+#define MODE_V_SYNC_POLARITY 0
+#define MODE_V_FRONT_PORCH   13
+#define MODE_V_SYNC_WIDTH    3
+#define MODE_V_BACK_PORCH    3
+#define MODE_V_ACTIVE_LINES  480
+#define MODE_HSTX_FREQ_HZ 320000000
+
+#if 0
+#define MODE_HSTX_FREQ_HZ 252000000
 #define MODE_H_SYNC_POLARITY 0
 #define MODE_H_FRONT_PORCH   16
 #define MODE_H_SYNC_WIDTH    96
@@ -18,6 +55,7 @@ extern "C" {
 #define MODE_V_SYNC_WIDTH    2
 #define MODE_V_BACK_PORCH    33
 #define MODE_V_ACTIVE_LINES  480
+#endif
 
 #ifndef MODE_BYTES_PER_PIXEL
 #define MODE_BYTES_PER_PIXEL 1

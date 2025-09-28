@@ -5,7 +5,7 @@ add_executable(hstx_dvi_vt_test
 
 target_compile_definitions(hstx_dvi_vt_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
-  MODE_BYTES_PER_PIXEL=1
+  MODE_BYTES_PER_PIXEL=2
 )
 
 target_link_libraries(hstx_dvi_vt_test
