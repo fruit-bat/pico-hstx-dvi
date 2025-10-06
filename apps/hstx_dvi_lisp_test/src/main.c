@@ -12,7 +12,7 @@
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
 #include "hstx_dvi_vt.h"
-#include "vt/vt_emu.h"
+#include "vt_emu.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
