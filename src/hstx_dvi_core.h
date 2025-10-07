@@ -28,7 +28,20 @@ Interlacing: Progressive (0)
 Refresh Rate: 60Hz 
 
 */
-#ifdef HSTX_DVI_MODE_800_480_60
+#ifdef HSTX_DVI_MODE_800_600_60
+#define MODE_H_SYNC_POLARITY 1
+#define MODE_H_FRONT_PORCH   40
+#define MODE_H_SYNC_WIDTH    128
+#define MODE_H_BACK_PORCH    88
+#define MODE_H_ACTIVE_PIXELS 800
+
+#define MODE_V_SYNC_POLARITY 1
+#define MODE_V_FRONT_PORCH   1
+#define MODE_V_SYNC_WIDTH    4
+#define MODE_V_BACK_PORCH    23
+#define MODE_V_ACTIVE_LINES  600
+#define MODE_HSTX_FREQ_HZ 400000000
+#elif defined(HSTX_DVI_MODE_800_480_60)
 #define MODE_H_SYNC_POLARITY 0
 #define MODE_H_FRONT_PORCH   40
 #define MODE_H_SYNC_WIDTH    48
