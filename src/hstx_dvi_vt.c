@@ -57,6 +57,8 @@ void __not_in_flash_func(hstx_dvi_vt_render_frame)(uint32_t frame_index) {
     hstx_dvi_pixel_t fgbg[2];
     const vt_coord_t cc = vt_emu.term.c;
     const vt_coord_t cr = vt_emu.term.r;
+    // The host can hide the cursor (DECTCEM, ESC [ ? 25 l)
+    const bool cvis = vt_term_mode_get(&vt_emu.term, VT_TERM_MODE_CURSOR);
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         const uint32_t row = k>>3;
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
@@ -66,7 +68,7 @@ void __not_in_flash_func(hstx_dvi_vt_render_frame)(uint32_t frame_index) {
             const uint32_t e = vt_cell_get_char(s) - FONT_FIRST_ASCII;
             const vt_cell_attr_t attr = vt_cell_get_attr(s);
             const vt_cell_flags_t flags = vt_cell_flags_get(attr);
-            const bool cup = row == cr && j == cc;
+            const bool cup = cvis && row == cr && j == cc;
             const bool rev1 = ((flags & VT_CELL_FLAGS_BLINK) || cup) && blink;
             const bool rev2 = (flags & VT_CELL_FLAGS_REVERSE) || cup;
             if (rev1 != rev2) {
