@@ -16,11 +16,21 @@
 #define FONT_N_CHARS 95
 #define FONT_FIRST_ASCII 32
 
+// The characters that fit on the display
 #define CHAR_ROWS (MODE_V_ACTIVE_LINES / FONT_CHAR_HEIGHT)
 #define CHAR_COLS (MODE_H_ACTIVE_PIXELS / FONT_CHAR_WIDTH)
 
+// The most the terminal can be (its capacity): what fits on the display, as
+// far as the emulator allows. The terminal can be resized up to this, and the
+// rest of the display is drawn in the background colour.
+#ifndef MIN
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif
+#define CAP_ROWS MIN(CHAR_ROWS, VT_SCREEN_MAX_ROWS)
+#define CAP_COLS MIN(CHAR_COLS, VT_SCREEN_MAX_COLS)
+
 static hstx_dvi_pixel_t _pallet[256];
-static vt_cell_t _screen[CHAR_ROWS][CHAR_COLS];
+static vt_cell_t _screen[CAP_ROWS][CAP_COLS];
 static vt_emu_t vt_emu;
 
 
@@ -38,13 +48,27 @@ static void vt_pallet_make_cb(
     _pallet[i] = hstx_dvi_pixel_rgb(r,g,b);
 }
 
+// Replies (e.g. size and cursor position reports) go back to the host
+static void vt_reply_cb(void *ctx, const vt_char_t *s, uint32_t n) {
+    (void)ctx;
+    for (uint32_t i = 0; i < n; ++i) putchar_raw(s[i]);
+}
+
+// The host asked for a new size (ESC [ 8 ; h ; w t): allow it, within the capacity
+static void vt_resize_req_cb(void *ctx, vt_coord_t w, vt_coord_t h) {
+    vt_emu_resize((vt_emu_t*)ctx, w, h);
+}
+
 void hstx_dvi_vt_init() {
 
     // Setup the pallet
     vt_pallet_make_256_colours(0, vt_pallet_make_cb);
 
-    // Setup the terminal emulator
-    vt_emu_init(&vt_emu, (vt_cell_t*)_screen, CHAR_COLS, CHAR_ROWS);
+    // Setup the terminal emulator, filling the display to start with
+    vt_emu_init_cap(&vt_emu, (vt_cell_t*)_screen, CAP_COLS, CAP_ROWS, CAP_COLS, CAP_ROWS);
+    vt_emu_set_reply(&vt_emu, vt_reply_cb, NULL);
+    vt_emu_set_resize_req(&vt_emu, vt_resize_req_cb, &vt_emu);
+    vt_emu_set_cell_size(&vt_emu, FONT_CHAR_WIDTH, FONT_CHAR_HEIGHT);
 
     // Say hello
     vt_emu_put_str(&vt_emu, (vt_char_t*)"Pico virtual terminal v0.1\r\n");
@@ -59,11 +83,23 @@ void __not_in_flash_func(hstx_dvi_vt_render_frame)(uint32_t frame_index) {
     const vt_coord_t cr = vt_emu.term.r;
     // The host can hide the cursor (DECTCEM, ESC [ ? 25 l)
     const bool cvis = vt_term_mode_get(&vt_emu.term, VT_TERM_MODE_CURSOR);
+    // The terminal's size, read once a frame as core 0 may resize it. Every
+    // row of the capacity is valid so a resize part done shows an odd frame
+    // at worst; the clamps make sure of that.
+    const uint32_t tw = MIN(vt_emu.term.w, CAP_COLS);
+    const uint32_t th = MIN(vt_emu.term.h, CAP_ROWS);
+    const hstx_dvi_pixel_t border = _pallet[VT_TERM_DEFAULT_BG];
     for(uint32_t k = 0; k < MODE_V_ACTIVE_LINES; k++) {
         const uint32_t row = k>>3;
         hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
-        vt_cell_t* srp = srps[row];
-        for (uint32_t j = 0; j < CHAR_COLS; j++) {
+        // Outside the terminal is the background colour
+        const uint32_t cols = row < th ? tw : 0;
+        for (uint32_t j = cols; j < CHAR_COLS; j++) {
+            hstx_dvi_row_set_pixel_quad(r, (j<<1), border,border,border,border);
+            hstx_dvi_row_set_pixel_quad(r, (j<<1) + 1, border,border,border,border);
+        }
+        vt_cell_t* srp = srps[MIN(row, CAP_ROWS - 1)];
+        for (uint32_t j = 0; j < cols; j++) {
             const vt_cell_t s = srp[j];
             const uint32_t e = vt_cell_get_char(s) - FONT_FIRST_ASCII;
             const vt_cell_attr_t attr = vt_cell_get_attr(s);
