@@ -100,6 +100,14 @@ struct TMT{
 
     bool decode_unicode; // Try to decode characters to ACS equivalents?
 
+    /**
+     * @brief Variable to hold the conversion state for multibyte character sequences.
+     *
+     * The `mbstate_t` type is used to keep track of the conversion state when converting between
+     * multibyte and wide character strings. It is required for functions such as `mbrtowc()`,
+     * `wcrtomb()`, and related functions that may need to maintain state information between calls,
+     * especially when dealing with state-dependent encodings.
+     */
     mbstate_t ms;
     size_t nmb;
     char mb[BUF_MAX + 1];

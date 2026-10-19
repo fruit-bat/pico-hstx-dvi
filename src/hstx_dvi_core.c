@@ -157,6 +157,9 @@ static void HSTX_DVI_MEM_LOC(dma_irq_handler)() {
     }
 }
 
+// 1 or 2
+#define SYS_CLK_DIV 1
+
 void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
 
     _row_fetcher = row_fetcher;
@@ -169,15 +172,15 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
     // Set core voltage to 1.2V
     vreg_set_voltage(VREG_VOLTAGE_1_20);
 
-    // Set the system clock to 252 MHz
-    set_sys_clock_khz(252000, true);
+    // Set the system clock
+    set_sys_clock_khz(MODE_HSTX_FREQ_HZ / (SYS_CLK_DIV * 1000), true);
 
     clock_configure_int_divider(
         clk_hstx,
         0,
         CLOCKS_CLK_HSTX_CTRL_AUXSRC_VALUE_CLK_SYS,
-        252000000,
-        2
+        MODE_HSTX_FREQ_HZ / SYS_CLK_DIV,
+        3 - SYS_CLK_DIV
     );
 #if MODE_BYTES_PER_PIXEL == 1
     // Configure HSTX's TMDS encoder for RGB332
@@ -294,7 +297,7 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
     dma_channel_start(DMACH_PING);
 }
 
-void hstx_dvi_fill_row(hstx_dvi_row_t* r, hstx_dvi_pixel_t p) {
+void __not_in_flash_func(hstx_dvi_fill_row)(hstx_dvi_row_t* r, hstx_dvi_pixel_t p) {
     uint32_t *x = (uint32_t*)r;
 #if MODE_BYTES_PER_PIXEL == 1
     const uint32_t w = hstx_dvi_row_enc_pixel_quad(p, p, p, p);

@@ -524,6 +524,9 @@ char get() {
 //      freopen("/dev/tty", "r", stdin);
       c = '\n';
     }
+    // HACK START echo
+    putchar(c);
+    // HACK END echo
     see = c;
 #endif
   }
