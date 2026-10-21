@@ -1,6 +1,5 @@
 #include "inv_mot.h"
 #include "inv_pallet.h"
-#include "inv_score.h"
 #include "inv_input.h"
 #include "inv_bullets.h"
 #include "inv_collisions.h"
@@ -165,8 +164,8 @@ void __not_in_flash_func(inv_gun_update)(uint32_t frame) {
 			break;
 		}
 		case GUN_STATE_DEAD: {
-			// Do nothing, the sprite is already disabled
-			inv_score_clear(); // Clear the score when the gun is destroyed
+			// Do nothing, the sprite is already disabled. The game loop ends
+			// once the lives reach zero; the score is reset by inv_score_init.
 			break;
 		}
 		default: {

@@ -43,10 +43,6 @@ SpriteId inv_score_init(SpriteId start) {
 	return _sprite_index + 1;
 }
 
-void inv_score_clear() {
-	_score = 0;
-}
-
 void __not_in_flash_func(inv_score_add)(uint32_t score) {
 	_score += score;
 }
