@@ -47,7 +47,6 @@ SpriteId inv_base_init(SpriteId start) {
 			si,
 			p,
 			MODE_V_ACTIVE_LINES - 88,
-			32,
 			16,
 			SF_ENABLE,
 			&tile32x16p2_bases[i],
@@ -76,6 +75,13 @@ static Tile8x8p2_t tile8x8p2_damage[] = {
 	}}
 };
 
+// Position an 8 bit damage row (bit 7 = left) at column dx of a 32 bit base row (bit 31 = left)
+static __force_inline uint32_t damage_row_at(const uint32_t d, const int32_t dx) {
+	const int32_t s = 24 - dx;
+	if (s >= 32 || s <= -8) return 0;
+	return s >= 0 ? d << s : d >> -s;
+}
+
 void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMask m) {
 	SpriteCollisionMask t = INV_BASE_COLLISION_MASK;
 	for(uint i = 0; i < INV_BASE_COUNT; ++i) {
@@ -95,7 +101,7 @@ void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMa
 				uint32_t d1 = d->d[r];
 				int32_t y = dy + r;
 				if ((y < 0) || (y >= 16)) continue; // Skip
-				base_image[y] &= ~(d1 << (24 -dx));
+				base_image[y] &= ~damage_row_at(d1, dx);
 			}
 		}
 		t <<= 1;
@@ -121,7 +127,7 @@ void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId, SpriteCollision
 				uint32_t d1 = d->d[7-r];
 				int32_t y = dy + r;
 				if ((y < 0) || (y >= 16)) continue; // Skip
-				base_image[y] &= ~(d1 << (24 -dx));
+				base_image[y] &= ~damage_row_at(d1, dx);
 			}
 		}
 		t <<= 1;

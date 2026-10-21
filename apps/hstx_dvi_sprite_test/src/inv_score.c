@@ -18,28 +18,28 @@ static uint32_t _score = 0;
 
 void __not_in_flash_func(inv_score_update)(void) {
 	// Update the score display
-	sprintf((char*)&_score_text[0],  "Score %5.5ld", _score);
+	// Keep to the field widths; the ' ' fix-ups overwrite the terminating nul
+	sprintf((char*)&_score_text[0],  "Score %5.5lu", (unsigned long)(_score % 100000));
 	_score_text[11] = ' ';
-	sprintf((char*)&_score_text[60], "Lives %1.1ld", inv_gun_get_lives());
+	sprintf((char*)&_score_text[60], "Lives %1.1lu", (unsigned long)(inv_gun_get_lives() % 10));
 	_score_text[60 + 7] = ' ';
 }
 
 SpriteId inv_score_init(SpriteId start) {
     _sprite_index = start;
 	_score = 0;
+	memset(_score_text, 32, sizeof(_score_text));
 	inv_score_update();
 	init_sprite(
 		_sprite_index,
 		(4*8),
 		0,
-		(80-8)*8,
 		1*8,
 		SF_ENABLE,
 		&_textGrid1,
 		inv_pallet_green(),
 		text_renderer_8x8_p1);
 
-	memset(_score_text, 32, sizeof(_score_text));
 	return _sprite_index + 1;
 }
 

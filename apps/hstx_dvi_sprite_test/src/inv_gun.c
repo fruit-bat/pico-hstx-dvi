@@ -70,7 +70,6 @@ SpriteId inv_gun_init(SpriteId start) {
 		si,
 		20,  // x
 		MODE_V_ACTIVE_LINES - 64, // y
-		16, // width
 		8,  // height
 		SF_ENABLE,  // flags
 		&tile16x8p2_gun[0],

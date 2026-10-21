@@ -10,9 +10,13 @@ Sprite _sprites[MAX_SPRITES];
 static Sprite _sprites_rdy[MAX_SPRITES];
 
 static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
-static SpriteIdRow _spriteIdRow; 
+static SpriteCollisionMask _spriteCollisionMasksRdy[MAX_SPRITES];
+static SpriteIdRow _spriteIdRow;
 SpriteCollisions _spriteCollisions;
 static SpriteCollisions _spriteCollisionsFrame;
+// Released by the application core when it has finished updating the sprites
+static struct semaphore _update_sem;
+// Released by the render core once the updates have been taken
 static struct semaphore _frame_sem;
 
 __force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
@@ -23,19 +27,22 @@ void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
     hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
-    for(uint32_t frame_index = 0; true; ++frame_index) {
-        hstx_dvi_sprite_render_frame(frame_index);
-		// If the other core is waiting for the next frame
-		if(!sem_available(&_frame_sem)) {
+    while(true) {
+        hstx_dvi_sprite_render_frame();
+		// Only take the updates once the other core has finished making them.
+		// It stays blocked in hstx_dvi_sprite_wait_for_frame until the copy is done.
+		if(sem_try_acquire(&_update_sem)) {
 			memcpy(_sprites_rdy, _sprites, sizeof(_sprites));
+			memcpy(_spriteCollisionMasksRdy, _spriteCollisionMasks, sizeof(_spriteCollisionMasks));
 			memcpy(&_spriteCollisions, &_spriteCollisionsFrame, sizeof(_spriteCollisionsFrame));
 			clear_sprite_collisions(&_spriteCollisionsFrame);
+			sem_release(&_frame_sem);
 		}
-        sem_release(&_frame_sem);
     }
 }
 
 void __not_in_flash_func(hstx_dvi_sprite_wait_for_frame)(){
+    sem_release(&_update_sem);
     sem_acquire_blocking(&_frame_sem);
 }
 
@@ -56,7 +63,8 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 		_sprites[i].f = 0;
 		_sprites_rdy[i].f = 0;
 	}
-	// Set up the frame semaphore. Released at the end of every frame.
+	// Set up the frame handshake semaphores
+    sem_init(&_update_sem, 0, 1);
     sem_init(&_frame_sem, 0, 1);
 
     // Initialize the HSTX DVI row FIFO.
@@ -83,20 +91,22 @@ void __not_in_flash_func(render_row_mono)(
 
 static __force_inline void render_sprite_pixel(
 	hstx_dvi_row_t* r,
-    hstx_dvi_pixel_t p,
+	const hstx_dvi_pixel_t p,
 	const SpriteId spriteId,
-	const uint32_t j)
-{
+	const SpriteCollisionMask spriteCollisionMask,
+	SpriteCollisionMask* const spriteCollisionsPtr,
+	const uint32_t j
+) {
 	const SpriteId ncid = _spriteIdRow.id[j];
 	if (ncid)
 	{
 		const SpriteId cid = ncid - 1;
-		_spriteCollisionsFrame.m[cid] |= _spriteCollisionMasks[spriteId];
-		_spriteCollisionsFrame.m[spriteId] |= _spriteCollisionMasks[cid];
+		_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
+		*spriteCollisionsPtr |= _spriteCollisionMasksRdy[cid];
 	}
 	else
 	{
-        hstx_dvi_row_set_pixel(r, j, p);
+		hstx_dvi_row_set_pixel(r, j, p);
 		_spriteIdRow.id[j] = spriteId + 1;
 	}
 }
@@ -119,30 +129,19 @@ static __force_inline void render_sprite_row_n_p1(
 ) {
 	if (d)
 	{
-		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasks[spriteId];
+		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
 		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
-		const uint32_t bm = 1 << (w-1);
+		const uint32_t bm = 1u << (w-1);
         const hstx_dvi_pixel_t p = p1[0];
 		const uint32_t ux = (uint32_t)x;
-		if (ux < (MODE_H_ACTIVE_PIXELS - w))
+		if (ux <= (MODE_H_ACTIVE_PIXELS - w))
 		{
 			for (int32_t i = 0; i < w; i++)
 			{
 				const uint32_t j = ux + i;
 				if (d & (bm >> i))
 				{
-					const SpriteId ncid = _spriteIdRow.id[j];
-					if (ncid)
-					{
-						const SpriteId cid = ncid - 1;
-						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
-						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
-					}
-					else
-					{
-						hstx_dvi_row_set_pixel(r, j, p);
-						_spriteIdRow.id[j] = spriteId + 1;
-					}
+					render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, j);
 				}
 			}
 		}
@@ -153,18 +152,7 @@ static __force_inline void render_sprite_row_n_p1(
 				const uint32_t j = ux + i;
 				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
 				{
-					const SpriteId ncid = _spriteIdRow.id[j];
-					if (ncid)
-					{
-						const SpriteId cid = ncid - 1;
-						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
-						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
-					}
-					else
-					{
-						hstx_dvi_row_set_pixel(r, j, p);
-						_spriteIdRow.id[j] = spriteId + 1;
-					}
+					render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, j);
 				}
 			}
 		}
@@ -181,8 +169,8 @@ static __force_inline void render_row_n_p1(
 	if (d)
 	{
         const hstx_dvi_pixel_t p = p1[0];
-		const uint32_t bm = 1 << (w-1);
-		if (((uint32_t)x) < (MODE_H_ACTIVE_PIXELS - w))
+		const uint32_t bm = 1u << (w-1);
+		if (((uint32_t)x) <= (MODE_H_ACTIVE_PIXELS - w))
 		{
 			for (int32_t i = 0; i < w; i++)
 			{
@@ -205,6 +193,13 @@ static __force_inline void render_row_n_p1(
 			}
 		}
 	}
+}
+
+// Characters outside the font are rendered as a space
+static __force_inline uint32_t text_grid8_glyph_offset(const uint8_t c, const uint32_t k) {
+	uint32_t g = (uint32_t)c - TEXT_GRID8_FIRST_CHAR;
+	if (g > (TEXT_GRID8_LAST_CHAR - TEXT_GRID8_FIRST_CHAR)) g = ' ' - TEXT_GRID8_FIRST_CHAR;
+	return k + (g << 3);
 }
 
 static __force_inline void render_row_text_8_p1(
@@ -222,10 +217,10 @@ static __force_inline void render_row_text_8_p1(
 
 	for(uint32_t i = 0; i < v; ++i) {
 		const uint32_t q = i << 2;
-		const uint8_t d1 = font_8x8[k + ((s[q] -  32) << 3)];
-		const uint8_t d2 = font_8x8[k + ((s[q+1] -  32) << 3)];
-		const uint8_t d3 = font_8x8[k + ((s[q+2] -  32) << 3)];
-		const uint8_t d4 = font_8x8[k + ((s[q+3] -  32) << 3)];
+		const uint8_t d1 = font_8x8[text_grid8_glyph_offset(s[q], k)];
+		const uint8_t d2 = font_8x8[text_grid8_glyph_offset(s[q+1], k)];
+		const uint8_t d3 = font_8x8[text_grid8_glyph_offset(s[q+2], k)];
+		const uint8_t d4 = font_8x8[text_grid8_glyph_offset(s[q+3], k)];
 		const uint32_t g = (((uint32_t)d1) << 24) | (((uint32_t)d2) << 16) | (((uint32_t)d3) << 8) | d4;
 		render_row_n_p1(
 			g,
@@ -236,7 +231,7 @@ static __force_inline void render_row_text_8_p1(
 		);
 	}
 	for(uint32_t i = w & -4; i < w; ++i) {
-		const uint8_t d = font_8x8[k + ((s[i] -  32) << 3)];
+		const uint8_t d = font_8x8[text_grid8_glyph_offset(s[i], k)];
 		render_row_n_p1(
 			d,
 			p1,
@@ -429,7 +424,7 @@ void __not_in_flash_func(render_Tile16x16p2)(
 	}
 }
 
-void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
+void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 		
 	//clear_sprite_collisions();
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {

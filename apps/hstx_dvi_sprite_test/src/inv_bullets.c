@@ -31,7 +31,6 @@ SpriteId inv_bullets_init(SpriteId start) {
 			si,
 			0,  // x
 			0,  // y
-			8,  // width
 			8,  // height
 			0,  // flags
 			&tile8x8p2_bullets[0],

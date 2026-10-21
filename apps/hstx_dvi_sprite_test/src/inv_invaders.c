@@ -174,7 +174,7 @@ SpriteId inv_invaders_init_title(SpriteId start) {
 	for(uint32_t y = 0; y < 8; ++y) {
         for(uint32_t x = 0; x < len; ++x) {
 			const uint8_t c = inv_title[x];
-			if (c < 32 || c > 127) continue; // Skip invalid characters
+			if (c < TEXT_GRID8_FIRST_CHAR || c > TEXT_GRID8_LAST_CHAR) continue; // Skip invalid characters
 			const uint32_t k = (c - 32) << 3;
 			const uint8_t d = font[k + y];
 			for(uint32_t j = 0; j < 8; ++j) {
@@ -185,7 +185,6 @@ SpriteId inv_invaders_init_title(SpriteId start) {
 						si,
 						sx + (((x << 3) + j) << 3),
 						60 + (y << 4),
-						16,
 						8,
 						SF_ENABLE,
 						&tile16x8p2_invaders[rt[y>>1]],
@@ -221,7 +220,6 @@ SpriteId inv_invaders_init(SpriteId start) {
                 si,
                 x << 4,
                 60 + (y << 4),
-                16,
                 8,
                 SF_ENABLE,
                 &tile16x8p2_invaders[rt[y>>1]],
@@ -283,7 +281,7 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 					if ((int32_t)(state->end - frame) < 0) {
 						state->state = INV_STATE_DEAD;
 						hstx_dvi_sprite_disable_1(hstx_dvi_sprite_get(si));
-						inv_score_add(get_score_for_sprite(si));
+						inv_score_add(get_score_for_sprite(i));
 					}
 					break;
 				}
