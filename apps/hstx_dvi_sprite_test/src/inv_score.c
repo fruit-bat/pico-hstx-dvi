@@ -1,5 +1,5 @@
 #include "inv_bullets.h"
-#include "font_inv.h" // TODO extern linkage
+#include "font_inv.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
@@ -12,7 +12,7 @@ static uint8_t _score_text[80] = {0};
 static TextGrid8_t _textGrid1 = {
 	72,
 	_score_text,
-	(uint8_t*)&font_8x8
+	(uint8_t*)font_8x8
 };
 static uint32_t _score = 0;
 

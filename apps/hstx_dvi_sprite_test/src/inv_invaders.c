@@ -3,7 +3,7 @@
 #include "inv_pallet.h"
 #include "inv_collisions.h"
 #include "inv_bombs.h"
-#include "font_inv.h" // TODO extern linkage
+#include "font_inv.h"
 #include <string.h>
 
 #define INV_INVADER_COLS 22
@@ -168,7 +168,7 @@ SpriteId inv_invaders_init_title(SpriteId start) {
 	char* inv_title = "INVADERS";
 	uint32_t len = strlen(inv_title);
 	uint32_t i = 0;
-	uint8_t* font = (uint8_t*)&font_8x8;
+	uint8_t* font = (uint8_t*)font_8x8;
 	const uint32_t sx = (MODE_H_ACTIVE_PIXELS - (len << (3+3))) >> 1;
 
 	for(uint32_t y = 0; y < 8; ++y) {
