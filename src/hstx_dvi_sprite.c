@@ -14,6 +14,13 @@ static SpriteCollisionMask _spriteCollisionMasksRdy[MAX_SPRITES];
 static SpriteIdRow _spriteIdRow;
 SpriteCollisions _spriteCollisions;
 static SpriteCollisions _spriteCollisionsFrame;
+// Sprites listed by the first line they appear on, rebuilt whenever _sprites_rdy changes.
+// _lineStart[y] and _nextStart[i] hold sprite id + 1, with 0 ending the list.
+#define ACTIVE_SPRITE_WORDS ((MAX_SPRITES + 31) >> 5)
+static uint8_t _lineStart[MODE_V_ACTIVE_LINES];
+static uint8_t _nextStart[MAX_SPRITES];
+// The line after the last one each listed sprite appears on
+static uint16_t _lineEnd[MAX_SPRITES];
 // Released by the application core when it has finished updating the sprites
 static struct semaphore _update_sem;
 // Released by the render core once the updates have been taken
@@ -21,6 +28,23 @@ static struct semaphore _frame_sem;
 
 __force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
 	for(uint32_t i = 0; i < MAX_SPRITES; ++i) sc->m[i] = 0;
+}
+
+// Lists the enabled sprites that are at least partly on screen by their first visible line
+static void __not_in_flash_func(build_sprite_lines)() {
+	memset(_lineStart, 0, sizeof(_lineStart));
+	for (int32_t i = MAX_SPRITES - 1; i >= 0; --i) {
+		const Sprite *sprite = &_sprites_rdy[i];
+		if (!(sprite->f & SF_ENABLE)) continue;
+		if ((sprite->x >= MODE_H_ACTIVE_PIXELS) || ((int64_t)sprite->x + sprite->w <= 0)) continue;
+		const int64_t y0 = sprite->y;
+		const int64_t y1 = y0 + sprite->h;
+		if ((y1 <= 0) || (y0 >= MODE_V_ACTIVE_LINES) || (y0 >= y1)) continue;
+		const uint32_t first = y0 < 0 ? 0 : (uint32_t)y0;
+		_lineEnd[i] = y1 > MODE_V_ACTIVE_LINES ? MODE_V_ACTIVE_LINES : (uint16_t)y1;
+		_nextStart[i] = _lineStart[first];
+		_lineStart[first] = i + 1;
+	}
 }
 
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
@@ -37,6 +61,7 @@ void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 			memcpy(&_spriteCollisions, &_spriteCollisionsFrame, sizeof(_spriteCollisionsFrame));
 			clear_sprite_collisions(&_spriteCollisionsFrame);
 			sem_release(&_frame_sem);
+			build_sprite_lines();
 		}
     }
 }
@@ -63,6 +88,7 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 		_sprites[i].f = 0;
 		_sprites_rdy[i].f = 0;
 	}
+	build_sprite_lines();
 	// Set up the frame handshake semaphores
     sem_init(&_update_sem, 0, 1);
     sem_init(&_frame_sem, 0, 1);
@@ -482,8 +508,9 @@ void __not_in_flash_func(render_Tile16x16p2)(
 }
 
 void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
-		
-	//clear_sprite_collisions();
+	// Sprites on the current line, one bit per sprite id
+	uint32_t active[ACTIVE_SPRITE_WORDS] = {0};
+
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
 		clear_sprite_id_row();
@@ -494,18 +521,26 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 			r,
 			hstx_dvi_pixel_rgb(0, 0, 0));
 
-		for (uint32_t i = 0; i < MAX_SPRITES; ++i)
-		{
-			const Sprite *sprite = &_sprites_rdy[i];
-			const uint32_t k = y - sprite->y;
-			if ((sprite-> f & SF_ENABLE) && k < sprite->h)
-			{
+		for (uint32_t n = _lineStart[y]; n; n = _nextStart[n - 1]) {
+			active[(n - 1) >> 5] |= 1u << ((n - 1) & 31);
+		}
+
+		// Render in ascending id order, so lower ids keep priority
+		for (uint32_t wi = 0; wi < ACTIVE_SPRITE_WORDS; ++wi) {
+			for (uint32_t bits = active[wi]; bits; bits &= bits - 1) {
+				const uint32_t b = __builtin_ctz(bits);
+				const uint32_t i = (wi << 5) + b;
+				if (y >= _lineEnd[i]) {
+					active[wi] &= ~(1u << b);
+					continue;
+				}
+				const Sprite *sprite = &_sprites_rdy[i];
 				(sprite->r)(
 					sprite->d1,
 					sprite->d2,
 					r,
 					sprite->x,
-					k,
+					y - sprite->y,
 					i);
 			}
 		}

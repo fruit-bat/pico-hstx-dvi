@@ -47,6 +47,7 @@ SpriteId inv_base_init(SpriteId start) {
 			si,
 			p,
 			MODE_V_ACTIVE_LINES - 88,
+			32,
 			16,
 			SF_ENABLE,
 			&tile32x16p2_bases[i],

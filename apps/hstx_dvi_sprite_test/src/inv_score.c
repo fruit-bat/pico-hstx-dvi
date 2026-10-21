@@ -34,6 +34,7 @@ SpriteId inv_score_init(SpriteId start) {
 		_sprite_index,
 		(4*8),
 		0,
+		(80-8)*8,
 		1*8,
 		SF_ENABLE,
 		&_textGrid1,

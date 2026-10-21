@@ -31,6 +31,7 @@ SpriteId inv_mot_init(SpriteId start) {
 		si,
 		INV_MOT_MIN_X,  // x
 		16, // y
+		16, // width
 		8,  // height
 		SF_ENABLE,  // flags
 		&tile16x8p2_mot[0],

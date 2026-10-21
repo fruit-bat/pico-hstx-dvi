@@ -52,7 +52,7 @@ enum SpriteFlags {
 
 typedef struct Sprite {
 	int32_t x,y;
-	uint16_t h,f;
+	uint16_t w,h,f; // w and h in pixels, used to skip sprites that are off screen
 	void *d1, *d2;
 	SpriteRenderer r;
 } Sprite;
@@ -81,6 +81,7 @@ __force_inline void init_sprite(
 	const int i,
 	const int32_t x,
 	const int32_t y,
+	const uint32_t w,
 	const uint32_t h,
 	const uint32_t f,
 	void * const d1, 
@@ -91,6 +92,7 @@ __force_inline void init_sprite(
 	Sprite *s = &_sprites[i];
 	s->x = x;
 	s->y = y;
+	s->w = w;
 	s->h = h;
 	s->f = f;
 	s->d1 = d1;
