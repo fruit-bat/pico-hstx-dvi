@@ -111,13 +111,57 @@ static __force_inline void render_sprite_pixel(
 	}
 }
 
-static __force_inline void render_pixel(
-	hstx_dvi_row_t* r,
-    hstx_dvi_pixel_t p,
-    const uint32_t j
+// Clips a row of w pixels at x to the screen. m holds the pixels with bit 31
+// as the leftmost; on return it only holds visible pixels starting at ux.
+// Returns false if nothing is visible.
+static __force_inline bool clip_row(
+	uint32_t* const m,
+	uint32_t* const ux,
+	const int32_t x,
+	const uint32_t w
 ) {
-    hstx_dvi_row_set_pixel(r, j, p);
+	*ux = (uint32_t)x;
+	if (*ux <= (MODE_H_ACTIVE_PIXELS - w)) return true;
+	if (x < 0) {
+		const uint32_t s = 0u - *ux;
+		if (s >= w) return false;
+		*m <<= s;
+		*ux = 0;
+	}
+	else {
+		if (*ux >= MODE_H_ACTIVE_PIXELS) return false;
+		*m &= ~(0xffffffffu >> (MODE_H_ACTIVE_PIXELS - *ux));
+	}
+	return *m != 0;
 }
+
+#if MODE_BYTES_PER_PIXEL == 1
+// Byte masks for 4 pixels in a row word; nibble bit 3 is the leftmost (lowest address) pixel.
+// Placed in RAM to avoid flash cache misses while rendering.
+static const uint32_t __attribute__((section(".data._nibble_byte_mask"))) _nibble_byte_mask[16] = {
+	0x00000000, 0xff000000, 0x00ff0000, 0xffff0000,
+	0x0000ff00, 0xff00ff00, 0x00ffff00, 0xffffff00,
+	0x000000ff, 0xff0000ff, 0x00ff00ff, 0xffff00ff,
+	0x0000ffff, 0xff00ffff, 0x00ffffff, 0xffffffff
+};
+
+// Runs BODY for each row word wi holding visible pixels, with nib holding those
+// pixels (bit 3 leftmost). Words with no pixels are skipped. m and ux are as left by clip_row.
+#define FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, BODY) \
+	{ \
+		uint32_t wi = (ux) >> 2; \
+		uint64_t mm = ((uint64_t)(m) << 32) >> ((ux) & 3); \
+		while (mm) { \
+			const uint32_t z = __builtin_clzll(mm) & ~3u; \
+			mm <<= z; \
+			wi += z >> 2; \
+			const uint32_t nib = (uint32_t)(mm >> 60); \
+			BODY \
+			mm <<= 4; \
+			++wi; \
+		} \
+	}
+#endif
 
 static __force_inline void render_sprite_row_n_p1(
 	const uint32_t d,
@@ -127,36 +171,40 @@ static __force_inline void render_sprite_row_n_p1(
 	const SpriteId spriteId,
 	const uint32_t w
 ) {
-	if (d)
-	{
-		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
-		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
-		const uint32_t bm = 1u << (w-1);
-        const hstx_dvi_pixel_t p = p1[0];
-		const uint32_t ux = (uint32_t)x;
-		if (ux <= (MODE_H_ACTIVE_PIXELS - w))
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = ux + i;
-				if (d & (bm >> i))
-				{
-					render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, j);
-				}
+	uint32_t m = d << (32 - w);
+	uint32_t ux;
+	if (!m || !clip_row(&m, &ux, x, w)) return;
+
+	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
+	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
+	const hstx_dvi_pixel_t p = p1[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	// Write 4 pixels at a time where none of them are already taken by another sprite
+	const uint32_t pq = p * 0x01010101u;
+	const uint32_t idq = (spriteId + 1) * 0x01010101u;
+	FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, {
+		const uint32_t bm = _nibble_byte_mask[nib];
+		const uint32_t ids = _spriteIdRow.word[wi];
+		if (!(ids & bm)) {
+			r->w[wi] = (r->w[wi] & ~bm) | (pq & bm);
+			_spriteIdRow.word[wi] = ids | (idq & bm);
+		}
+		else {
+			for (uint32_t b = nib; b; ) {
+				const uint32_t k = __builtin_clz(b) - 28;
+				b ^= 8u >> k;
+				render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, (wi << 2) + k);
 			}
 		}
-		else
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = ux + i;
-				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
-				{
-					render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, j);
-				}
-			}
-		}
+	})
+#else
+	// Visit the set pixels only
+	while (m) {
+		const uint32_t i = __builtin_clz(m);
+		m ^= 0x80000000u >> i;
+		render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, ux + i);
 	}
+#endif
 }
 
 static __force_inline void render_row_n_p1(
@@ -166,33 +214,24 @@ static __force_inline void render_row_n_p1(
 	const int32_t x,
 	const uint32_t w
 ) {
-	if (d)
-	{
-        const hstx_dvi_pixel_t p = p1[0];
-		const uint32_t bm = 1u << (w-1);
-		if (((uint32_t)x) <= (MODE_H_ACTIVE_PIXELS - w))
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = (uint32_t)x + i;
-				if (d & (bm >> i))
-				{
-					render_pixel(r, p, j);
-				}
-			}
-		}
-		else
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = (uint32_t)x + i;
-				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
-				{
-					render_pixel(r, p, j);
-				}
-			}
-		}
+	uint32_t m = d << (32 - w);
+	uint32_t ux;
+	if (!m || !clip_row(&m, &ux, x, w)) return;
+
+	const hstx_dvi_pixel_t p = p1[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t pq = p * 0x01010101u;
+	FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, {
+		const uint32_t bm = _nibble_byte_mask[nib];
+		r->w[wi] = (r->w[wi] & ~bm) | (pq & bm);
+	})
+#else
+	while (m) {
+		const uint32_t i = __builtin_clz(m);
+		m ^= 0x80000000u >> i;
+		hstx_dvi_row_set_pixel(r, ux + i, p);
 	}
+#endif
 }
 
 // Characters outside the font are rendered as a space
@@ -214,6 +253,24 @@ static __force_inline void render_row_text_8_p1(
 	const uint32_t w = tg->w;
 	const uint32_t v = w >> 2;
     uint8_t* font_8x8 = tg->font;
+
+#if MODE_BYTES_PER_PIXEL == 1
+	// Whole grid on screen and word aligned: 2 masked word writes per character
+	if (!(x & 3) && ((w << 3) <= MODE_H_ACTIVE_PIXELS) && ((uint32_t)x <= MODE_H_ACTIVE_PIXELS - (w << 3))) {
+		const uint32_t pq = p1[0] * 0x01010101u;
+		uint32_t* rw = &r->w[(uint32_t)x >> 2];
+		for(uint32_t i = 0; i < w; ++i, rw += 2) {
+			const uint32_t d = font_8x8[text_grid8_glyph_offset(s[i], k)];
+			if (d) {
+				const uint32_t bm1 = _nibble_byte_mask[d >> 4];
+				const uint32_t bm2 = _nibble_byte_mask[d & 15];
+				rw[0] = (rw[0] & ~bm1) | (pq & bm1);
+				rw[1] = (rw[1] & ~bm2) | (pq & bm2);
+			}
+		}
+		return;
+	}
+#endif
 
 	for(uint32_t i = 0; i < v; ++i) {
 		const uint32_t q = i << 2;
@@ -419,7 +476,7 @@ void __not_in_flash_func(render_Tile16x16p2)(
     const hstx_dvi_pixel_t fg = p2[1];
 	uint16_t d = t->d[row];
 	for(int32_t i = 0; i < 16; i++) {
-		render_pixel(r, d & (1<<15) ? fg : bg, x + i);
+		hstx_dvi_row_set_pixel(r, x + i, d & (1<<15) ? fg : bg);
 		d <<= 1;
 	}
 }
