@@ -44,7 +44,7 @@ See https://github.com/Robert-van-Engelen/lisp
 #include <cstring>
 #include <cstdint>
 #include <csetjmp>
-#include <functional>
+#include <type_traits>
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>             /* to catch CTRL-C and continue the REPL */
@@ -72,15 +72,13 @@ inline void using_history() { }
 #define ALWAYS_GC 0
 #endif
 
-/* Just printf output for now */
-#define fprintf(A, ...) printf(__VA_ARGS__)
-
-#ifdef LISP_FLOAT
-#define T(x) (*(uint32_t*)&x >> 20)
-#else
-/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) (*(uint64_t*)&x >> 48)
+/* LISP_ECHO: echo terminal input as it is typed, for terminals without local echo */
+#ifndef LISP_ECHO
+#define LISP_ECHO 0
 #endif
+
+/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
+#define T(x) (bits(x) >> TAG_SHIFT)
 /* Lisp class<P,S> parameterized with pool size P and stack/heap size S */
 template<uint32_t P,uint32_t S> class Lisp {
 
@@ -92,7 +90,10 @@ public:
 
 typedef Lisp<P,S> This;
 
-Lisp<P,S>() {
+/* thrown by (quit) and at the end of the terminal input */
+struct QUIT { };
+
+Lisp() {
   A = reinterpret_cast<char*>(cell);
   fp = 0;                                       /* free pointer */
   hp = H;                                       /* heap pointer */
@@ -104,20 +105,21 @@ Lisp<P,S>() {
   nil = box(NIL, 0);                            /* set the constant nil (empty list) */
   tru = atom("#t");                             /* set the constant #t */
   env = pair(tru, tru, nil);                    /* create environment with symbolic constant #t */
-  for (I i = 0; prim[i].s; ++i) {               /* expand environment with primitives */
-    printf("adding %s\n ", prim[i].s);
+  for (I i = 0; prim[i].s; ++i)                 /* expand environment with primitives */
     env = pair(atom(prim[i].s), box(PRIM, i), env);
-
-  }
   fin = 0;                                      /* no open files */
   see = '\n';                                   /* input line sentinel \n */
   ptr = "";                                     /* pointer to char in line, init to \0 end of line */
   line = NULL;                                  /* no line read */
   strcpy(ps, ">");                              /* prompt */
+#ifndef HAVE_READLINE_H
+  eol = 0;                                      /* no line terminator seen yet */
+#endif
+  stack_limit = 0;                              /* no C stack check */
   break_on();                                   /* enable interrupt if compiled with -DHAVE_SIGINT_H */
 }
 
-~Lisp<P,S>() {
+~Lisp() {
   break_default();                              /* reinstate CTRL-C default if compiled with -DHAVE_SIGINT_H */
   closein();                                    /* close all open input files */
 }
@@ -146,6 +148,17 @@ typedef uint32_t I;
 
 protected:
 
+/* B is an unsigned integer holding the raw bits of an L; bits(x) and unbits(b) convert between them */
+#ifdef LISP_FLOAT
+typedef uint32_t B;
+static const I TAG_SHIFT = 20;
+#else
+typedef uint64_t B;
+static const I TAG_SHIFT = 48;
+#endif
+static B bits(L x)   { B b; memcpy(&b, &x, sizeof(b)); return b; }
+static L unbits(B b) { L x; memcpy(&x, &b, sizeof(x)); return x; }
+
 #ifdef LISP_FLOAT
 /* primitive, atom, string, cons, closure, macro and nil tags for NaN boxing (reserve 0x7f8 for nan) */
 enum { PRIM = 0x7f9, ATOM = 0x7fa, STRG = 0x7fb, CONS = 0x7fc, CLOS = 0x7fe, MACR = 0x7ff, NIL = 0xfff };
@@ -154,10 +167,10 @@ enum { PRIM = 0x7f9, ATOM = 0x7fa, STRG = 0x7fb, CONS = 0x7fc, CLOS = 0x7fe, MAC
    ord(x):   returns the 20 bits ordinal of the NaN-boxed float x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-static L box(I t, I i) { L x; *(I*)&x = (I)t << 20 | i; return x; }
-static I ord(L x)      { return *(I*)&x & 0xfffff; }           /* remove the tag */
+static L box(I t, I i) { return unbits((B)t << 20 | i); }
+static I ord(L x)      { return bits(x) & 0xfffff; }           /* remove the tag */
 static L num(L n)      { return n; }                           /* could check for a valid number return n == n ? n : err(5); */
-static I equ(L x, L y) { return *(I*)&x == *(I*)&y; }
+static I equ(L x, L y) { return bits(x) == bits(y); }
 
 #else
 /* primitive, atom, string, cons, closure, macro and nil tags for NaN boxing (reserve 0x7ff8 for nan) */
@@ -167,10 +180,10 @@ enum { PRIM = 0x7ff9, ATOM = 0x7ffa, STRG = 0x7ffb, CONS = 0x7ffc, CLOS = 0x7ffe
    ord(x):   returns the ordinal of the NaN-boxed double x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-static L box(I t, I i) { L x; *(uint64_t*)&x = (uint64_t)t << 48 | i; return x; }
-static I ord(L x)      { return *(uint64_t*)&x; }       /* narrow return to 32 bit to remove the tag */
+static L box(I t, I i) { return unbits((B)t << 48 | i); }
+static I ord(L x)      { return (I)bits(x); }           /* narrow return to 32 bit to remove the tag */
 static L num(L n)      { return n; }                    /* could check for a valid number return n == n ? n : err(5); */
-static I equ(L x, L y) { return *(uint64_t*)&x == *(uint64_t*)&y; }
+static I equ(L x, L y) { return bits(x) == bits(y); }
 #endif
 
 /*----------------------------------------------------------------------------*\
@@ -178,6 +191,15 @@ static I equ(L x, L y) { return *(uint64_t*)&x == *(uint64_t*)&y; }
 \*----------------------------------------------------------------------------*/
 
 public:
+
+/* lowest address the C stack may grow down to before err(6) is raised, 0 disables the check */
+uintptr_t stack_limit;
+
+/* raise err(6) when the C stack is about to overflow (eval, read, print and the GC recurse) */
+void check_stack() {
+  if ((uintptr_t)__builtin_frame_address(0) < stack_limit)
+    err(6);
+}
 
 /* report and throw an exception */
 #define ERR(n, ...) (fprintf(stderr, __VA_ARGS__), err(n))
@@ -247,9 +269,9 @@ I gc() {
 /* push x on the stack to protect it from being recycled, returns pointer to cell pair (e.g. to update the value) */
 L *push(L x) {
   cell[--sp] = x;                               /* we must save x on the stack so it won't get GC'ed */
-  if (hp > (sp-1) << 3 || ALWAYS_GC) {          /* if insufficient stack space is available, then GC */
+  if (hp > (sp-1)*sizeof(L) || ALWAYS_GC) {     /* if insufficient stack space is available, then GC */
     gc();                                       /* GC */
-    if (hp > (sp-1) << 3)                       /* GC did not free up heap space to enlarge the stack */
+    if (hp > (sp-1)*sizeof(L))                  /* GC did not free up heap space to enlarge the stack */
       err(6);
   }
   return &cell[sp];
@@ -290,8 +312,9 @@ uint32_t used[(P+63)/64];
 
 /* mark-sweep garbage collector recycles cons pair pool cells, finds and marks cells that are used */
 void mark(I i) {
-  while (!(used[i/64] & 1 << i/2%32)) {         /* while i'th cell pair is not used in the pool */
-    used[i/64] |= 1 << i/2%32;                  /* mark i'th cell pair as used */
+  check_stack();
+  while (!(used[i/64] & 1u << i/2%32)) {        /* while i'th cell pair is not used in the pool */
+    used[i/64] |= 1u << i/2%32;                 /* mark i'th cell pair as used */
     if ((T(cell[i]) & ~(CONS^MACR)) == CONS)    /* recursively mark car cell[i] if car refers to a pair */
       mark(ord(cell[i]));
     if ((T(cell[i+1]) & ~(CONS^MACR)) != CONS)  /* if cdr cell[i+1] is not a pair, then break and return */
@@ -300,11 +323,12 @@ void mark(I i) {
   }
 }
 
-/* mark-sweep garbage collector recycles cons pair pool cells, returns total number of free cells in the pool */
+/* mark-sweep garbage collector recycles cons pair pool cells, returns total number of free cells in the pool
+   pair 0 is never used, so that fp=0 always means there are no free pairs */
 I sweep() {
   I i, j;
-  for (fp = 0, i = P/2, j = 0; i--; ) {         /* for each cons pair (two cells) in the pool, from top to bottom */
-    if (!(used[i/32] & 1 << i%32)) {            /* if the cons pair cell[2*i] and cell[2*i+1] are not used */
+  for (fp = 0, i = P/2, j = 0; --i; ) {         /* for each cons pair (two cells) in the pool, from top to bottom */
+    if (!(used[i/32] & 1u << i%32)) {           /* if the cons pair cell[2*i] and cell[2*i+1] are not used */
       cell[2*i] = box(NIL, fp);                 /* then add it to the linked list of free cells pairs as a NIL box */
       fp = 2*i;                                 /* free pointer points to the last added free pair */
       j += 2;                                   /* two more cells freed */
@@ -313,10 +337,14 @@ I sweep() {
   return j;                                     /* return number of cells freed */
 }
 
+/* get and set the cell reference field at heap offset i, these fields are not aligned */
+I ref(I i)          { I k; memcpy(&k, A+i, R); return k; }
+void set_ref(I i, I k) { memcpy(A+i, &k, R); }
+
 /* add i'th cell to the linked list of cells that refer to the same atom/string */
 void link(I i) {
-  I k = *(I*)(A+ord(cell[i])-R);                /* atom/string reference k is the k'th cell that uses the atom/string */
-  *(I*)(A+ord(cell[i])-R) = i;                  /* add k'th cell to the linked list of atom/string cells */
+  I k = ref(ord(cell[i])-R);                    /* atom/string reference k is the k'th cell that uses the atom/string */
+  set_ref(ord(cell[i])-R, i);                   /* add k'th cell to the linked list of atom/string cells */
   cell[i] = box(T(cell[i]), k);                 /* by updating the i'th cell atom/string ordinal to k */
 }
 
@@ -324,15 +352,15 @@ void link(I i) {
 void compact() {
   I i, j;
   for (i = H; i < hp; i += strlen(A+R+i)+R+1)   /* reset all atom/string reference fields to N (end of linked list) */
-    *(I*)(A+i) = N;
+    set_ref(i, N);
   for (i = 0; i < P; ++i)                       /* add each used atom/string cell in the pool to its linked list */
-    if (used[i/64] & 1 << i/2%32 && (T(cell[i]) & ~(ATOM^STRG)) == ATOM)
+    if (used[i/64] & 1u << i/2%32 && (T(cell[i]) & ~(ATOM^STRG)) == ATOM)
       link(i);
   for (i = sp; i < N; ++i)                      /* add each used atom/string cell on the stack to its linked list */
     if ((T(cell[i]) & ~(ATOM^STRG)) == ATOM)
       link(i);
   for (i = H, j = hp, hp = H; i < j; ) {        /* for each atom/string on the heap */
-    I k = *(I*)(A+i), n = strlen(A+R+i)+R+1;
+    I k = ref(i), n = strlen(A+R+i)+R+1;
     if (k < N) {                                /* if its linked list is not empty, then we need to keep it */
       while (k < N) {                           /* traverse linked list to update atom/string cells to hp+R */
         I l = ord(cell[k]);
@@ -357,9 +385,9 @@ public:
 I alloc(I n) {
   I i = hp+R;                                   /* free atom/heap is located at hp+R */
   n += R+1;                                     /* n+R+1 is the space we need to reserve */
-  if (hp+n > (sp-1) << 3 || ALWAYS_GC) {        /* if insufficient heap space is available, then GC */
+  if (hp+n > (sp-1)*sizeof(L) || ALWAYS_GC) {   /* if insufficient heap space is available, then GC */
     gc();                                       /* GC */
-    if (hp+n > (sp-1) << 3)                     /* GC did not free up sufficient heap/stack space */
+    if (hp+n > (sp-1)*sizeof(L))                /* GC did not free up sufficient heap/stack space */
       err(6);
     i = hp+R;                                   /* new atom/string is located at hp+R on the heap */
   }
@@ -389,7 +417,15 @@ L string(const char *s) {
 
 /* construct pair (x . y) returns a NaN-boxed CONS */
 L cons(L x, L y) {
-  L p; I i = fp;                                /* i'th cons cell pair car cell[i] and cdr cell[i+1] is free */
+  L p; I i;
+  if (!fp) {                                    /* no free pairs left, e.g. after an earlier GC ran out of memory */
+    push(x);                                    /* protect x and y, the GC may also move atoms/strings they refer to */
+    push(y);
+    gc();                                       /* GC, raises err(7) if there are still no free pairs */
+    y = pop();
+    x = pop();
+  }
+  i = fp;                                       /* i'th cons cell pair car cell[i] and cdr cell[i+1] is free */
   fp = ord(cell[i]);                            /* update free pointer to next free cell pair, zero if none are free */
   cell[i] = x;                                  /* save x into car cell[i] */
   cell[i+1] = y;                                /* save y into cdr cell[i+1] */
@@ -457,10 +493,29 @@ FILE *input(const char *s) {
   return fin <= 9 && (in[fin] = fopen(s, "r")) ? in[fin++] : NULL;
 }
 
-/* close all open input files */
+/* specify an open input file to parse, e.g. a string opened with fmemopen(), it is closed after reading */
+FILE *input(FILE *f) {
+  return fin <= 9 && f ? in[fin++] = f : NULL;
+}
+
+/* nonzero while there is input left to read from files rather than the terminal */
+I reading_file() {
+  return fin;
+}
+
+/* skip white space and ;-comments in the files being read, without moving on to the terminal */
+void skip_file_space() {
+  while (fin && (seeing(' ') || seeing(';')))
+    if (get() == ';')
+      while (fin && !seeing('\n'))
+        get();
+}
+
+/* close all open input files and drop the rest of the current line, e.g. after an error */
 void closein() {
   while (fin)
     fclose(in[--fin]);
+  see = '\n';
 }
 
 /* return the Lisp expression parsed and read from input */
@@ -472,7 +527,7 @@ L read() {
 /* specify a REPL prompt, where the first %u shows free pool space and second %u shows free stack/heap space */
 void prompt(const char *s) {
   I i = gc();
-  snprintf(ps, sizeof(ps), s, i, sp-hp/8);
+  snprintf(ps, sizeof(ps), s, (unsigned)i, (unsigned)(sp-hp/sizeof(L)));
 }
 
 protected:
@@ -486,6 +541,53 @@ char buf[256], see;
 
 /* readline pointer into the last line */
 const char *ptr, *line;
+
+#ifndef HAVE_READLINE_H
+/* terminal line buffer and the line terminator last seen, to treat \r\n as one line end */
+char lbuf[256], eol;
+
+/* read a line from the terminal into lbuf[] with backspace editing, raises QUIT at the end of the input */
+void getline() {
+  I n = 0;
+  int c;
+  printf("%s", ps);
+  fflush(stdout);
+  strcpy(ps, "?");                              /* change prompt to ? */
+  while (1) {
+    c = getchar();
+    if (c == EOF) {
+      if (!n)
+        throw QUIT();
+      break;
+    }
+    if (c == '\n' && eol == '\r') {             /* \n after \r ends the same line */
+      eol = 0;
+      continue;
+    }
+    if (c == '\r' || c == '\n') {
+      eol = c;
+      if (LISP_ECHO)
+        putchar('\n');
+      break;
+    }
+    eol = 0;
+    if (c == '\b' || c == 127) {                 /* backspace or delete */
+      if (n) {
+        --n;
+        if (LISP_ECHO)
+          printf("\b \b");
+      }
+    }
+    else if (n < sizeof(lbuf)-1 && (c >= ' ' || c == '\t')) {
+      lbuf[n++] = c;
+      if (LISP_ECHO)
+        putchar(c);
+    }
+  }
+  lbuf[n] = 0;
+  ptr = lbuf;
+}
+#endif
 
 /* prompt string */
 char ps[20];
@@ -516,18 +618,10 @@ char get() {
     if (!(see = *ptr++))                        /* look at the next character in the readline line */
       see = '\n';                               /* but when it is \0, replace it with a newline \n */
 #else
-    if (see == '\n') {
-      printf("%s", ps);
-      strcpy(ps, "?");
-    }
-    if ((c = getchar()) == EOF) {
-//      freopen("/dev/tty", "r", stdin);
-      c = '\n';
-    }
-    // HACK START echo
-    putchar(c);
-    // HACK END echo
-    see = c;
+    if (see == '\n')                            /* if looking at the end of the current line */
+      getline();                                /* read the next line from the terminal */
+    if (!(see = *ptr++))                        /* look at the next character in the line */
+      see = '\n';                               /* but when it is \0, replace it with a newline \n */
 #endif
   }
   return look;                                  /* return the previous character we were looking at */
@@ -571,7 +665,9 @@ char scan() {
 
 /* return a parsed Lisp list */
 L list() {
-  L *p = push(nil);                             /* push the new list to protect it from getting GC'ed */
+  L *p;
+  check_stack();
+  p = push(nil);                             /* push the new list to protect it from getting GC'ed */
   while (scan() != ')') {
     if (*buf == '.' && !buf[1]) {               /* parse list with dot pair ( <expr> ... <expr> . <expr> ) */
       *p = read();                              /* read expression to replace the last nil at the end of the list */
@@ -588,6 +684,7 @@ L list() {
 /* return a list/quote-converted Lisp expression (backquote aka. backtick) */
 L tick() {
   L *p;
+  check_stack();
   if (*buf == ',')
     return read();                              /* parse and return Lisp expression */
   if (*buf != '(')
@@ -608,7 +705,7 @@ L tick() {
 
 /* return a parsed Lisp expression */
 L parse() {
-  L x; I i;
+  L x; int i;
   switch (*buf) {
     case '(':  return list();                   /* if token is ( then parse a list */
     case '\'': return cons(atom("quote"), cons(read(), nil)); /* if token is ' then quote an expression */
@@ -696,14 +793,14 @@ L f_div(L t, L *_) {
 
 L f_int(L t, L *_) {
   L n = car(t);
-  return n < 1e16 && n > -1e16 ? (I)n : n;
+  return n < 1e16 && n > -1e16 ? (int64_t)n : n;
 }
 
 L f_lt(L t, L *_) {
   L x = car(t), y = car(cdr(t));
   return (T(x) == T(y) && (T(x) & ~(ATOM^STRG)) == ATOM ? strcmp(A+ord(x), A+ord(y)) < 0 :
       x == x && y == y ? x < y : /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-      *(I*)&x < *(I*)&y) ? tru : nil;
+      static_cast<std::make_signed_t<B>>(bits(x)) < static_cast<std::make_signed_t<B>>(bits(y))) ? tru : nil;
 }
 
 L f_eq(L t, L *_) {
@@ -920,7 +1017,6 @@ L f_throw(L t, L *_) {
   throw static_cast<int>(num(car(t)));
 }
 
-struct QUIT { };
 L f_quit(L t, L *_) {
   throw QUIT();
 }
@@ -936,7 +1032,7 @@ static const uint8_t NORMAL = 0, SPECIAL = 1, TAILCALL = 2;
 /* table of Lisp primitives, each has a name s, a function pointer f, and an evaluation mode m */
 inline static const struct {
   const char *s;
-  std::function<L(This&,L,L*)> f;
+  L (This::*f)(L, L*);
   uint8_t m;
 } prim[44] = {
   {"type",     &This::f_type,    NORMAL},           /* (type x) => <type> value between -1 and 7 */
@@ -993,7 +1089,7 @@ protected:
 
 /* when tracing is enabled, then display the evaluation of w => x */
 void trace(L w, L x) {
-  printf("\e[32m%4u: \e[33m", N-sp); print(w);  /* <stack depth>: unevaluated expression */
+  printf("\e[32m%4u: \e[33m", (unsigned)(N-sp)); print(w);  /* <stack depth>: unevaluated expression */
   printf("\e[36m => \e[33m");        print(x);  /* => value of the expression */
   printf("\e[m\t");
   if (tr > 1)                                   /* wait for ENTER key or other CTRL */
@@ -1008,6 +1104,7 @@ public:
 /* evaluate x in environment e, returns value of x, tail-call optimized */
 L eval(L x, L e) {
   L *f, v, w, *d, *y, *z; I k = sp;             /* save sp to unwind the stack back to sp afterwards */
+  check_stack();
   f = push(nil);                                /* protect closure f from getting GC'ed */
   d = push(nil);                                /* protect new bindings d from getting GC'ed */
   y = push(nil);                                /* protect alias y of new x from getting GC'ed */
@@ -1027,7 +1124,7 @@ L eval(L x, L e) {
       if (!(prim[i].m & SPECIAL))               /* if the primitive is NORMAL mode, */
         x = evlis(x, e);                        /* ... then evaluate actual arguments x */
       *z = e;
-      x = *y = prim[i].f(*this, x, z);          /* call the primitive with arguments x, put return value back in x */
+      x = *y = (this->*prim[i].f)(x, z);        /* call the primitive with arguments x, put return value back in x */
       e = *z;                                   /* the new environment e is d to evaluate x, put in *z to protect */
       if (!(prim[i].m & TAILCALL))              /* if the primitive is TAILCALL mode, then continnue */
         break;                                  /* else break to return value x */
@@ -1101,8 +1198,8 @@ void print(L x) {
     case ATOM: fprintf(out, "%s", A+ord(x));         break;
     case STRG: fprintf(out, "\"%s\"", A+ord(x));     break;
     case CONS: printlist(x);                         break;
-    case CLOS: fprintf(out, "{%u}", ord(x));         break;
-    case MACR: fprintf(out, "[%u]", ord(x));         break;
+    case CLOS: fprintf(out, "{%u}", (unsigned)ord(x)); break;
+    case MACR: fprintf(out, "[%u]", (unsigned)ord(x)); break;
     default:   fprintf(out, FLOAT, x);               break;
   }
 }
@@ -1111,6 +1208,7 @@ protected:
 
 /* output Lisp list t */
 void printlist(L t) {
+  check_stack();
   putc('(', out);
   while (1) {
     print(car(t));
