@@ -9,7 +9,6 @@ extern "C" {
 
 SpriteId inv_score_init(SpriteId start);
 void inv_score_update(void);
-void inv_score_clear(void);
 void inv_score_add(uint32_t score);
 
 #ifdef __cplusplus

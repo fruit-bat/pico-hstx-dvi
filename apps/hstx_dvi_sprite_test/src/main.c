@@ -9,6 +9,7 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "app_led.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
 #include "hstx_dvi_sprite.h"
@@ -103,11 +104,8 @@ void __not_in_flash_func(main_loop)() {
 
 int main(void)
 {
-    // Initialize stdio and GPIO 25 for the onboard LED
     stdio_init_all();
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1); // Turn LED on
+    app_led_on();
 
 	// Initialize the gpio input
 	init_inv_input();

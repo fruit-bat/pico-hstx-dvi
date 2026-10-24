@@ -3,7 +3,7 @@
 #include "inv_pallet.h"
 #include "inv_collisions.h"
 #include "inv_bombs.h"
-#include "font_inv.h" // TODO extern linkage
+#include "font_inv.h"
 #include <string.h>
 
 #define INV_INVADER_COLS 22
@@ -168,13 +168,13 @@ SpriteId inv_invaders_init_title(SpriteId start) {
 	char* inv_title = "INVADERS";
 	uint32_t len = strlen(inv_title);
 	uint32_t i = 0;
-	uint8_t* font = (uint8_t*)&font_8x8;
+	uint8_t* font = (uint8_t*)font_8x8;
 	const uint32_t sx = (MODE_H_ACTIVE_PIXELS - (len << (3+3))) >> 1;
 
 	for(uint32_t y = 0; y < 8; ++y) {
         for(uint32_t x = 0; x < len; ++x) {
 			const uint8_t c = inv_title[x];
-			if (c < 32 || c > 127) continue; // Skip invalid characters
+			if (c < TEXT_GRID8_FIRST_CHAR || c > TEXT_GRID8_LAST_CHAR) continue; // Skip invalid characters
 			const uint32_t k = (c - 32) << 3;
 			const uint8_t d = font[k + y];
 			for(uint32_t j = 0; j < 8; ++j) {
@@ -283,7 +283,7 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 					if ((int32_t)(state->end - frame) < 0) {
 						state->state = INV_STATE_DEAD;
 						hstx_dvi_sprite_disable_1(hstx_dvi_sprite_get(si));
-						inv_score_add(get_score_for_sprite(si));
+						inv_score_add(get_score_for_sprite(i));
 					}
 					break;
 				}

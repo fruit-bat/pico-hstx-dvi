@@ -1,22 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 
-# Determine the MCU type and configure accordingly
-#set(PICO_MCU "rp2040" CACHE STRING "Specify Pico MCU type")#
-#
-#if ((${PICO_MCU} STREQUAL "rp2350"))
-#    set(PICO_PLATFORM "rp2350-arm-s")
-#else()
-#    set(PICO_PLATFORM "rp2040")
-#endif()
-
-# Look for board file in local board directory
-#set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/boards)
-
-# Pico SDC on Raspberry Pi 4
-cmake_policy(VERSION 3.12)
-
-# Pico SDC Toolchai on Windows 10
-# cmake_policy(SET CMP0115 OLD)
+# HSTX is only on the RP2350, so build for a Pico 2 unless told otherwise,
+# e.g. cmake -DPICO_BOARD=pico2_w ..
+if (NOT DEFINED PICO_BOARD AND NOT DEFINED ENV{PICO_BOARD})
+    set(PICO_BOARD pico2)
+endif()
 
 # Pull in PICO SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -32,17 +20,20 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-#set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-#set(CMAKE_CXX_FLAGS_DEBUG "-g")
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
 if (PICO_SDK_VERSION_STRING VERSION_LESS "2.0.0")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.0.0 (or later) required. Current version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
 pico_sdk_init()
 
+if (PICO_PLATFORM STREQUAL "rp2040")
+    message(FATAL_ERROR "HSTX needs an RP2350 board, but PICO_BOARD '${PICO_BOARD}' is an RP2040")
+endif()
+
 add_compile_options(-Wall)
+
+# Helpers shared by the apps
+include_directories(${CMAKE_CURRENT_LIST_DIR}/common)
 
 get_filename_component(PICO_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 
@@ -55,7 +46,3 @@ add_subdirectory(hstx_dvi_tmt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_tmt_te
 add_subdirectory(hstx_dvi_vt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_vt_test")
 add_subdirectory(hstx_dvi_sprite_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_sprite_test")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
-
-
-
-
