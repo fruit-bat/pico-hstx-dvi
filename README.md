@@ -14,6 +14,45 @@ cmake ..                       # or e.g. cmake -DPICO_BOARD=pico2_w ..
 make -j
 ```
 
+## CP/M (hstx_dvi_cpm)
+
+`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen with
+[CPM-Emulator](https://github.com/fruit-bat/CPM-Emulator) (a Z80 with an emulated BDOS). It needs
+CPM-Emulator (with its submodules) and [pimoroni-pico](https://github.com/pimoroni/pimoroni-pico)
+(for its SD card & FatFs drivers) cloned beside this repository.
+
+The drives are directories on an SD card, wired to SPI0 on the GPIOs the Pico DVI Sock leaves free:
+
+| SD card | GPIO |
+|---|---|
+| SCK  | 2 |
+| MOSI | 3 |
+| MISO | 4 |
+| CS   | 5 |
+
+The card is FAT formatted, with the CCP and a directory for each drive in a `cpm` directory, as the
+`run` directory of CPM-Emulator:
+
+```
+cpm/
+  CCP-DR.64K
+  A/   PIP.COM, STAT.COM, MBASIC.COM...
+  B/
+```
+
+Without a `cpm` directory they're looked for at the top of the card. The name is `CPM_DIR` in
+[`apps/hstx_dvi_cpm/CMakeLists.txt`](apps/hstx_dvi_cpm/CMakeLists.txt).
+
+Only files with 8.3 names are seen. For now keys come from the USB serial port, and the output is
+shown both on the screen and over the USB serial port, so any terminal program works:
+
+```sh
+picocom -q /dev/ttyACM0      # or screen /dev/ttyACM0, minicom -D /dev/ttyACM0...
+```
+
+Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
+it says so and restarts on a key press.
+
 ## Using the virtual terminal (hstx_dvi_vt_test)
 
 `hstx_dvi_vt_test` turns the Pico into an 80x60 terminal on the DVI screen. It shows what arrives on

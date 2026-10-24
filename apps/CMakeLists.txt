@@ -39,6 +39,10 @@ get_filename_component(PICO_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 
 add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-hstx-dvi")
 
+# SD card & FAT file system
+include(${PICO_FOLDER}/pimoroni-pico/drivers/fatfs/fatfs.cmake)
+include(${PICO_FOLDER}/pimoroni-pico/drivers/sdcard/sdcard.cmake)
+
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")
 add_subdirectory(hstx_dvi_row_fifo_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_row_fifo_test")
 add_subdirectory(hstx_dvi_text_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_text_test")
@@ -46,3 +50,4 @@ add_subdirectory(hstx_dvi_tmt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_tmt_te
 add_subdirectory(hstx_dvi_vt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_vt_test")
 add_subdirectory(hstx_dvi_sprite_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_sprite_test")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
+add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
