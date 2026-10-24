@@ -11,11 +11,13 @@
 // TMT from https://github.com/MurphyMc/libtmt-revival
 
 #include "hstx_dvi_core.h"
+#include "app_led.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
 #include "hstx_dvi_grid.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
+#include "hardware/sync.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -29,11 +31,8 @@ void callback(tmt_msg_t m, TMT *vt, const void *a, void *p);
 
 int main(void)
 {
-    // Initialize stdio and GPIO 25 for the onboard LED
     stdio_init_all();
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1); // Turn LED on
+    app_led_on();
 
     // Initialize the row buffer
     hstx_dvi_row_buf_init();
@@ -63,20 +62,21 @@ int main(void)
     TMT *vt = tmt_open(60, 80, callback, NULL, NULL);
     if (!vt) {
         hstx_dvi_grid_write_str(5, 0, "Failed to start TMT", 5, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
-    }
-    else {
-        /* Write some text to the terminal, using escape sequences to
-        * use a bold rendition.
-        *
-        * The final argument is the length of the input; 0 means that
-        * libtmt will determine the length dynamically using strlen.
-        */
-       tmt_write(vt, "\033[1mhello, world (in bold!)\033[0m", 0);
+        while (1)
+            __wfi();
     }
 
+    /* Write some text to the terminal, using escape sequences to
+     * use a bold rendition.
+     *
+     * The final argument is the length of the input; 0 means that
+     * libtmt will determine the length dynamically using strlen.
+     */
+    tmt_write(vt, "\033[1mhello, world (in bold!)\033[0m", 0);
+
     while(1) {
-        const int ch = getchar();
-        tmt_write(vt, (const char *)&ch, 1);
+        const char ch = getchar();
+        tmt_write(vt, &ch, 1);
     }
 }
 
