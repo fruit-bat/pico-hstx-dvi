@@ -85,7 +85,6 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 {
     /* grab a pointer to the virtual screen */
     const TMTSCREEN *s = tmt_screen(vt);
-    const TMTPOINT *c = tmt_cursor(vt);
 
     switch (m){
         case TMT_MSG_BELL:
@@ -146,13 +145,12 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 
         case TMT_MSG_ANSWER:
             /* the terminal has a response to give to the program; a is a
-             * pointer to a string */
-            printf("terminal answered %s\n", (const char *)a);
+             * pointer to a string, sent back to the host as is */
+            printf("%s", (const char *)a);
             break;
 
         case TMT_MSG_MOVED:
             /* the cursor moved; a is a pointer to the cursor's TMTPOINT */
-            printf("cursor is now at %zd,%zd\n", c->r, c->c);
             break;
 
         case TMT_MSG_TITLE:
@@ -171,11 +169,6 @@ callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
         case TMT_MSG_CURSOR:
             /* the terminal is requesting that we show or hide the cursor;
              * a is a string that is either "t" (show) or "f" (hide) */
-            if (strcmp((const char *)a, "t") == 0) {
-                printf("showing cursor\n");
-            } else if (strcmp((const char *)a, "f") == 0) {
-                printf("hiding cursor\n");
-            }
             break;
     }
 }

@@ -44,6 +44,11 @@ int main(void)
 
     _emu = hstx_dvi_vt_emu_get();
 
+    // The screen only mirrors stdout, so leave answering queries (e.g. ESC [ 6 n)
+    // to the USB terminal. A reply from here would be printed back into the
+    // emulator while it is still handling the query.
+    vt_emu_set_reply(_emu, NULL, NULL);
+
     stdio_init_all();
     stdio_set_driver_enabled(&vt_driver, true);
 
