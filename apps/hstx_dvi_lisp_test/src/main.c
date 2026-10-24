@@ -32,6 +32,10 @@ static void vt_out_chars(const char *buf, int length) {
 
 static struct stdio_driver vt_driver = {
     .out_chars = vt_out_chars,
+#if PICO_STDIO_ENABLE_CRLF_SUPPORT
+    // Send "\n" as "\r\n", as the USB driver does, or each line starts where the last one ended
+    .crlf_enabled = PICO_STDIO_DEFAULT_CRLF,
+#endif
 };
 
 extern int lisp_main(int argc, char **argv);
