@@ -9,11 +9,13 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "app_led.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
 #include "hstx_dvi_grid.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,11 +33,8 @@ Enfolding sunny spots of greenery.";
 
 int main(void)
 {
-    // Initialize stdio and GPIO 25 for the onboard LED
     stdio_init_all();
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1); // Turn LED on
+    app_led_on();
 
     hstx_dvi_grid_init_all();
 
@@ -58,7 +57,6 @@ int main(void)
     hstx_dvi_grid_write_ch(20, 10, '4', 4, 0, HSTX_DVI_GRID_ATTRS_BLINK);
     hstx_dvi_grid_write_ch(20, 11, '5', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE | HSTX_DVI_GRID_ATTRS_BLINK);
     hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
-    hstx_dvi_grid_write_ch(20, 12, '6', 4, 0, HSTX_DVI_GRID_ATTRS_REVERSE);
     hstx_dvi_grid_write_str(22, 0, "Normal", 4, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
     hstx_dvi_grid_write_str(23, 0, "Dim", 4, 0, HSTX_DVI_GRID_ATTRS_DIM);
     hstx_dvi_grid_write_str(25, 0, "Underlined", 4, 0, HSTX_DVI_GRID_ATTRS_UNDERLINE);
@@ -67,7 +65,7 @@ int main(void)
     uint32_t k = 0;
     while(1) {
         sleep_ms(100);
-        sprintf(buffer, "HSTX DVI Text Test %ld", k++);
+        snprintf(buffer, sizeof(buffer), "HSTX DVI Text Test %" PRIu32, k++);
         hstx_dvi_grid_write_str(30, 0, buffer, 5, 0, HSTX_DVI_GRID_ATTRS_NORMAL);
     }
 }
