@@ -3,12 +3,23 @@
 #include "inv_pallet.h"
 #include "inv_collisions.h"
 #include "inv_bombs.h"
+#include "inv_base.h"
+#include "inv_gun.h"
+#include "inv_level.h"
+#include "inv_util.h"
 #include "font_inv.h"
 #include <string.h>
 
 #define INV_INVADER_COLS 22
 #define INV_INVADER_ROWS 10
 #define INV_INVADER_COUNT (INV_INVADER_COLS * INV_INVADER_ROWS)
+// How far the invaders step down each time they reach the side of the screen
+#define INV_INVADER_DROP 8
+// Frames before the first bomb of a wave
+#define INV_INVADER_FIRE_DELAY 90
+#define INV_TITLE_MAX 160
+// Frames for the title invaders to fly in to place
+#define INV_TITLE_FLY 90
 
 typedef enum  {
 	INV_STATE_WALK = 0,
@@ -24,7 +35,22 @@ typedef struct {
 static SpriteId _inv_index = 0;
 static int32_t inv_v = 1;
 static InvInvaderState_t _inv_state[INV_INVADER_COUNT];
-static uint32_t _last_fire_col = 0;
+// Lowest walking invader in each column, or -1
+static int32_t _inv_lowest[INV_INVADER_COLS];
+// Sub pixel march position, in 1/16 pixel
+static uint32_t _inv_sub = 0;
+// March speed last frame, in 1/16 pixel per frame
+static uint32_t _inv_speed = 0;
+static uint32_t _inv_alive = 0;
+static uint32_t _inv_exploding = 0;
+static bool _inv_landed = false;
+static uint32_t _fire_timer = 0;
+
+// Where each title invader rests, and the direction it flies in from
+static uint32_t _title_count = 0;
+static int16_t _title_x[INV_TITLE_MAX];
+static int16_t _title_y[INV_TITLE_MAX];
+static uint8_t _title_a[INV_TITLE_MAX];
 
 const static uint8_t _inv_row_score[INV_INVADER_ROWS] = {
     20,20,10,10,10,10,5,5,5,5
@@ -153,17 +179,31 @@ static void inv_invader_explode(const uint32_t index, const uint32_t frame) {
 	}
 }
 
+const Tile16x8p2_t* inv_invaders_tile(uint32_t type, uint32_t anim) {
+	// The mystery ship only has the one frame
+	if (type >= INV_INVADER_TYPE_MOT) return &tile16x8p2_invaders[6];
+	return &tile16x8p2_invaders[(type << 1) + (anim & 1)];
+}
+
+hstx_dvi_pixel_t* inv_invaders_pallet(uint32_t type) {
+	switch(type) {
+		case 0: return inv_pallet_white();
+		case 1: return inv_pallet_blue();
+		case 2: return inv_pallet_purple();
+		default: return inv_pallet_red();
+	}
+}
+
+uint32_t inv_invaders_type_score(uint32_t type) {
+	switch(type) {
+		case 0: return 20;
+		case 1: return 10;
+		default: return 5;
+	}
+}
+
 SpriteId inv_invaders_init_title(SpriteId start) {
     _inv_index = start;
-
-	uint32_t rt[5] = {0, 1, 0, 1, 0};
-	hstx_dvi_pixel_t* rp[5] = {
-        inv_pallet_white(),
-        inv_pallet_blue(),
-        inv_pallet_blue(),
-        inv_pallet_purple(),
-        inv_pallet_purple()
-    };
 
 	char* inv_title = "INVADERS";
 	uint32_t len = strlen(inv_title);
@@ -178,27 +218,58 @@ SpriteId inv_invaders_init_title(SpriteId start) {
 			const uint32_t k = (c - 32) << 3;
 			const uint8_t d = font[k + y];
 			for(uint32_t j = 0; j < 8; ++j) {
-				if (d & (1 << (7 - j))) {
-					const SpriteId si = start + i++;
-					// Create the invader sprite
+				if ((d & (1 << (7 - j))) && i < INV_TITLE_MAX) {
+					const SpriteId si = start + i;
+					_title_x[i] = sx + (((x << 3) + j) << 3);
+					_title_y[i] = 60 + (y << 4);
+					_title_a[i] = inv_rand();
+					// Create the invader sprite off screen, ready to fly in
 					init_sprite(
 						si,
-						sx + (((x << 3) + j) << 3),
-						60 + (y << 4),
+						-32,
+						-32,
 						16,
 						8,
 						SF_ENABLE,
-						&tile16x8p2_invaders[rt[y>>1]],
-						rp[y >> 1],
+						&tile16x8p2_invaders[(y >> 1) & 2],
+						inv_pallet_rainbow(i),
 						sprite_renderer_invader_16x8_p1);
+					++i;
 				}
 			}
 		}
 	}
+	_title_count = i;
 
     return start + i;
 }
 
+// Flies the title invaders in from all around, waves them about in a rainbow
+// and then flies them back out again by the end frame
+void __not_in_flash_func(inv_invaders_update_title)(uint32_t frame, uint32_t end) {
+	const int32_t left = (int32_t)end - (int32_t)frame;
+	int32_t phase = (int32_t)frame < left ? (int32_t)frame : left;
+	if (phase < 0) phase = 0;
+	if (phase > INV_TITLE_FLY) phase = INV_TITLE_FLY;
+	// Ease out on the way in, ease in on the way out
+	const int32_t ff = INV_TITLE_FLY * INV_TITLE_FLY;
+	const int32_t e = ff - (INV_TITLE_FLY - phase) * (INV_TITLE_FLY - phase);
+	const int32_t cx = (MODE_H_ACTIVE_PIXELS >> 1) - 8;
+	const int32_t cy = MODE_V_ACTIVE_LINES >> 1;
+	const int32_t radius = MODE_H_ACTIVE_PIXELS * 3 / 4;
+
+	for (uint32_t i = 0; i < _title_count; ++i) {
+		Sprite *sprite = hstx_dvi_sprite_get(_inv_index + i);
+		const int32_t hx = _title_x[i];
+		const int32_t hy = _title_y[i];
+		const int32_t fx = cx + inv_sin(_title_a[i] + 64) * radius / 127;
+		const int32_t fy = cy + inv_sin(_title_a[i]) * radius / 127;
+		const int32_t wave = inv_sin((hx >> 1) - (frame << 2)) * 8 / 127;
+		sprite->x = fx + (hx - fx) * e / ff;
+		sprite->y = fy + (hy + wave - fy) * e / ff;
+		sprite->d2 = inv_pallet_rainbow((hx >> 3) + (hy >> 4) - (frame >> 2));
+	}
+}
 
 SpriteId inv_invaders_init(SpriteId start) {
     _inv_index = start;
@@ -212,6 +283,7 @@ SpriteId inv_invaders_init(SpriteId start) {
         inv_pallet_purple()
     };
 
+	const int32_t top = inv_level_invader_top();
 	uint32_t i = 0;
 	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
         for(uint32_t x = 0; x < INV_INVADER_COLS; ++x, ++i) {
@@ -220,7 +292,7 @@ SpriteId inv_invaders_init(SpriteId start) {
 			init_sprite(
                 si,
                 x << 4,
-                60 + (y << 4),
+                top + (y << 4),
                 16,
                 8,
                 SF_ENABLE,
@@ -235,21 +307,77 @@ SpriteId inv_invaders_init(SpriteId start) {
 			_inv_state[i].end = 0;
 		}
 	}
+	for (uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
+		_inv_lowest[x] = -1;
+	}
 
 	// Set the invaders to move right
 	inv_v = 1;
+	_inv_sub = 0;
+	_inv_speed = 0;
+	_inv_alive = INV_INVADER_COUNT;
+	_inv_exploding = 0;
+	_inv_landed = false;
+	_fire_timer = INV_INVADER_FIRE_DELAY;
 
     return start + INV_INVADER_COUNT;
 }
 
+// The march speeds up as the invaders are thinned out, and the last one really goes for it
+static uint32_t __not_in_flash_func(march_speed)(void) {
+	uint32_t s = inv_level_invader_speed();
+	s += ((INV_INVADER_COUNT - _inv_alive) * 24) / INV_INVADER_COUNT;
+	if (_inv_alive <= 10) s += 8;
+	if (_inv_alive <= 1) s += 24;
+	return s;
+}
+
+// Picks a column to drop a bomb from, either the one nearest the gun or one at random
+static int32_t __not_in_flash_func(pick_bomb_column)(void) {
+	if ((inv_rand() & 255) < inv_level_aim_chance()) {
+		const int32_t gx = inv_gun_get_x();
+		int32_t best = -1;
+		int32_t best_d = INT32_MAX;
+		for (uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
+			if (_inv_lowest[x] < 0) continue;
+			int32_t d = hstx_dvi_sprite_get(_inv_index + _inv_lowest[x])->x - gx;
+			if (d < 0) d = -d;
+			if (d < best_d) {
+				best_d = d;
+				best = x;
+			}
+		}
+		return best;
+	}
+	const uint32_t first = inv_rand() % INV_INVADER_COLS;
+	for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
+		uint32_t x = first + i;
+		if (x >= INV_INVADER_COLS) x -= INV_INVADER_COLS;
+		if (_inv_lowest[x] >= 0) return x;
+	}
+	return -1;
+}
+
 void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 
-    int32_t inv_lowest[INV_INVADER_COLS];
+	// Everything holds still while the gun is being replaced
+	const bool frozen = _inv_landed || !inv_gun_is_alive();
+	int32_t dx = 0;
+	if (!frozen) {
+		_inv_speed = march_speed();
+		_inv_sub += _inv_speed;
+		dx = (int32_t)(_inv_sub >> 4) * inv_v;
+		_inv_sub &= 15;
+	}
+
     for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
-        inv_lowest[i] = -1;
+        _inv_lowest[i] = -1;
     }
 
     bool reverse = false;
+	uint32_t alive = 0;
+	uint32_t exploding = 0;
+	int32_t bottom = 0;
 	uint32_t i = 0;
 	for(uint32_t y = 0; y < INV_INVADER_ROWS; ++y) {
         for(uint32_t x = 0; x < INV_INVADER_COLS; ++x, ++i) {
@@ -258,32 +386,38 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 			Sprite *sprite = hstx_dvi_sprite_get(si);
 			switch (state->state) {
 				case INV_STATE_WALK: {
-					sprite->x += inv_v;
-					if (sprite->f & SF_ENABLE) {
-						if (_spriteCollisions.m[si]) {
-							inv_invader_explode(i, frame);
+					sprite->x += dx;
+					const SpriteCollisionMask m = _spriteCollisions.m[si];
+					if (m & INV_BULLET_COLLISION_MASK) {
+						inv_invader_explode(i, frame);
+						++exploding;
+					}
+					else {
+						if (m & INV_BASE_COLLISION_MASKS) {
+							inv_base_invader_hit(si, m);
 						}
-						else {
-							if (inv_v > 0) {
-								if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
-							}
-							else {
-								if(sprite->x <= 0) reverse = true;
-							}
-
-							if ((inv_lowest[x] == -1) || (hstx_dvi_sprite_get(inv_lowest[x])->y < sprite->y)) {
-								inv_lowest[x] = si;
-							}
+						++alive;
+						if (dx > 0) {
+							if(sprite->x + 16 >= MODE_H_ACTIVE_PIXELS) reverse = true;
 						}
+						else if (dx < 0) {
+							if(sprite->x <= 0) reverse = true;
+						}
+						// Rows are visited top to bottom, so the last one seen is the lowest
+						_inv_lowest[x] = i;
+						if (sprite->y + 8 > bottom) bottom = sprite->y + 8;
 					}
 					break;
 				}
 				case INV_STATE_EXPLODE: {
-					sprite->x += inv_v;
+					sprite->x += dx;
 					if ((int32_t)(state->end - frame) < 0) {
 						state->state = INV_STATE_DEAD;
 						hstx_dvi_sprite_disable_1(hstx_dvi_sprite_get(si));
 						inv_score_add(get_score_for_sprite(i));
+					}
+					else {
+						++exploding;
 					}
 					break;
 				}
@@ -297,23 +431,61 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 			}
         }
     }
-    if (reverse) inv_v = -inv_v;
-
-	bool any_alive = false;
-    for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
-		uint32_t j = i + _last_fire_col;
-		if (j >= INV_INVADER_COLS) j -= INV_INVADER_COLS;
-        int32_t id = inv_lowest[j];
-        if (id != -1)  {
-			any_alive = true;
-            inv_bombs_fire((SpriteId)id);
-        }
-    }
-	_last_fire_col += 3;
-	if (_last_fire_col >= INV_INVADER_COLS) _last_fire_col = 0;
-
-	if (!any_alive) {
-		// Next wave
-		inv_invaders_init(_inv_index);
+    if (reverse) {
+		inv_v = -inv_v;
+		for (uint32_t j = 0; j < INV_INVADER_COUNT; ++j) {
+			hstx_dvi_sprite_get(_inv_index + j)->y += INV_INVADER_DROP;
+		}
+		bottom += INV_INVADER_DROP;
 	}
+	_inv_alive = alive;
+	_inv_exploding = exploding;
+
+	if (alive && bottom >= inv_gun_get_y()) {
+		_inv_landed = true;
+	}
+
+	if (frozen || !alive) return;
+
+	if (_fire_timer) {
+		--_fire_timer;
+	}
+	else if (inv_bombs_active() < inv_level_bomb_max()) {
+		const int32_t x = pick_bomb_column();
+		if (x >= 0) inv_bombs_fire(_inv_index + _inv_lowest[x]);
+		const uint32_t interval = inv_level_bomb_interval();
+		_fire_timer = (interval >> 1) + (inv_rand() % interval);
+	}
+}
+
+uint32_t __not_in_flash_func(inv_invaders_alive)(void) {
+	return _inv_alive;
+}
+
+bool inv_invaders_cleared(void) {
+	return !_inv_alive && !_inv_exploding;
+}
+
+bool inv_invaders_landed(void) {
+	return _inv_landed;
+}
+
+bool __not_in_flash_func(inv_invaders_aim)(const int32_t gx, int32_t* tx) {
+	const Sprite *best = NULL;
+	int32_t best_d = INT32_MAX;
+	for (uint32_t x = 0; x < INV_INVADER_COLS; ++x) {
+		if (_inv_lowest[x] < 0) continue;
+		const Sprite *sprite = hstx_dvi_sprite_get(_inv_index + _inv_lowest[x]);
+		int32_t d = sprite->x + 8 - gx;
+		if (d < 0) d = -d;
+		if (d < best_d) {
+			best_d = d;
+			best = sprite;
+		}
+	}
+	if (!best) return false;
+	// Lead the target by how far it will march while a bullet climbs up to it
+	const int32_t frames = (inv_gun_get_y() - best->y) >> 2;
+	*tx = best->x + 8 + ((frames * (int32_t)_inv_speed * inv_v) >> 4);
+	return true;
 }

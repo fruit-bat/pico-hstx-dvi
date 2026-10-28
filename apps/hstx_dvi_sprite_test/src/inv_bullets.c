@@ -6,6 +6,7 @@
 #define INV_BULLET_COUNT 5
 
 static SpriteId _sprite_index = 0;
+static uint32_t _shots = 0;
 
 static Tile8x8p2_t tile8x8p2_bullets[] = {
 	{{
@@ -41,6 +42,7 @@ SpriteId inv_bullets_init(SpriteId start) {
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BULLET_COLLISION_MASK);
 	}
 
+	_shots = 0;
     return _sprite_index + INV_BULLET_COUNT;
 }
 
@@ -76,7 +78,18 @@ void __not_in_flash_func(inv_bullets_fire)(SpriteId gunSpriteId) {
 			sprite->x = 8 + hstx_dvi_sprite_get(gunSpriteId)->x; // Set bullet x to gun x
 			sprite->y = hstx_dvi_sprite_get(gunSpriteId)->y - 8; // Set bullet y above the gun
 			sprite->f |= SF_ENABLE; // Enable the bullet
+			++_shots;
 			break; // Exit after firing one bullet
 		}
 	}
+}
+
+void inv_bullets_clear(void) {
+	for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i) {
+		hstx_dvi_sprite_disable(_sprite_index + i);
+	}
+}
+
+uint32_t inv_bullets_get_shots(void) {
+	return _shots;
 }

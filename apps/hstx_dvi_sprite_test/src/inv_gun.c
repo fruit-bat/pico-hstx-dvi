@@ -6,6 +6,8 @@
 #include "inv_gun.h"
 
 #define INV_GUN_COOLDOWN 20
+#define INV_GUN_Y (MODE_V_ACTIVE_LINES - 64)
+#define INV_GUN_MAX_LIVES 9
 
 typedef enum  {
 	GUN_STATE_ALIVE = 0,
@@ -68,7 +70,7 @@ SpriteId inv_gun_init(SpriteId start) {
 	init_sprite(
 		si,
 		20,  // x
-		MODE_V_ACTIVE_LINES - 64, // y
+		INV_GUN_Y, // y
 		16, // width
 		8,  // height
 		SF_ENABLE,  // flags
@@ -98,19 +100,16 @@ static void inv_gun_explode(const uint32_t frame) {
 	}
 }
 
-void __not_in_flash_func(inv_gun_update)(uint32_t frame) {
+void __not_in_flash_func(inv_gun_update)(uint32_t frame, uint8_t input) {
 	SpriteId si = _sprite_index;
 	Sprite *sprite = hstx_dvi_sprite_get(si);
 	switch(_gun_state.state) {
 		case GUN_STATE_ALIVE: {
 			if (sprite->f & SF_ENABLE) {
-				if (_spriteCollisions.m[si]) {
+				if (_spriteCollisions.m[si] & (INV_BOMB_COLLISION_MASK | INV_INVADER_COLLISION_MASK)) {
 					inv_gun_explode(frame);
 				}
 				else {
-					// read the input
-					const uint8_t input = get_inv_input();
-
 					if (is_inv_input_left(input)) {
 						sprite->x -= 2;
 						if (sprite->x < 0) sprite->x = 0;
@@ -177,4 +176,43 @@ void __not_in_flash_func(inv_gun_update)(uint32_t frame) {
 
 uint32_t __not_in_flash_func(inv_gun_get_lives)(void) {
 	return _lives;
-}	
+}
+
+void inv_gun_add_life(void) {
+	if (_lives < INV_GUN_MAX_LIVES) ++_lives;
+}
+
+void inv_gun_destroy(uint32_t frame) {
+	switch(_gun_state.state) {
+		case GUN_STATE_ALIVE: {
+			_lives = 1;
+			inv_gun_explode(frame);
+			break;
+		}
+		case GUN_STATE_EXPLODE: {
+			// The life is taken when the explosion ends
+			_lives = 1;
+			break;
+		}
+		case GUN_STATE_WAIT: {
+			_lives = 0;
+			_gun_state.state = GUN_STATE_DEAD;
+			break;
+		}
+		default: {
+			break;
+		}
+	}
+}
+
+bool __not_in_flash_func(inv_gun_is_alive)(void) {
+	return _gun_state.state == GUN_STATE_ALIVE;
+}
+
+int32_t __not_in_flash_func(inv_gun_get_x)(void) {
+	return hstx_dvi_sprite_get(_sprite_index)->x;
+}
+
+int32_t __not_in_flash_func(inv_gun_get_y)(void) {
+	return INV_GUN_Y;
+}

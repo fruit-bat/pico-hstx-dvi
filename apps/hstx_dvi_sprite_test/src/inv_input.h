@@ -13,6 +13,8 @@ extern "C" {
 
 void init_inv_input();
 uint8_t get_inv_input();
+// Buttons that have gone down since the last call
+uint8_t inv_input_pressed();
 
 bool __force_inline is_inv_input_left(uint8_t input) {
     return (input & INV_INP_BIT_L) != 0;
@@ -25,6 +27,9 @@ bool __force_inline is_inv_input_fire(uint8_t input) {
 }
 bool __force_inline is_inv_input_start(uint8_t input) {
     return (input & INV_INP_BIT_S) != 0;
+}
+bool __force_inline is_inv_input_play(uint8_t input) {
+    return (input & (INV_INP_BIT_F | INV_INP_BIT_S)) != 0;
 }
 
 #ifdef __cplusplus

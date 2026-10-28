@@ -76,11 +76,16 @@ static Tile8x8p2_t tile8x8p2_damage[] = {
 	}}
 };
 
+// Position a w bit row (bit w-1 = left) at column dx of a 32 bit base row (bit 31 = left)
+static __force_inline uint32_t row_at(const uint32_t d, const int32_t dx, const int32_t w) {
+	const int32_t s = 32 - w - dx;
+	if (s >= 32 || s <= -w) return 0;
+	return s >= 0 ? d << s : d >> -s;
+}
+
 // Position an 8 bit damage row (bit 7 = left) at column dx of a 32 bit base row (bit 31 = left)
 static __force_inline uint32_t damage_row_at(const uint32_t d, const int32_t dx) {
-	const int32_t s = 24 - dx;
-	if (s >= 32 || s <= -8) return 0;
-	return s >= 0 ? d << s : d >> -s;
+	return row_at(d, dx, 8);
 }
 
 void __not_in_flash_func(inv_base_bomb_hit)(SpriteId spriteId, SpriteCollisionMask m) {
@@ -135,3 +140,24 @@ void __not_in_flash_func(inv_base_bullet_hit)(SpriteId spriteId, SpriteCollision
 	}
 }
 
+// An invader walking through a base wipes out the part of the base it covers
+void __not_in_flash_func(inv_base_invader_hit)(SpriteId spriteId, SpriteCollisionMask m) {
+	SpriteCollisionMask t = INV_BASE_COLLISION_MASK;
+	for(uint i = 0; i < INV_BASE_COUNT; ++i) {
+		if (m & t) {
+			SpriteId si = _sprite_index + i;
+			uint32_t* base_image = (uint32_t*)(&tile32x16p2_bases[i]);
+			Sprite *invader_sprite = hstx_dvi_sprite_get(spriteId);
+			int32_t dx = invader_sprite->x - hstx_dvi_sprite_get(si)->x;
+			int32_t dy = invader_sprite->y - hstx_dvi_sprite_get(si)->y;
+			const uint32_t clear = ~row_at(0xffff, dx, 16);
+			for (uint32_t r = 0; r < 8; ++r)
+			{
+				int32_t y = dy + r;
+				if ((y < 0) || (y >= 16)) continue; // Skip
+				base_image[y] &= clear;
+			}
+		}
+		t <<= 1;
+	}
+}
