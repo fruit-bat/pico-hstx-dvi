@@ -7,9 +7,8 @@
 #include "def_hud.h"
 #include "def_fx.h"
 #include "def_util.h"
+#include "def_art.h"
 
-#define DEF_HUMAN_W 4
-#define DEF_HUMAN_H 8
 #define DEF_HUMAN_GRAVITY 20
 #define DEF_HUMAN_MAX_FALL DEF_PX(3)
 // Falling further than this is fatal
@@ -33,27 +32,36 @@ typedef struct {
 
 static DefHuman_t _humans[DEF_HUMAN_MAX];
 
-static Tile8x8p2_t _tile_body = {{
-	0b00000000,
-	0b00000000,
-	0b11110000,
-	0b01100000,
-	0b01100000,
-	0b01100000,
-	0b10010000,
-	0b10010000,
-}};
+static const char* const _art_human[] = {
+	"..KK............",
+	".KKKK...........",
+	"..KK............",
+	".GGGG...........",
+	"GGGGGG..........",
+	"G.GG.G..........",
+	"G.GG.G..........",
+	"..GG............",
+	".PPPP...........",
+	".P..P...........",
+	".P..P...........",
+	"PP..PP..........",
+};
+static const uint8_t _human_colours[] = { DEF_PINK, DEF_GREEN, DEF_PURPLE };
+// Waving for help when in trouble
+static const uint8_t _human_alarm[] = { DEF_WHITE, DEF_YELLOW, DEF_PURPLE };
 
-static Tile8x8p2_t _tile_head = {{
-	0b01100000,
-	0b01100000,
-}};
+static DefArt_t _human;
+static bool _art_made = false;
 
 static __force_inline int32_t standing_y(const int32_t x) {
-	return DEF_PX(def_world_ground_y(x + DEF_PX(2)) - DEF_HUMAN_H);
+	return DEF_PX(def_world_ground_y(x + DEF_PX(DEF_HUMAN_W >> 1)) - DEF_HUMAN_H);
 }
 
 void def_human_init(uint32_t count) {
+	if (!_art_made) {
+		def_art_make(&_human, _art_human, DEF_ART_ROWS(_art_human), "KGP", _human_colours);
+		_art_made = true;
+	}
 	for (uint32_t i = 0; i < DEF_HUMAN_MAX; ++i) {
 		DefHuman_t* h = &_humans[i];
 		if (i >= count) {
@@ -112,8 +120,8 @@ void __not_in_flash_func(def_human_update)(uint32_t frame) {
 					break;
 				}
 				// Hangs below the ship until it is put down
-				h->x = def_wrap(def_player_x() + DEF_PX(6));
-				h->y = DEF_PX(def_player_y() + 8);
+				h->x = def_wrap(def_player_x() + DEF_PX((DEF_SHIP_W - DEF_HUMAN_W) >> 1));
+				h->y = DEF_PX(def_player_y() + DEF_SHIP_H);
 				if (h->y >= standing_y(h->x)) land(h, DEF_HUMAN_RETURN_SCORE);
 				break;
 			}
@@ -130,11 +138,8 @@ void __not_in_flash_func(def_human_draw)(uint32_t frame) {
 		if (h->state == DEF_HS_DEAD) continue;
 		const int32_t sx = def_world_screen_x(h->x);
 		if (sx <= -8 || sx >= DEF_SCREEN_W) continue;
-		const int32_t sy = h->y >> DEF_FP;
-		// Waving for help when in trouble
-		const uint32_t c = (h->state == DEF_HS_CARRIED || h->state == DEF_HS_FALLING) && (frame & 8) ? DEF_WHITE : DEF_PINK;
-		def_spr_add(sx, sy, 8, 2, &_tile_head, def_pallet(DEF_GREEN), sprite_renderer_sprite_8x8_p1);
-		def_spr_add(sx, sy, 8, 8, &_tile_body, def_pallet(c), sprite_renderer_sprite_8x8_p1);
+		const bool alarm = (h->state == DEF_HS_CARRIED || h->state == DEF_HS_FALLING) && (frame & 8);
+		def_art_draw(&_human, sx, h->y >> DEF_FP, alarm ? _human_alarm : NULL);
 	}
 }
 
@@ -202,9 +207,9 @@ void def_human_kill(int32_t i) {
 	DefHuman_t* h = &_humans[i];
 	if (h->state == DEF_HS_DEAD) return;
 	h->state = DEF_HS_DEAD;
-	def_fx_explode(def_wrap(h->x + DEF_PX(2)), h->y + DEF_PX(4), DEF_PINK, 16, DEF_PX(2));
+	def_fx_explode(def_wrap(h->x + DEF_PX(DEF_HUMAN_W >> 1)), h->y + DEF_PX(DEF_HUMAN_H >> 1), DEF_PINK, 20, DEF_PX(2));
 }
 
-Tile8x8p2_t* def_human_icon(void) {
-	return &_tile_body;
+void def_human_draw_icon(int32_t sx, int32_t sy) {
+	def_art_draw(&_human, sx, sy, NULL);
 }

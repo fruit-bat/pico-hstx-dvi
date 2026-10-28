@@ -5,6 +5,7 @@ add_executable(hstx_dvi_defender
   ${CMAKE_CURRENT_LIST_DIR}/src/def_util.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_pallet.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_render.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/def_art.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_world.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_scanner.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_hud.c

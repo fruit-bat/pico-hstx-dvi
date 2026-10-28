@@ -8,6 +8,7 @@
 #include "def_fx.h"
 #include "def_util.h"
 #include "def_scanner.h"
+#include "def_art.h"
 
 #define DEF_ENEMY_MAX 64
 #define DEF_BULLET_MAX 32
@@ -25,8 +26,6 @@
 #define DEF_SWARMER_SPEED DEF_PX(5)
 #define DEF_BAITER_SPEED DEF_PX(4)
 #define DEF_BOMBER_SWING 40
-// Below this, with the planet in the way
-#define DEF_ENEMY_LOWEST (DEF_TERRAIN_TOP - 8)
 
 typedef enum {
 	DEF_ES_SPAWN = 0,
@@ -55,139 +54,110 @@ typedef struct {
 
 typedef struct {
 	uint8_t w;
+	uint8_t h;
 	uint8_t colour;
 	uint8_t detail;
 	uint16_t score;
 	const char* name;
 	// Chance out of 4096 of firing each frame
 	uint16_t fire;
-	void* body;
-	void* detail_tile;
+	DefArt_t* art;
 } DefEnemyInfo_t;
 
 static DefEnemy_t _enemies[DEF_ENEMY_MAX];
 static DefBullet_t _bullets[DEF_BULLET_MAX];
 static uint32_t _wave = 1;
 
-static Tile16x8p2_t _tile_lander[2] = {
-	{{
-		0b0000011111100000,
-		0b0000111111110000,
-		0b0001100110011000,
-		0b0001111111111000,
-		0b0000111111110000,
-		0b0000010000100000,
-		0b0000100000010000,
-		0b0001000000001000,
-	}},
-	{{
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000011001100000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-	}},
+static const char* const _art_lander[] = {
+	"....GGGGGGGG....",
+	"..GGGGGGGGGGGG..",
+	".GGGRRGGGGRRGGG.",
+	".GGRRRRGGRRRRGG.",
+	".GGGRRGGGGRRGGG.",
+	"..GGGGGGGGGGGG..",
+	"...GG.GGGG.GG...",
+	"....GGGGGGGG....",
+	"...WW......WW...",
+	"..WW........WW..",
+	".WW..........WW.",
+	"WW............WW",
 };
 
-static Tile16x8p2_t _tile_baiter[2] = {
-	{{
-		0b0000000000000000,
-		0b0000011111100000,
-		0b0011111111111100,
-		0b1111111111111111,
-		0b0011111111111100,
-		0b0000011111100000,
-		0b0000000000000000,
-		0b0000000000000000,
-	}},
-	{{
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000101010100000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-		0b0000000000000000,
-	}},
+static const char* const _art_baiter[] = {
+	"...........GGGGGGGGGG...........",
+	"......GGGGGGGGGGGGGGGGGGGG......",
+	"...GGGGWWGGWWGGWWGGWWGGWWGGGG...",
+	"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+	"...GGGGGGGGGGGGGGGGGGGGGGGGGG...",
+	"......RR....RR....RR....RR......",
 };
 
-static Tile8x8p2_t _tile_bomber[2] = {
-	{{
-		0b01111110,
-		0b11111111,
-		0b11000011,
-		0b11000011,
-		0b11000011,
-		0b11000011,
-		0b11111111,
-		0b01111110,
-	}},
-	{{
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00011000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-	}},
+static const char* const _art_bomber[] = {
+	"..BBBBBBBBBBBB..",
+	".BBBBBBBBBBBBBB.",
+	"BBYYBBBBBBBBYYBB",
+	"BBYYBBBBBBBBYYBB",
+	"BBBBBB....BBBBBB",
+	"BBBBB.YYYY.BBBBB",
+	"BBBBB.YYYY.BBBBB",
+	"BBBBB.YYYY.BBBBB",
+	"BBBBB.YYYY.BBBBB",
+	"BBBBBB....BBBBBB",
+	"BBYYBBBBBBBBYYBB",
+	"BBYYBBBBBBBBYYBB",
+	".BBBBBBBBBBBBBB.",
+	"..BBBBBBBBBBBB..",
 };
 
-static Tile8x8p2_t _tile_pod[2] = {
-	{{
-		0b10000001,
-		0b01011010,
-		0b00111100,
-		0b01100110,
-		0b01100110,
-		0b00111100,
-		0b01011010,
-		0b10000001,
-	}},
-	{{
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00011000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-	}},
+static const char* const _art_pod[] = {
+	"P......PP......P",
+	".P.....PP.....P.",
+	"..P..PPPPPP..P..",
+	"...PPPPPPPPPP...",
+	"...PPRRRRRRPP...",
+	"..PPRRWWWWRRPP..",
+	"PPPPRWWWWWWRPPPP",
+	"PPPPRWWWWWWRPPPP",
+	"..PPRRWWWWRRPP..",
+	"...PPRRRRRRPP...",
+	"...PPPPPPPPPP...",
+	"..P..PPPPPP..P..",
+	".P.....PP.....P.",
+	"P......PP......P",
 };
 
-static Tile8x8p2_t _tile_swarmer[2] = {
-	{{
-		0b00000000,
-		0b00011000,
-		0b00111100,
-		0b01111110,
-		0b00111100,
-		0b00011000,
-		0b00000000,
-		0b00000000,
-	}},
-	{{
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-	}},
+static const char* const _art_swarmer[] = {
+	"......RRRR......",
+	"....RRRRRRRR....",
+	"..RRRRYYYYRRRR..",
+	"RRRRRYYYYYYRRRRR",
+	"..RRRRYYYYRRRR..",
+	"....RRRRRRRR....",
+	"......RRRR......",
 };
+
+static const uint8_t _lander_colours[] = { DEF_GREEN, DEF_RED, DEF_WHITE };
+static const uint8_t _mutant_colours[] = { DEF_PURPLE, DEF_GREEN, DEF_RED };
+static const uint8_t _mutant_flicker[] = { DEF_PURPLE, DEF_WHITE, DEF_RED };
+static const uint8_t _baiter_colours[] = { DEF_GREEN, DEF_WHITE, DEF_RED };
+static const uint8_t _baiter_flicker[] = { DEF_GREEN, DEF_RED, DEF_WHITE };
+static const uint8_t _bomber_colours[] = { DEF_BLUE, DEF_YELLOW };
+static const uint8_t _pod_colours[] = { DEF_PURPLE, DEF_RED, DEF_WHITE };
+static const uint8_t _swarmer_colours[] = { DEF_RED, DEF_YELLOW };
+
+static DefArt_t _lander;
+static DefArt_t _mutant;
+static DefArt_t _baiter;
+static DefArt_t _bomber;
+static DefArt_t _pod;
+static DefArt_t _swarmer;
+static bool _art_made = false;
 
 static Tile8x8p2_t _tile_bullet[2] = {
 	{{
-		0b11000000,
-		0b11000000,
+		0b11100000,
+		0b11100000,
+		0b11100000,
 	}},
 	{{
 		0b10100000,
@@ -198,16 +168,30 @@ static Tile8x8p2_t _tile_bullet[2] = {
 
 static const DefEnemyInfo_t _info[DEF_ENEMY_TYPE_COUNT] = {
 	{ 0 },
-	{ 16, DEF_GREEN,  DEF_YELLOW, 150,  "LANDER",  24, &_tile_lander[0],  &_tile_lander[1] },
-	{ 16, DEF_PURPLE, DEF_GREEN,  150,  "MUTANT",  60, &_tile_lander[0],  &_tile_lander[1] },
-	{ 8,  DEF_BLUE,   DEF_YELLOW, 250,  "BOMBER",  0,  &_tile_bomber[0],  &_tile_bomber[1] },
-	{ 8,  DEF_PURPLE, DEF_RED,    1000, "POD",     0,  &_tile_pod[0],     &_tile_pod[1] },
-	{ 8,  DEF_RED,    DEF_YELLOW, 150,  "SWARMER", 40, &_tile_swarmer[0], &_tile_swarmer[1] },
-	{ 16, DEF_GREEN,  DEF_CYAN,   200,  "BAITER",  120, &_tile_baiter[0], &_tile_baiter[1] },
+	{ 16, 12, DEF_GREEN,  DEF_RED,    150,  "LANDER",  24,  &_lander },
+	{ 16, 12, DEF_PURPLE, DEF_GREEN,  150,  "MUTANT",  60,  &_mutant },
+	{ 16, 14, DEF_BLUE,   DEF_YELLOW, 250,  "BOMBER",  0,   &_bomber },
+	{ 16, 14, DEF_PURPLE, DEF_RED,    1000, "POD",     0,   &_pod },
+	{ 16, 7,  DEF_RED,    DEF_YELLOW, 150,  "SWARMER", 40,  &_swarmer },
+	{ 32, 6,  DEF_GREEN,  DEF_WHITE,  200,  "BAITER",  120, &_baiter },
 };
+
+static void make_art(void) {
+	def_art_make(&_lander, _art_lander, DEF_ART_ROWS(_art_lander), "GRW", _lander_colours);
+	def_art_make(&_mutant, _art_lander, DEF_ART_ROWS(_art_lander), "GRW", _mutant_colours);
+	def_art_make(&_baiter, _art_baiter, DEF_ART_ROWS(_art_baiter), "GWR", _baiter_colours);
+	def_art_make(&_bomber, _art_bomber, DEF_ART_ROWS(_art_bomber), "BY", _bomber_colours);
+	def_art_make(&_pod, _art_pod, DEF_ART_ROWS(_art_pod), "PRW", _pod_colours);
+	def_art_make(&_swarmer, _art_swarmer, DEF_ART_ROWS(_art_swarmer), "RY", _swarmer_colours);
+	_art_made = true;
+}
 
 static __force_inline int32_t enemy_w(const DefEnemy_t* e) {
 	return _info[e->type].w;
+}
+
+static __force_inline int32_t enemy_h(const DefEnemy_t* e) {
+	return _info[e->type].h;
 }
 
 // A random speed between lo and hi, either way
@@ -217,6 +201,7 @@ static int32_t random_v(const int32_t lo, const int32_t hi) {
 }
 
 void def_enemy_init(void) {
+	if (!_art_made) make_art();
 	for (uint32_t i = 0; i < DEF_ENEMY_MAX; ++i) _enemies[i].type = DEF_ENEMY_NONE;
 	def_enemy_clear_bullets();
 }
@@ -240,9 +225,9 @@ static DefBullet_t* new_bullet(void) {
 static void fire_at_player(const DefEnemy_t* e) {
 	const int32_t w = enemy_w(e);
 	const int32_t x = def_wrap(e->x + DEF_PX(w >> 1));
-	const int32_t y = e->y + DEF_PX(4);
+	const int32_t y = e->y + DEF_PX(enemy_h(e) >> 1);
 	const int32_t dx = def_dx(def_player_x() + DEF_PX(DEF_SHIP_W >> 1), x) >> DEF_FP;
-	const int32_t dy = def_player_y() + 4 - (y >> DEF_FP);
+	const int32_t dy = def_player_y() + (DEF_SHIP_H >> 1) - (y >> DEF_FP);
 	const int32_t m = def_abs(dx) > def_abs(dy) ? def_abs(dx) : def_abs(dy);
 	if (m == 0 || m > DEF_ENEMY_FIRE_RANGE) return;
 	DefBullet_t* b = new_bullet();
@@ -263,8 +248,8 @@ static void drop_mine(const DefEnemy_t* e) {
 	b->active = true;
 	b->mine = true;
 	b->life = DEF_MINE_LIFE;
-	b->x = e->x;
-	b->y = e->y + DEF_PX(8);
+	b->x = def_wrap(e->x + DEF_PX(enemy_w(e) >> 1));
+	b->y = e->y + DEF_PX(enemy_h(e));
 	b->vx = 0;
 	b->vy = 0;
 }
@@ -315,7 +300,7 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 			}
 		}
 		if (e->state == DEF_ES_SPAWN) {
-			def_fx_implode(def_wrap(e->x + DEF_PX(_info[type].w >> 1)), e->y + DEF_PX(4), _info[type].colour, 16, DEF_ENEMY_SPAWN_FRAMES);
+			def_fx_implode(def_wrap(e->x + DEF_PX(_info[type].w >> 1)), e->y + DEF_PX(_info[type].h >> 1), _info[type].colour, 24, DEF_ENEMY_SPAWN_FRAMES);
 		}
 		return true;
 	}
@@ -325,9 +310,9 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 static void enemy_kill(DefEnemy_t* e, const bool award, const bool split) {
 	const DefEnemyInfo_t* info = &_info[e->type];
 	const int32_t cx = def_wrap(e->x + DEF_PX(info->w >> 1));
-	const int32_t cy = e->y + DEF_PX(4);
-	def_fx_explode(cx, cy, info->colour, 20, DEF_PX(3));
-	def_fx_explode(cx, cy, info->detail, 8, DEF_PX(2));
+	const int32_t cy = e->y + DEF_PX(info->h >> 1);
+	def_fx_explode(cx, cy, info->colour, 28, DEF_PX(3));
+	def_fx_explode(cx, cy, info->detail, 12, DEF_PX(2));
 	if (award) def_hud_add_score(info->score);
 	if (e->human >= 0 && e->state == DEF_ES_ASCEND) def_human_release(e->human);
 	const uint32_t type = e->type;
@@ -344,7 +329,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 			e->y += def_sign(e->base_y - e->y) * 64;
 			if (e->human >= 0 && def_human_on_ground(e->human)) {
 				// Heads for the humanoid it is after, the short way round
-				const int32_t dx = def_dx(def_human_x(e->human), e->x + DEF_PX(6));
+				const int32_t dx = def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8));
 				if (def_abs(dx) < DEF_PX(3)) {
 					e->state = DEF_ES_DESCEND;
 				}
@@ -364,9 +349,9 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 				e->human = -1;
 				break;
 			}
-			e->x = def_wrap(e->x + def_clamp(def_dx(def_human_x(e->human), e->x + DEF_PX(6)), -DEF_PX(1), DEF_PX(1)));
+			e->x = def_wrap(e->x + def_clamp(def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8)), -DEF_PX(1), DEF_PX(1)));
 			e->y += DEF_LANDER_DESCEND;
-			if ((e->y >> DEF_FP) + 8 >= (def_human_y(e->human) >> DEF_FP)) {
+			if ((e->y >> DEF_FP) + enemy_h(e) >= (def_human_y(e->human) >> DEF_FP)) {
 				def_human_grab(e->human);
 				e->state = DEF_ES_ASCEND;
 			}
@@ -374,14 +359,14 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 		}
 		case DEF_ES_ASCEND: {
 			e->y -= DEF_LANDER_ASCEND;
-			def_human_carry(e->human, def_wrap(e->x + DEF_PX(6)), e->y + DEF_PX(8));
+			def_human_carry(e->human, def_wrap(e->x + DEF_PX(8 - (DEF_HUMAN_W >> 1))), e->y + DEF_PX(enemy_h(e)));
 			if (e->y <= DEF_PX(DEF_PLAY_TOP)) {
 				// Too late, it has been turned
 				def_human_kill(e->human);
 				e->human = -1;
 				e->type = DEF_ENEMY_MUTANT;
 				e->state = DEF_ES_SEEK;
-				def_fx_explode(e->x + DEF_PX(8), e->y + DEF_PX(4), DEF_PURPLE, 12, DEF_PX(2));
+				def_fx_explode(def_wrap(e->x + DEF_PX(8)), e->y + DEF_PX(6), DEF_PURPLE, 16, DEF_PX(2));
 			}
 			break;
 		}
@@ -412,7 +397,7 @@ static void update_bomber(DefEnemy_t* e, const uint32_t frame) {
 static void update_pod(DefEnemy_t* e) {
 	e->x = def_wrap(e->x + e->vx);
 	e->y += e->vy;
-	if (e->y < DEF_PX(DEF_PLAY_TOP + 16) || e->y > DEF_PX(DEF_ENEMY_LOWEST - 40)) e->vy = -e->vy;
+	if (e->y < DEF_PX(DEF_PLAY_TOP + 16) || e->y > DEF_PX(DEF_TERRAIN_TOP - 60)) e->vy = -e->vy;
 }
 
 // Weaves after the ship, overshooting as it goes
@@ -455,15 +440,15 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 		const DefEnemyInfo_t* info = &_info[e->type];
 		// Landers go down amongst the mountains for the humanoids
 		if (e->state == DEF_ES_SEEK) {
-			e->y = def_clamp(e->y, DEF_PX(DEF_PLAY_TOP), DEF_PX(DEF_ENEMY_LOWEST));
+			e->y = def_clamp(e->y, DEF_PX(DEF_PLAY_TOP), DEF_PX(DEF_TERRAIN_TOP - info->h));
 		}
 
 		const int32_t y = e->y >> DEF_FP;
-		if (def_player_laser_hit(e->x, y, info->w, 8)) {
+		if (def_player_laser_hit(e->x, y, info->w, info->h)) {
 			enemy_kill(e, true, true);
 			continue;
 		}
-		if (def_player_hit(e->x, y, info->w, 8)) {
+		if (def_player_hit(e->x, y, info->w, info->h)) {
 			enemy_kill(e, true, false);
 			def_player_kill();
 			continue;
@@ -496,12 +481,13 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 
 static void draw_enemy(const uint32_t type, const int32_t sx, const int32_t sy, const uint32_t frame) {
 	const DefEnemyInfo_t* info = &_info[type];
-	const SpriteRenderer r = info->w == 16 ? sprite_renderer_sprite_16x8_p1 : sprite_renderer_sprite_8x8_p1;
-	// Mutants and baiters flicker between colours
-	uint32_t detail = info->detail;
-	if (type == DEF_ENEMY_MUTANT || type == DEF_ENEMY_BAITER) detail = (frame & 4) ? info->detail : info->colour;
-	def_spr_add(sx, sy, info->w, 8, info->detail_tile, def_pallet(detail), r);
-	def_spr_add(sx, sy, info->w, 8, info->body, def_pallet(info->colour), r);
+	// Mutants and baiters flicker
+	const uint8_t* colours = NULL;
+	if (frame & 4) {
+		if (type == DEF_ENEMY_MUTANT) colours = _mutant_flicker;
+		else if (type == DEF_ENEMY_BAITER) colours = _baiter_flicker;
+	}
+	def_art_draw(info->art, sx, sy, colours);
 }
 
 void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
@@ -509,7 +495,7 @@ void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
 		const DefEnemy_t* e = &_enemies[i];
 		if (e->type == DEF_ENEMY_NONE || e->state == DEF_ES_SPAWN) continue;
 		int32_t sx = def_world_screen_x(e->x);
-		if (sx <= -16 || sx >= DEF_SCREEN_W) continue;
+		if (sx <= -_info[e->type].w || sx >= DEF_SCREEN_W) continue;
 		if (e->type == DEF_ENEMY_MUTANT) sx += (int32_t)(def_rand() % 3) - 1;
 		draw_enemy(e->type, sx, e->y >> DEF_FP, frame);
 	}
@@ -555,7 +541,7 @@ uint32_t def_enemy_on_screen(void) {
 	uint32_t n = 0;
 	for (uint32_t i = 0; i < DEF_ENEMY_MAX; ++i) {
 		const DefEnemy_t* e = &_enemies[i];
-		if (e->type != DEF_ENEMY_NONE && e->state != DEF_ES_SPAWN && def_world_on_screen(e->x, 16)) ++n;
+		if (e->type != DEF_ENEMY_NONE && e->state != DEF_ES_SPAWN && def_world_on_screen(e->x, _info[e->type].w)) ++n;
 	}
 	return n;
 }
@@ -563,7 +549,7 @@ uint32_t def_enemy_on_screen(void) {
 void def_enemy_smart_bomb(void) {
 	for (uint32_t i = 0; i < DEF_ENEMY_MAX; ++i) {
 		DefEnemy_t* e = &_enemies[i];
-		if (e->type != DEF_ENEMY_NONE && e->state != DEF_ES_SPAWN && def_world_on_screen(e->x, 16)) {
+		if (e->type != DEF_ENEMY_NONE && e->state != DEF_ES_SPAWN && def_world_on_screen(e->x, _info[e->type].w)) {
 			enemy_kill(e, true, false);
 		}
 	}
@@ -597,8 +583,8 @@ bool def_enemy_nearest(int32_t x, int32_t* ex, int32_t* ey) {
 		const int32_t d = def_abs(def_dx(e->x, x));
 		if (d < best) {
 			best = d;
-			*ex = e->x;
-			*ey = e->y >> DEF_FP;
+			*ex = def_wrap(e->x + DEF_PX(_info[e->type].w >> 1));
+			*ey = (e->y >> DEF_FP) + (_info[e->type].h >> 1);
 		}
 	}
 	return best != INT32_MAX;
@@ -620,7 +606,16 @@ bool def_enemy_bullet_near(int32_t x, int32_t y, int32_t range, int32_t* by) {
 
 void def_enemy_draw_icon(uint32_t type, int32_t sx, int32_t sy, uint32_t frame) {
 	if (type == DEF_ENEMY_NONE || type >= DEF_ENEMY_TYPE_COUNT) return;
+	if (!_art_made) make_art();
 	draw_enemy(type, sx, sy, frame);
+}
+
+uint32_t def_enemy_width(uint32_t type) {
+	return type < DEF_ENEMY_TYPE_COUNT ? _info[type].w : 0;
+}
+
+uint32_t def_enemy_height(uint32_t type) {
+	return type < DEF_ENEMY_TYPE_COUNT ? _info[type].h : 0;
 }
 
 const char* def_enemy_name(uint32_t type) {

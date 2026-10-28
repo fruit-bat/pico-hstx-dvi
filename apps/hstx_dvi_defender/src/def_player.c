@@ -7,6 +7,7 @@
 #include "def_fx.h"
 #include "def_hud.h"
 #include "def_enemy.h"
+#include "def_art.h"
 
 #define DEF_SHIP_MAX_VX DEF_PX(10)
 #define DEF_SHIP_ACCEL 96
@@ -55,7 +56,45 @@ static uint32_t _fire_timer = 0;
 static DefLaser_t _lasers[DEF_LASER_COUNT];
 
 // Facing right; the left facing ones are made from them
-static Tile16x8p2_t _tile_body[2] = {{{
+static const char* const _art_ship[] = {
+	"WW..............................",
+	"WWW.............................",
+	"WWWW............CCC.............",
+	"WWWWW..........CCCCC............",
+	"WWWWWWWWWWWWWWWWWWWWWWWW........",
+	"RWWWWWWWWWWWWWWWWWWWWWWWWWWW....",
+	"RRPPPPPPPPPPPPPPPPPPPPPWWWWWWWWW",
+	"RWWWWWWWWWWWWWWWWWWWWWWWWWWW....",
+	"..WWWWWWWWWWWWWWWWWWWWWW........",
+	"....GGGGGGGGGGGGGGGGG...........",
+};
+static const uint8_t _ship_colours[] = { DEF_WHITE, DEF_CYAN, DEF_RED, DEF_PURPLE, DEF_GREY };
+
+// The exhaust, two frames of flicker
+static const char* const _art_flame[2][5] = {
+	{
+		"..........FFFFFF",
+		"....FFFFFFFFFFFF",
+		"FFFFFFFFFFFFFFFF",
+		"....FFFFFFFFFFFF",
+		"..........FFFFFF",
+	},
+	{
+		"............FFFF",
+		"......FFFFFFFFFF",
+		"..FFFFFFFFFFFFFF",
+		"......FFFFFFFFFF",
+		"............FFFF",
+	},
+};
+static const uint8_t _flame_colours[] = { DEF_YELLOW };
+
+// Right and left facing
+static DefArt_t _ship[2];
+static DefArt_t _flame[2][2];
+
+// A smaller ship to count the lives with
+static Tile16x8p2_t _tile_icon = {{
 	0b1100000000000000,
 	0b1110000000000000,
 	0b1111111110000000,
@@ -64,61 +103,18 @@ static Tile16x8p2_t _tile_body[2] = {{{
 	0b0011111111100000,
 	0b0000000000000000,
 	0b0000000000000000,
-}}};
+}};
 
-static Tile16x8p2_t _tile_detail[2] = {{{
-	0b0000000000000000,
-	0b0000000000000000,
-	0b0000000001100000,
-	0b0000001111110000,
-	0b0100000000000000,
-	0b0000000000000000,
-	0b0000000000000000,
-	0b0000000000000000,
-}}};
+static bool _art_made = false;
 
-static Tile8x8p2_t _tile_flame[4] = {
-	{{
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00111111,
-		0b11101111,
-		0b00000111,
-		0b00000000,
-		0b00000000,
-	}},
-	{{
-		0b00000000,
-		0b00000000,
-		0b00000011,
-		0b01111111,
-		0b00011111,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-	}},
-};
-
-static bool _tiles_made = false;
-
-static uint16_t reverse16(uint16_t v) {
-	uint16_t r = 0;
-	for (uint32_t i = 0; i < 16; ++i) {
-		r = (r << 1) | (v & 1);
-		v >>= 1;
+static void make_art(void) {
+	def_art_make(&_ship[0], _art_ship, DEF_ART_ROWS(_art_ship), "WCRPG", _ship_colours);
+	def_art_mirror(&_ship[1], &_ship[0]);
+	for (uint32_t i = 0; i < 2; ++i) {
+		def_art_make(&_flame[0][i], _art_flame[i], DEF_ART_ROWS(_art_flame[i]), "F", _flame_colours);
+		def_art_mirror(&_flame[1][i], &_flame[0][i]);
 	}
-	return r;
-}
-
-static void make_tiles(void) {
-	for (uint32_t i = 0; i < 8; ++i) {
-		_tile_body[1].d[i] = reverse16(_tile_body[0].d[i]);
-		_tile_detail[1].d[i] = reverse16(_tile_detail[0].d[i]);
-		_tile_flame[2].d[i] = reverse16(_tile_flame[0].d[i]) >> 8;
-		_tile_flame[3].d[i] = reverse16(_tile_flame[1].d[i]) >> 8;
-	}
-	_tiles_made = true;
+	_art_made = true;
 }
 
 void def_player_clear_lasers(void) {
@@ -126,7 +122,7 @@ void def_player_clear_lasers(void) {
 }
 
 void def_player_init(void) {
-	if (!_tiles_made) make_tiles();
+	if (!_art_made) make_art();
 	_x = 0;
 	_y = DEF_SHIP_START_Y;
 	_vx = 0;
@@ -146,7 +142,7 @@ static void fire_laser(void) {
 		l->active = true;
 		l->dir = _right ? 1 : -1;
 		l->x = def_wrap(_x + (_right ? DEF_PX(DEF_SHIP_W) : 0));
-		l->y = _y + 4;
+		l->y = _y + DEF_SHIP_NOSE;
 		l->head = 0;
 		l->tail = 0;
 		l->age = 0;
@@ -167,12 +163,12 @@ static void update_lasers(void) {
 }
 
 static void hyperspace(void) {
-	def_fx_explode(def_wrap(_x + DEF_PX(8)), DEF_PX(_y + 4), DEF_WHITE, 16, DEF_PX(2));
+	def_fx_explode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 16, DEF_PX(2));
 	_x = def_rand() % DEF_WORLD_W_FP;
 	_y = DEF_PLAY_TOP + def_rand() % (DEF_TERRAIN_TOP - DEF_PLAY_TOP);
 	_vx = 0;
 	def_player_clear_lasers();
-	def_fx_implode(def_wrap(_x + DEF_PX(8)), DEF_PX(_y + 4), DEF_WHITE, 16, 20);
+	def_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 16, 20);
 }
 
 void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8_t pressed) {
@@ -229,7 +225,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 					_vx = 0;
 					_y = DEF_SHIP_START_Y;
 					def_enemy_clear_bullets();
-					def_fx_implode(def_wrap(_x + DEF_PX(8)), DEF_PX(_y + 4), DEF_WHITE, 24, 30);
+					def_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 24, 30);
 				}
 				else {
 					_state = DEF_PLAYER_OVER;
@@ -252,18 +248,10 @@ void __not_in_flash_func(def_player_draw)(uint32_t frame) {
 	if (_state != DEF_PLAYER_ALIVE) return;
 	const int32_t sx = def_world_screen_x(_x);
 	const uint32_t f = _right ? 0 : 1;
-	// The detail goes first so it shows over the body
-	def_spr_add(sx, _y, DEF_SHIP_W, DEF_SHIP_H, &_tile_detail[f], def_pallet(DEF_RED), sprite_renderer_sprite_16x8_p1);
-	def_spr_add(sx, _y, DEF_SHIP_W, DEF_SHIP_H, &_tile_body[f], def_pallet(DEF_WHITE), sprite_renderer_sprite_16x8_p1);
+	def_art_draw(&_ship[f], sx, _y, NULL);
 	if (_thrust) {
-		def_spr_add(
-			_right ? sx - 8 : sx + DEF_SHIP_W,
-			_y,
-			8,
-			8,
-			&_tile_flame[(f << 1) + ((frame >> 1) & 1)],
-			def_pallet_rainbow(frame),
-			sprite_renderer_sprite_8x8_p1);
+		const uint8_t c[1] = { (frame & 2) ? DEF_YELLOW : DEF_ORANGE };
+		def_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + 4, c);
 	}
 }
 
@@ -282,8 +270,8 @@ void def_player_kill(void) {
 	if (_state != DEF_PLAYER_ALIVE) return;
 	_state = DEF_PLAYER_DEAD;
 	_timer = DEF_PLAYER_DEAD_FRAMES;
-	const int32_t cx = def_wrap(_x + DEF_PX(8));
-	const int32_t cy = DEF_PX(_y + 4);
+	const int32_t cx = def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1));
+	const int32_t cy = DEF_PX(_y + (DEF_SHIP_H >> 1));
 	def_fx_explode(cx, cy, DEF_COLOUR_RANDOM, 64, DEF_PX(4));
 	def_fx_explode(cx, cy, DEF_WHITE, 32, DEF_PX(2));
 	def_player_clear_lasers();
@@ -317,7 +305,7 @@ bool __not_in_flash_func(def_player_hit)(int32_t x, int32_t y, int32_t w, int32_
 	if (_state != DEF_PLAYER_ALIVE) return false;
 	const int32_t dx = def_dx(x, _x) >> DEF_FP;
 	// A slightly smaller box than the ship, to be fair
-	return dx < DEF_SHIP_W - 2 && dx + w > 2 && y < _y + DEF_SHIP_H - 2 && y + h > _y + 1;
+	return dx < DEF_SHIP_W - 3 && dx + w > 3 && y < _y + DEF_SHIP_H - 2 && y + h > _y + 2;
 }
 
 bool __not_in_flash_func(def_player_laser_hit)(int32_t x, int32_t y, int32_t w, int32_t h) {
@@ -337,5 +325,5 @@ bool __not_in_flash_func(def_player_laser_hit)(int32_t x, int32_t y, int32_t w, 
 }
 
 Tile16x8p2_t* def_player_icon(void) {
-	return &_tile_body[0];
+	return &_tile_icon;
 }

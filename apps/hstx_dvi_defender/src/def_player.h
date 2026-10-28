@@ -7,8 +7,10 @@
 extern "C" {
 #endif
 
-#define DEF_SHIP_W 16
-#define DEF_SHIP_H 8
+#define DEF_SHIP_W 32
+#define DEF_SHIP_H 10
+// The row the lasers come out of
+#define DEF_SHIP_NOSE 6
 
 void def_player_init(void);
 

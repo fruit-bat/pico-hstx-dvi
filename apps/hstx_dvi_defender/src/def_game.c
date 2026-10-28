@@ -146,7 +146,7 @@ static bool wave_end(const bool demo) {
 		def_hud_draw(_wave, true);
 		draw_messages();
 		for (uint32_t i = 0; i < shown; ++i) {
-			def_spr_add(DEF_SCREEN_W / 2 - DEF_HUMAN_MAX * 8 + i * 16, 300, 8, 8, def_human_icon(), def_pallet(DEF_PINK), sprite_renderer_sprite_8x8_p1);
+			def_human_draw_icon(DEF_SCREEN_W / 2 - DEF_HUMAN_MAX * 10 + i * 20, 300);
 		}
 		def_world_draw_stars(frame, frame);
 		def_spr_end();

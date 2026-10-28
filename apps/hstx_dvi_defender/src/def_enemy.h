@@ -42,12 +42,14 @@ void def_enemy_remove(uint32_t type);
 // Turns all the landers into mutants, for when the planet has gone
 void def_enemy_mutate_all(void);
 
-// For the demo player
+// For the demo player, the middle of the nearest enemy and any bullet close by
 bool def_enemy_nearest(int32_t x, int32_t* ex, int32_t* ey);
 bool def_enemy_bullet_near(int32_t x, int32_t y, int32_t range, int32_t* by);
 
 // For the attract screens
 void def_enemy_draw_icon(uint32_t type, int32_t sx, int32_t sy, uint32_t frame);
+uint32_t def_enemy_width(uint32_t type);
+uint32_t def_enemy_height(uint32_t type);
 const char* def_enemy_name(uint32_t type);
 uint32_t def_enemy_score(uint32_t type);
 uint32_t def_enemy_colour(uint32_t type);

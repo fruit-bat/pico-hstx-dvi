@@ -74,7 +74,7 @@ bool def_attract_title(void) {
 	def_text_set(&_text[9], "PRESS FIRE TO START", 2);
 	def_text_set(&_text[10], "RP2350 HSTX DVI SPRITES", 1);
 
-	// Where each enemy in the roll call goes
+	// Where the middle of each enemy in the roll call goes
 	int32_t rx[DEF_ATTRACT_ROLL_COUNT];
 	int32_t ry[DEF_ATTRACT_ROLL_COUNT];
 	for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
@@ -92,7 +92,7 @@ bool def_attract_title(void) {
 		// Each enemy is drawn in by particles before it appears
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame == DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP) {
-				def_fx_implode(DEF_PX(rx[i] + 8), DEF_PX(ry[i] + 4), def_enemy_colour(_roll[i]), 24, DEF_ATTRACT_MATERIALISE);
+				def_fx_implode(DEF_PX(rx[i]), DEF_PX(ry[i] + (def_enemy_height(_roll[i]) >> 1)), def_enemy_colour(_roll[i]), 32, DEF_ATTRACT_MATERIALISE);
 			}
 		}
 
@@ -106,14 +106,14 @@ bool def_attract_title(void) {
 		def_spr_text_centre(&_text[8], 130, def_pallet(DEF_WHITE));
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame < DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP + DEF_ATTRACT_MATERIALISE) continue;
-			def_spr_text(&_names[i], rx[i] + 8 - (def_text_width(&_names[i]) >> 1), ry[i] + 18, def_pallet(DEF_WHITE));
-			def_spr_text(&_scores[i], rx[i] + 8 - (def_text_width(&_scores[i]) >> 1), ry[i] + 32, def_pallet(DEF_YELLOW));
+			def_spr_text(&_names[i], rx[i] - (def_text_width(&_names[i]) >> 1), ry[i] + 22, def_pallet(DEF_WHITE));
+			def_spr_text(&_scores[i], rx[i] - (def_text_width(&_scores[i]) >> 1), ry[i] + 36, def_pallet(DEF_YELLOW));
 		}
 		if ((frame >> 5) & 1) def_spr_text_centre(&_text[9], 410, def_pallet(DEF_YELLOW));
 		def_spr_text_centre(&_text[10], DEF_SCREEN_H - 20, def_pallet(DEF_GREY));
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame < DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP + DEF_ATTRACT_MATERIALISE) continue;
-			def_enemy_draw_icon(_roll[i], rx[i], ry[i], frame);
+			def_enemy_draw_icon(_roll[i], rx[i] - (def_enemy_width(_roll[i]) >> 1), ry[i], frame);
 		}
 		def_fx_draw_particles();
 		def_world_draw_stars(frame, frame);

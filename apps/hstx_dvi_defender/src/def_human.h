@@ -8,6 +8,8 @@ extern "C" {
 #endif
 
 #define DEF_HUMAN_MAX 10
+#define DEF_HUMAN_W 6
+#define DEF_HUMAN_H 12
 #define DEF_HUMAN_CATCH_SCORE 500
 #define DEF_HUMAN_RETURN_SCORE 500
 #define DEF_HUMAN_LAND_SCORE 250
@@ -33,7 +35,7 @@ void def_human_carry(int32_t i, int32_t x, int32_t y);
 void def_human_release(int32_t i);
 void def_human_kill(int32_t i);
 
-Tile8x8p2_t* def_human_icon(void);
+void def_human_draw_icon(int32_t sx, int32_t sy);
 
 #ifdef __cplusplus
 }

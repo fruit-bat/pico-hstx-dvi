@@ -15,8 +15,9 @@
 uint8_t __not_in_flash_func(def_demo_input)(uint32_t frame) {
 	if (!def_player_alive()) return 0;
 
-	const int32_t px = def_player_x();
-	const int32_t py = def_player_y();
+	// The middle of the ship, and where its lasers come out
+	const int32_t px = def_wrap(def_player_x() + DEF_PX(DEF_SHIP_W >> 1));
+	const int32_t py = def_player_y() + DEF_SHIP_NOSE;
 	const bool right = def_player_facing_right();
 	uint8_t input = 0;
 
@@ -26,8 +27,8 @@ uint8_t __not_in_flash_func(def_demo_input)(uint32_t frame) {
 	}
 
 	int32_t by;
-	if (def_enemy_bullet_near(px + DEF_PX(8), py + 4, DEF_DEMO_DODGE, &by)) {
-		input |= by < py + 4 ? DEF_INP_BIT_D : DEF_INP_BIT_U;
+	if (def_enemy_bullet_near(px, py, DEF_DEMO_DODGE, &by)) {
+		input |= by < py ? DEF_INP_BIT_D : DEF_INP_BIT_U;
 	}
 
 	int32_t ex, ey;
