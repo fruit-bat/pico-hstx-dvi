@@ -32,6 +32,7 @@ uint32_t def_enemy_count_hostile(void);
 uint32_t def_human_alive(void);
 bool def_world_planet_alive(void);
 void def_human_kill(int32_t i);
+int32_t def_player_y(void);
 
 typedef struct { pthread_mutex_t m; pthread_cond_t c; int v; } HostSem;
 
@@ -90,6 +91,10 @@ static volatile uint32_t _frames = 0;
 static uint8_t _frame_buf[MODE_V_ACTIVE_LINES][MODE_H_ACTIVE_PIXELS];
 static uint32_t _y = 0;
 static uint32_t _max_sprites = 0;
+// Times the ship has changed between going up and down from one frame to the next
+static uint32_t _reversals = 0;
+static int32_t _last_y = 0;
+static int32_t _last_dy = 0;
 
 static void save(uint32_t n) {
 	char name[256];
@@ -120,11 +125,17 @@ void hstx_dvi_row_fifo_put_blocking(hstx_dvi_row_t* r) {
 		if (!strcmp(_mode, "planet") && _frames == 900) {
 			for (int i = 0; i < 10; ++i) def_human_kill(i);
 		}
+		const int32_t y = def_player_y();
+		const int32_t dy = y - _last_y;
+		if (dy && _last_dy && (dy > 0) != (_last_dy > 0)) ++_reversals;
+		if (dy) _last_dy = dy;
+		_last_y = y;
 		if (_frames % _every == 0) save(_frames);
 		if (_frames % 600 == 0) {
-			printf("%6u score %6u lives %u smart %u hostile %2u humans %2u planet %d sprites %u\n",
+			printf("%6u score %6u lives %u smart %u hostile %2u humans %2u planet %d sprites %3u reversals %u\n",
 				_frames, def_hud_score(), def_hud_lives(), def_hud_smart_bombs(), def_enemy_count_hostile(),
-				def_human_alive(), def_world_planet_alive(), n);
+				def_human_alive(), def_world_planet_alive(), n, _reversals);
+			_reversals = 0;
 		}
 		if (++_frames >= _max_frames) {
 			printf("frames %u, most sprites %u\n", _frames, _max_sprites);

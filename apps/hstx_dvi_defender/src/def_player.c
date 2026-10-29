@@ -27,6 +27,8 @@
 #define DEF_LASER_REPEAT 8
 #define DEF_PLAYER_DEAD_FRAMES 150
 #define DEF_SMART_FLASH 6
+// The exhaust changes colour every 2 to the power of this many frames
+#define DEF_FLAME_COLOUR_SHIFT 3
 
 typedef enum {
 	DEF_PLAYER_ALIVE = 0,
@@ -73,18 +75,18 @@ static const uint8_t _ship_colours[] = { DEF_WHITE, DEF_CYAN, DEF_RED, DEF_PURPL
 // The exhaust, two frames of flicker
 static const char* const _art_flame[2][5] = {
 	{
-		"..........FFFFFF",
+		"..........FFFFF.",
 		"....FFFFFFFFFFFF",
 		"FFFFFFFFFFFFFFFF",
 		"....FFFFFFFFFFFF",
-		"..........FFFFFF",
+		"..........FFFFF.",
 	},
 	{
-		"............FFFF",
+		"............FFF.",
 		"......FFFFFFFFFF",
 		"..FFFFFFFFFFFFFF",
 		"......FFFFFFFFFF",
-		"............FFFF",
+		"............FFF.",
 	},
 };
 static const uint8_t _flame_colours[] = { DEF_YELLOW };
@@ -250,7 +252,8 @@ void __not_in_flash_func(def_player_draw)(uint32_t frame) {
 	const uint32_t f = _right ? 0 : 1;
 	def_art_draw(&_ship[f], sx, _y, NULL);
 	if (_thrust) {
-		const uint8_t c[1] = { (frame & 2) ? DEF_YELLOW : DEF_ORANGE };
+		// The colour changes slowly enough to see, while the shape flickers
+		const uint8_t c[1] = { ((frame >> DEF_FLAME_COLOUR_SHIFT) & 1) ? DEF_YELLOW : DEF_RED };
 		def_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + 4, c);
 	}
 }
