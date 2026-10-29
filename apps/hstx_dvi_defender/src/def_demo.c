@@ -3,7 +3,7 @@
 #include "def_player.h"
 #include "def_enemy.h"
 #include "def_world.h"
-#include "def_util.h"
+#include "game_util.h"
 
 // Gets in close before opening fire
 #define DEF_DEMO_CHASE 260
@@ -52,14 +52,14 @@ uint8_t __not_in_flash_func(def_demo_input)(uint32_t frame) {
 
 	const int32_t dx = def_dx(ex, px) >> DEF_FP;
 	const bool want_right = dx > 0;
-	if (want_right != right || def_abs(dx) > DEF_DEMO_CHASE) {
+	if (want_right != right || game_abs(dx) > DEF_DEMO_CHASE) {
 		input |= want_right ? DEF_INP_BIT_R : DEF_INP_BIT_L;
 	}
 	if (!(input & (DEF_INP_BIT_U | DEF_INP_BIT_D))) {
 		if (ey < py - DEF_DEMO_LINE_UP) input |= DEF_INP_BIT_U;
 		else if (ey > py + DEF_DEMO_LINE_UP) input |= DEF_INP_BIT_D;
 	}
-	if (want_right == right && def_abs(ey - py) <= DEF_DEMO_LINE_UP + 1 && def_abs(dx) < DEF_DEMO_RANGE) {
+	if (want_right == right && game_abs(ey - py) <= DEF_DEMO_LINE_UP + 1 && game_abs(dx) < DEF_DEMO_RANGE) {
 		input |= DEF_INP_BIT_F;
 	}
 	return input;

@@ -26,6 +26,14 @@ int32_t inv_level_bomb_speed(void);
 uint32_t inv_level_aim_chance(void);
 // Frames until the next mystery ship
 uint32_t inv_level_mot_interval(void);
+// Average frames between invaders diving out of the formation
+uint32_t inv_level_dive_interval(void);
+// Most invaders out of the formation at once
+uint32_t inv_level_dive_max(void);
+// Fastest a diver falls, fixed point pixels per frame
+int32_t inv_level_dive_speed(void);
+// Bombs a diver drops on the way down
+uint32_t inv_level_dive_bombs(void);
 
 #ifdef __cplusplus
 }

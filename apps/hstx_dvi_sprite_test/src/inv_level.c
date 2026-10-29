@@ -1,5 +1,5 @@
 #include "inv_level.h"
-#include "inv_util.h"
+#include "game_util.h"
 
 static uint32_t _wave = 1;
 
@@ -45,5 +45,21 @@ uint32_t __not_in_flash_func(inv_level_aim_chance)(void) {
 }
 
 uint32_t inv_level_mot_interval(void) {
-	return 900 + (inv_rand() % 600);
+	return 900 + (game_rand() % 600);
+}
+
+uint32_t __not_in_flash_func(inv_level_dive_interval)(void) {
+	return 360 - 30 * min_u32(_wave - 1, 8);
+}
+
+uint32_t __not_in_flash_func(inv_level_dive_max)(void) {
+	return min_u32(1 + (_wave >> 1), 4);
+}
+
+int32_t __not_in_flash_func(inv_level_dive_speed)(void) {
+	return GAME_PX(2) + 32 * min_u32(_wave - 1, 6);
+}
+
+uint32_t __not_in_flash_func(inv_level_dive_bombs)(void) {
+	return min_u32(1 + (_wave >> 2), 3);
 }

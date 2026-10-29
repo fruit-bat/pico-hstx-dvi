@@ -20,6 +20,7 @@
 #include "pico/sem.h"
 #include "inv_input.h"
 #include "inv_hiscore.h"
+#include "game_pallet.h"
 #include "inv_game.h"
 #include "inv_attract.h"
 
@@ -49,9 +50,10 @@ int main(void)
     app_led_on();
 
 	// Initialize the gpio input
-	init_inv_input();
+	game_input_init(INV_INP_GPIO_START, INV_INP_GPIO_COUNT);
 
-	inv_hiscore_init();
+	game_pallet_init();
+	game_hiscore_init(inv_hiscore_defaults());
 
 	// Initialize the HSTX DVI sprite system
     hstx_dvi_sprite_init_all();

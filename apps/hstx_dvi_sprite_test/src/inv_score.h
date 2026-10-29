@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 // A bonus life is awarded each time the score passes a multiple of this
-#define INV_SCORE_BONUS_LIFE 5000
+#define INV_SCORE_BONUS_LIFE 3000
 
 // The score line across the top of the screen. The wave and lives are only
 // shown when in_game is set. The score itself is kept, see inv_score_reset.

@@ -1,14 +1,14 @@
 #include "def_enemy.h"
 #include "def_world.h"
-#include "def_render.h"
-#include "def_pallet.h"
+#include "game_render.h"
+#include "game_pallet.h"
 #include "def_player.h"
 #include "def_human.h"
 #include "def_hud.h"
-#include "def_fx.h"
-#include "def_util.h"
+#include "game_fx.h"
+#include "game_util.h"
 #include "def_scanner.h"
-#include "def_art.h"
+#include "game_art.h"
 
 #define DEF_ENEMY_MAX 64
 #define DEF_BULLET_MAX 32
@@ -63,7 +63,7 @@ typedef struct {
 	const char* name;
 	// Chance out of 4096 of firing each frame
 	uint16_t fire;
-	DefArt_t* art;
+	GameArt_t* art;
 	uint8_t frames;
 	// Each frame is shown for 1 << rate frames
 	uint8_t rate;
@@ -343,22 +343,22 @@ static const char* const _art_swarmer[DEF_SWARMER_FRAMES][DEF_SWARMER_H] = {
 	},
 };
 
-static const uint8_t _lander_colours[] = { DEF_GREEN, DEF_RED, DEF_WHITE };
-static const uint8_t _mutant_colours[] = { DEF_PURPLE, DEF_GREEN, DEF_RED };
-static const uint8_t _mutant_flicker[] = { DEF_PURPLE, DEF_WHITE, DEF_RED };
-static const uint8_t _baiter_colours[] = { DEF_GREEN, DEF_WHITE, DEF_RED };
-static const uint8_t _baiter_flicker[] = { DEF_GREEN, DEF_RED, DEF_WHITE };
-static const uint8_t _bomber_colours[] = { DEF_BLUE, DEF_YELLOW };
-static const uint8_t _pod_colours[] = { DEF_PURPLE, DEF_RED, DEF_WHITE };
-static const uint8_t _swarmer_colours[] = { DEF_RED, DEF_YELLOW };
+static const uint8_t _lander_colours[] = { GAME_GREEN, GAME_RED, GAME_WHITE };
+static const uint8_t _mutant_colours[] = { GAME_PURPLE, GAME_GREEN, GAME_RED };
+static const uint8_t _mutant_flicker[] = { GAME_PURPLE, GAME_WHITE, GAME_RED };
+static const uint8_t _baiter_colours[] = { GAME_GREEN, GAME_WHITE, GAME_RED };
+static const uint8_t _baiter_flicker[] = { GAME_GREEN, GAME_RED, GAME_WHITE };
+static const uint8_t _bomber_colours[] = { GAME_BLUE, GAME_YELLOW };
+static const uint8_t _pod_colours[] = { GAME_PURPLE, GAME_RED, GAME_WHITE };
+static const uint8_t _swarmer_colours[] = { GAME_RED, GAME_YELLOW };
 
 // The lander has an extra frame on the end for when it is carrying a humanoid
-static DefArt_t _lander[DEF_LANDER_FRAMES + 1];
-static DefArt_t _mutant[DEF_MUTANT_FRAMES];
-static DefArt_t _baiter[DEF_BAITER_FRAMES];
-static DefArt_t _bomber[DEF_BOMBER_FRAMES];
-static DefArt_t _pod[DEF_POD_FRAMES];
-static DefArt_t _swarmer[DEF_SWARMER_FRAMES];
+static GameArt_t _lander[DEF_LANDER_FRAMES + 1];
+static GameArt_t _mutant[DEF_MUTANT_FRAMES];
+static GameArt_t _baiter[DEF_BAITER_FRAMES];
+static GameArt_t _bomber[DEF_BOMBER_FRAMES];
+static GameArt_t _pod[DEF_POD_FRAMES];
+static GameArt_t _swarmer[DEF_SWARMER_FRAMES];
 static bool _art_made = false;
 
 static Tile8x8p2_t _tile_bullet[2] = {
@@ -376,15 +376,15 @@ static Tile8x8p2_t _tile_bullet[2] = {
 
 static const DefEnemyInfo_t _info[DEF_ENEMY_TYPE_COUNT] = {
 	{ 0 },
-	{ 16, 12, DEF_GREEN,  DEF_RED,    150,  "LANDER",  24,  _lander,  DEF_LANDER_FRAMES,  3 },
-	{ 16, 12, DEF_PURPLE, DEF_GREEN,  150,  "MUTANT",  60,  _mutant,  DEF_MUTANT_FRAMES,  2 },
-	{ 16, 14, DEF_BLUE,   DEF_YELLOW, 250,  "BOMBER",  0,   _bomber,  DEF_BOMBER_FRAMES,  3 },
-	{ 16, 14, DEF_PURPLE, DEF_RED,    1000, "POD",     0,   _pod,     DEF_POD_FRAMES,     3 },
-	{ 16, 7,  DEF_RED,    DEF_YELLOW, 150,  "SWARMER", 40,  _swarmer, DEF_SWARMER_FRAMES, 2 },
-	{ 32, 6,  DEF_GREEN,  DEF_WHITE,  200,  "BAITER",  120, _baiter,  DEF_BAITER_FRAMES,  2 },
+	{ 16, 12, GAME_GREEN,  GAME_RED,    150,  "LANDER",  24,  _lander,  DEF_LANDER_FRAMES,  3 },
+	{ 16, 12, GAME_PURPLE, GAME_GREEN,  150,  "MUTANT",  60,  _mutant,  DEF_MUTANT_FRAMES,  2 },
+	{ 16, 14, GAME_BLUE,   GAME_YELLOW, 250,  "BOMBER",  0,   _bomber,  DEF_BOMBER_FRAMES,  3 },
+	{ 16, 14, GAME_PURPLE, GAME_RED,    1000, "POD",     0,   _pod,     DEF_POD_FRAMES,     3 },
+	{ 16, 7,  GAME_RED,    GAME_YELLOW, 150,  "SWARMER", 40,  _swarmer, DEF_SWARMER_FRAMES, 2 },
+	{ 32, 6,  GAME_GREEN,  GAME_WHITE,  200,  "BAITER",  120, _baiter,  DEF_BAITER_FRAMES,  2 },
 };
 
-static void make_lander(DefArt_t* a, const uint32_t look, const uint32_t rim, const char* const* legs, const uint8_t* colours) {
+static void make_lander(GameArt_t* a, const uint32_t look, const uint32_t rim, const char* const* legs, const uint8_t* colours) {
 	const char* rows[12] = {
 		_lander_top[0], _lander_top[1],
 		_lander_eyes[look][0], _lander_eyes[look][1], _lander_eyes[look][2],
@@ -392,7 +392,7 @@ static void make_lander(DefArt_t* a, const uint32_t look, const uint32_t rim, co
 		_lander_rim[rim],
 		legs[0], legs[1], legs[2], legs[3],
 	};
-	def_art_make(a, rows, 12, "GRW", colours);
+	game_art_make(a, rows, 12, "GRW", colours);
 }
 
 static void make_art(void) {
@@ -408,16 +408,16 @@ static void make_art(void) {
 		const char* rows[6] = {
 			_baiter_top[0], _baiter_top[1], _baiter_windows[f], _baiter_bottom[0], _baiter_bottom[1], _baiter_lights[f & 1],
 		};
-		def_art_make(&_baiter[f], rows, 6, "GWR", _baiter_colours);
+		game_art_make(&_baiter[f], rows, 6, "GWR", _baiter_colours);
 	}
 	for (uint32_t f = 0; f < DEF_BOMBER_FRAMES; ++f) {
-		def_art_make(&_bomber[f], _art_bomber[f], DEF_BOMBER_H, "BY", _bomber_colours);
+		game_art_make(&_bomber[f], _art_bomber[f], DEF_BOMBER_H, "BY", _bomber_colours);
 	}
 	for (uint32_t f = 0; f < DEF_POD_FRAMES; ++f) {
-		def_art_make(&_pod[f], _art_pod[f], DEF_POD_H, "PRW", _pod_colours);
+		game_art_make(&_pod[f], _art_pod[f], DEF_POD_H, "PRW", _pod_colours);
 	}
 	for (uint32_t f = 0; f < DEF_SWARMER_FRAMES; ++f) {
-		def_art_make(&_swarmer[f], _art_swarmer[f], DEF_SWARMER_H, "RY", _swarmer_colours);
+		game_art_make(&_swarmer[f], _art_swarmer[f], DEF_SWARMER_H, "RY", _swarmer_colours);
 	}
 	_art_made = true;
 }
@@ -432,8 +432,8 @@ static __force_inline int32_t enemy_h(const DefEnemy_t* e) {
 
 // A random speed between lo and hi, either way
 static int32_t random_v(const int32_t lo, const int32_t hi) {
-	const int32_t v = lo + (int32_t)(def_rand() % (uint32_t)(hi - lo + 1));
-	return (def_rand() & 1) ? v : -v;
+	const int32_t v = lo + (int32_t)(game_rand() % (uint32_t)(hi - lo + 1));
+	return (game_rand() & 1) ? v : -v;
 }
 
 void def_enemy_init(void) {
@@ -464,7 +464,7 @@ static void fire_at_player(const DefEnemy_t* e) {
 	const int32_t y = e->y + DEF_PX(enemy_h(e) >> 1);
 	const int32_t dx = def_dx(def_player_x() + DEF_PX(DEF_SHIP_W >> 1), x) >> DEF_FP;
 	const int32_t dy = def_player_y() + (DEF_SHIP_H >> 1) - (y >> DEF_FP);
-	const int32_t m = def_abs(dx) > def_abs(dy) ? def_abs(dx) : def_abs(dy);
+	const int32_t m = game_abs(dx) > game_abs(dy) ? game_abs(dx) : game_abs(dy);
 	if (m == 0 || m > DEF_ENEMY_FIRE_RANGE) return;
 	DefBullet_t* b = new_bullet();
 	if (!b) return;
@@ -505,19 +505,19 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 		e->vx = 0;
 		e->vy = 0;
 		e->base_y = y;
-		e->anim = def_rand();
-		e->phase = def_rand();
+		e->anim = game_rand();
+		e->phase = game_rand();
 		switch (type) {
 			case DEF_ENEMY_LANDER: {
 				const int32_t s = DEF_LANDER_SPEED + (int32_t)(_wave > 8 ? 8 : _wave) * 16;
 				e->vx = random_v(s >> 1, s);
-				e->base_y = DEF_PX(DEF_PLAY_TOP + 40 + def_rand() % 160);
+				e->base_y = DEF_PX(DEF_PLAY_TOP + 40 + game_rand() % 160);
 				e->human = def_human_pick();
 				break;
 			}
 			case DEF_ENEMY_BOMBER: {
 				e->vx = random_v(128, 224);
-				e->base_y = DEF_PX(DEF_PLAY_TOP + 80 + def_rand() % 180);
+				e->base_y = DEF_PX(DEF_PLAY_TOP + 80 + game_rand() % 180);
 				break;
 			}
 			case DEF_ENEMY_POD: {
@@ -537,7 +537,7 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 			}
 		}
 		if (e->state == DEF_ES_SPAWN) {
-			def_fx_implode(def_wrap(e->x + DEF_PX(_info[type].w >> 1)), e->y + DEF_PX(_info[type].h >> 1), _info[type].colour, 24, DEF_ENEMY_SPAWN_FRAMES);
+			game_fx_implode(def_wrap(e->x + DEF_PX(_info[type].w >> 1)), e->y + DEF_PX(_info[type].h >> 1), _info[type].colour, 24, DEF_ENEMY_SPAWN_FRAMES);
 		}
 		return true;
 	}
@@ -548,8 +548,8 @@ static void enemy_kill(DefEnemy_t* e, const bool award, const bool split) {
 	const DefEnemyInfo_t* info = &_info[e->type];
 	const int32_t cx = def_wrap(e->x + DEF_PX(info->w >> 1));
 	const int32_t cy = e->y + DEF_PX(info->h >> 1);
-	def_fx_explode(cx, cy, info->colour, 28, DEF_PX(3));
-	def_fx_explode(cx, cy, info->detail, 12, DEF_PX(2));
+	game_fx_explode(cx, cy, info->colour, 28, DEF_PX(3));
+	game_fx_explode(cx, cy, info->detail, 12, DEF_PX(2));
 	if (award) def_hud_add_score(info->score);
 	if (e->human >= 0 && e->state == DEF_ES_ASCEND) def_human_release(e->human);
 	const uint32_t type = e->type;
@@ -563,18 +563,18 @@ static void enemy_kill(DefEnemy_t* e, const bool award, const bool split) {
 static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 	switch (e->state) {
 		case DEF_ES_SEEK: {
-			e->y += def_sign(e->base_y - e->y) * 64;
+			e->y += game_sign(e->base_y - e->y) * 64;
 			if (e->human >= 0 && def_human_on_ground(e->human)) {
 				// Heads for the humanoid it is after, the short way round
 				const int32_t dx = def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8));
-				if (def_abs(dx) < DEF_PX(3)) {
+				if (game_abs(dx) < DEF_PX(3)) {
 					e->state = DEF_ES_DESCEND;
 				}
 				else {
-					e->vx = def_sign(dx) * def_abs(e->vx);
+					e->vx = game_sign(dx) * game_abs(e->vx);
 				}
 			}
-			else if ((def_rand() & 63) == 0) {
+			else if ((game_rand() & 63) == 0) {
 				e->human = def_human_pick();
 			}
 			e->x = def_wrap(e->x + e->vx);
@@ -586,7 +586,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 				e->human = -1;
 				break;
 			}
-			e->x = def_wrap(e->x + def_clamp(def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8)), -DEF_PX(1), DEF_PX(1)));
+			e->x = def_wrap(e->x + game_clamp(def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8)), -DEF_PX(1), DEF_PX(1)));
 			e->y += DEF_LANDER_DESCEND;
 			if ((e->y >> DEF_FP) + enemy_h(e) >= (def_human_y(e->human) >> DEF_FP)) {
 				def_human_grab(e->human);
@@ -603,7 +603,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 				e->human = -1;
 				e->type = DEF_ENEMY_MUTANT;
 				e->state = DEF_ES_SEEK;
-				def_fx_explode(def_wrap(e->x + DEF_PX(8)), e->y + DEF_PX(6), DEF_PURPLE, 16, DEF_PX(2));
+				game_fx_explode(def_wrap(e->x + DEF_PX(8)), e->y + DEF_PX(6), GAME_PURPLE, 16, DEF_PX(2));
 			}
 			break;
 		}
@@ -618,15 +618,15 @@ static void update_mutant(DefEnemy_t* e) {
 	const int32_t speed = DEF_MUTANT_SPEED + (int32_t)(_wave > 8 ? 8 : _wave) * 32;
 	const int32_t dx = def_dx(def_player_x(), e->x);
 	const int32_t dy = DEF_PX(def_player_y()) - e->y;
-	e->vx += def_sign(dx) * 48;
-	e->vx = def_clamp(e->vx, -speed, speed);
+	e->vx += game_sign(dx) * 48;
+	e->vx = game_clamp(e->vx, -speed, speed);
 	e->x = def_wrap(e->x + e->vx);
-	e->y += def_sign(dy) * 320 + (int32_t)((def_rand() % 5) - 2) * DEF_PX(1);
+	e->y += game_sign(dy) * 320 + (int32_t)((game_rand() % 5) - 2) * DEF_PX(1);
 }
 
 static void update_bomber(DefEnemy_t* e, const uint32_t frame) {
 	e->x = def_wrap(e->x + e->vx);
-	e->y = e->base_y + DEF_PX(def_sin(e->anim) * DEF_BOMBER_SWING / 127);
+	e->y = e->base_y + DEF_PX(game_sin(e->anim) * DEF_BOMBER_SWING / 127);
 	e->anim += 1;
 	if ((e->anim % 50) == 0) drop_mine(e);
 }
@@ -640,20 +640,20 @@ static void update_pod(DefEnemy_t* e) {
 // Weaves after the ship, overshooting as it goes
 static void update_swarmer(DefEnemy_t* e) {
 	const int32_t dx = def_dx(def_player_x(), e->x);
-	e->vx += def_sign(dx) * 40;
-	e->vx = def_clamp(e->vx, -DEF_SWARMER_SPEED, DEF_SWARMER_SPEED);
+	e->vx += game_sign(dx) * 40;
+	e->vx = game_clamp(e->vx, -DEF_SWARMER_SPEED, DEF_SWARMER_SPEED);
 	e->x = def_wrap(e->x + e->vx);
 	e->anim += 8;
-	e->y += def_sin(e->anim) * 2 + def_sign(DEF_PX(def_player_y()) - e->y) * 96;
+	e->y += game_sin(e->anim) * 2 + game_sign(DEF_PX(def_player_y()) - e->y) * 96;
 }
 
 // Fast and persistent, sent to hurry the player up
 static void update_baiter(DefEnemy_t* e) {
 	const int32_t dx = def_dx(def_player_x(), e->x);
-	const int32_t target = def_player_vx() + def_sign(dx) * DEF_BAITER_SPEED;
-	e->vx += def_clamp(target - e->vx, -96, 96);
+	const int32_t target = def_player_vx() + game_sign(dx) * DEF_BAITER_SPEED;
+	e->vx += game_clamp(target - e->vx, -96, 96);
 	e->x = def_wrap(e->x + e->vx);
-	e->y += def_clamp(DEF_PX(def_player_y()) - e->y, -DEF_PX(2), DEF_PX(2));
+	e->y += game_clamp(DEF_PX(def_player_y()) - e->y, -DEF_PX(2), DEF_PX(2));
 }
 
 void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
@@ -677,7 +677,7 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 		const DefEnemyInfo_t* info = &_info[e->type];
 		// Landers go down amongst the mountains for the humanoids
 		if (e->state == DEF_ES_SEEK) {
-			e->y = def_clamp(e->y, DEF_PX(DEF_PLAY_TOP), DEF_PX(DEF_TERRAIN_TOP - info->h));
+			e->y = game_clamp(e->y, DEF_PX(DEF_PLAY_TOP), DEF_PX(DEF_TERRAIN_TOP - info->h));
 		}
 
 		const int32_t y = e->y >> DEF_FP;
@@ -691,7 +691,7 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 			continue;
 		}
 		const uint32_t chance = info->fire + (info->fire ? (_wave > 10 ? 10 : _wave) * 4 : 0);
-		if (chance && def_player_alive() && (def_rand() & 4095) < chance) {
+		if (chance && def_player_alive() && (game_rand() & 4095) < chance) {
 			fire_at_player(e);
 		}
 	}
@@ -706,7 +706,7 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 		b->x = def_wrap(b->x + b->vx);
 		b->y += b->vy;
 		const int32_t y = b->y >> DEF_FP;
-		if (y < DEF_PLAY_TOP || y >= DEF_SCREEN_H) {
+		if (y < DEF_PLAY_TOP || y >= GAME_SCREEN_H) {
 			b->active = false;
 		}
 		else if (def_player_hit(b->x, y, 3, 3)) {
@@ -726,7 +726,7 @@ static void draw_enemy(const uint32_t type, const int32_t sx, const int32_t sy, 
 		else if (type == DEF_ENEMY_BAITER) colours = _baiter_flicker;
 	}
 	const uint32_t f = clutching ? DEF_LANDER_CLUTCH : step % info->frames;
-	def_art_draw(&info->art[f], sx, sy, colours);
+	game_art_draw(&info->art[f], sx, sy, colours);
 }
 
 void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
@@ -734,8 +734,8 @@ void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
 		const DefEnemy_t* e = &_enemies[i];
 		if (e->type == DEF_ENEMY_NONE || e->state == DEF_ES_SPAWN) continue;
 		int32_t sx = def_world_screen_x(e->x);
-		if (sx <= -_info[e->type].w || sx >= DEF_SCREEN_W) continue;
-		if (e->type == DEF_ENEMY_MUTANT) sx += (int32_t)(def_rand() % 3) - 1;
+		if (sx <= -_info[e->type].w || sx >= GAME_SCREEN_W) continue;
+		if (e->type == DEF_ENEMY_MUTANT) sx += (int32_t)(game_rand() % 3) - 1;
 		const bool clutching = e->type == DEF_ENEMY_LANDER && e->state == DEF_ES_ASCEND;
 		draw_enemy(e->type, sx, e->y >> DEF_FP, frame, (frame >> _info[e->type].rate) + e->phase, clutching);
 	}
@@ -746,9 +746,9 @@ void __not_in_flash_func(def_enemy_draw_bullets)(uint32_t frame) {
 		const DefBullet_t* b = &_bullets[i];
 		if (!b->active) continue;
 		const int32_t sx = def_world_screen_x(b->x);
-		if (sx <= -4 || sx >= DEF_SCREEN_W) continue;
-		const uint32_t c = b->mine ? ((frame & 8) ? DEF_PURPLE : DEF_WHITE) : ((frame & 2) ? DEF_WHITE : DEF_YELLOW);
-		def_spr_add(sx, b->y >> DEF_FP, 8, 3, &_tile_bullet[b->mine ? 1 : 0], def_pallet(c), sprite_renderer_sprite_8x8_p1);
+		if (sx <= -4 || sx >= GAME_SCREEN_W) continue;
+		const uint32_t c = b->mine ? ((frame & 8) ? GAME_PURPLE : GAME_WHITE) : ((frame & 2) ? GAME_WHITE : GAME_YELLOW);
+		game_spr_add(sx, b->y >> DEF_FP, 8, 3, &_tile_bullet[b->mine ? 1 : 0], game_pallet(c), sprite_renderer_sprite_8x8_p1);
 	}
 }
 
@@ -820,7 +820,7 @@ bool def_enemy_nearest(int32_t x, int32_t* ex, int32_t* ey) {
 	for (uint32_t i = 0; i < DEF_ENEMY_MAX; ++i) {
 		const DefEnemy_t* e = &_enemies[i];
 		if (e->type == DEF_ENEMY_NONE || e->state == DEF_ES_SPAWN) continue;
-		const int32_t d = def_abs(def_dx(e->x, x));
+		const int32_t d = game_abs(def_dx(e->x, x));
 		if (d < best) {
 			best = d;
 			*ex = def_wrap(e->x + DEF_PX(_info[e->type].w >> 1));
@@ -834,8 +834,8 @@ bool def_enemy_bullet_near(int32_t x, int32_t y, int32_t range, int32_t* by) {
 	for (uint32_t i = 0; i < DEF_BULLET_MAX; ++i) {
 		const DefBullet_t* b = &_bullets[i];
 		if (!b->active) continue;
-		const int32_t dx = def_abs(def_dx(b->x, x)) >> DEF_FP;
-		const int32_t dy = def_abs((b->y >> DEF_FP) - y);
+		const int32_t dx = game_abs(def_dx(b->x, x)) >> DEF_FP;
+		const int32_t dy = game_abs((b->y >> DEF_FP) - y);
 		if (dx < range && dy < (range >> 1)) {
 			*by = b->y >> DEF_FP;
 			return true;
@@ -867,5 +867,5 @@ uint32_t def_enemy_score(uint32_t type) {
 }
 
 uint32_t def_enemy_colour(uint32_t type) {
-	return type < DEF_ENEMY_TYPE_COUNT ? _info[type].colour : DEF_WHITE;
+	return type < DEF_ENEMY_TYPE_COUNT ? _info[type].colour : GAME_WHITE;
 }

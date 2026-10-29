@@ -1,8 +1,8 @@
-#include "def_util.h"
+#include "game_util.h"
 
-#define DEF_RAND_DEFAULT_SEED 0x2545f491
+#define GAME_RAND_DEFAULT_SEED 0x2545f491
 
-static uint32_t _rand_state = DEF_RAND_DEFAULT_SEED;
+static uint32_t _rand_state = GAME_RAND_DEFAULT_SEED;
 
 // A quarter of a sine wave scaled to 127, 0 to 64 inclusive
 static const int8_t _sin_q[65] = {
@@ -13,12 +13,12 @@ static const int8_t _sin_q[65] = {
 	127
 };
 
-void def_rand_seed(uint32_t seed) {
-	_rand_state = seed ? seed : DEF_RAND_DEFAULT_SEED;
+void game_rand_seed(uint32_t seed) {
+	_rand_state = seed ? seed : GAME_RAND_DEFAULT_SEED;
 }
 
 // xorshift32
-uint32_t __not_in_flash_func(def_rand)(void) {
+uint32_t __not_in_flash_func(game_rand)(void) {
 	uint32_t x = _rand_state;
 	x ^= x << 13;
 	x ^= x >> 17;
@@ -27,7 +27,7 @@ uint32_t __not_in_flash_func(def_rand)(void) {
 	return x;
 }
 
-int32_t __not_in_flash_func(def_sin)(uint32_t a) {
+int32_t __not_in_flash_func(game_sin)(uint32_t a) {
 	a &= 255;
 	const uint32_t q = a & 63;
 	switch (a >> 6) {

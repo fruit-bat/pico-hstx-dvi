@@ -1,8 +1,8 @@
 #include "def_hud.h"
-#include "def_render.h"
-#include "def_pallet.h"
+#include "game_render.h"
+#include "game_pallet.h"
 #include "def_player.h"
-#include "def_hiscore.h"
+#include "game_hiscore.h"
 #include "def_world.h"
 #include <stdio.h>
 
@@ -16,9 +16,9 @@ static uint32_t _score = 0;
 static uint32_t _lives = 0;
 static uint32_t _smart = 0;
 static uint32_t _next_bonus = 0;
-static DefText_t _score_text;
-static DefText_t _hi_text;
-static DefText_t _wave_text;
+static GameText_t _score_text;
+static GameText_t _hi_text;
+static GameText_t _wave_text;
 
 static Tile8x8p2_t _tile_smart = {{
 	0b00000000,
@@ -76,31 +76,31 @@ bool def_hud_use_smart_bomb(void) {
 }
 
 void def_hud_draw(uint32_t wave, bool in_game) {
-	char t[DEF_TEXT_MAX];
+	char t[GAME_TEXT_MAX];
 	snprintf(t, sizeof(t), "%7lu", (unsigned long)(_score % 10000000));
-	def_text_set(&_score_text, t, 2);
-	def_spr_text(&_score_text, 16, 6, def_pallet(DEF_CYAN));
+	game_text_set(&_score_text, t, 2);
+	game_spr_text(&_score_text, 16, 6, game_pallet(GAME_CYAN));
 
-	const uint32_t top = def_hiscore_top();
+	const uint32_t top = game_hiscore_top();
 	snprintf(t, sizeof(t), "HI %07lu", (unsigned long)((_score > top ? _score : top) % 10000000));
-	def_text_set(&_hi_text, t, 1);
-	def_spr_text(&_hi_text, 472, 10, def_pallet(DEF_WHITE));
+	game_text_set(&_hi_text, t, 1);
+	game_spr_text(&_hi_text, 472, 10, game_pallet(GAME_WHITE));
 
 	if (in_game) {
 		snprintf(t, sizeof(t), "WAVE %lu", (unsigned long)wave);
-		def_text_set(&_wave_text, t, 1);
-		def_spr_text(&_wave_text, 472, 26, def_pallet(DEF_GREEN));
+		game_text_set(&_wave_text, t, 1);
+		game_spr_text(&_wave_text, 472, 26, game_pallet(GAME_GREEN));
 	}
 
 	// Separates the scanner from the play area
-	def_spr_hline(0, DEF_HUD_H - 2, DEF_SCREEN_W, def_pallet(DEF_BLUE));
+	game_spr_hline(0, DEF_HUD_H - 2, GAME_SCREEN_W, game_pallet(GAME_BLUE));
 
 	if (in_game) {
 		for (uint32_t i = 0; i < _lives && i < DEF_HUD_ICONS; ++i) {
-			def_spr_add(16 + i * 20, 28, 16, 8, def_player_icon(), def_pallet(DEF_WHITE), sprite_renderer_sprite_16x8_p1);
+			game_spr_add(16 + i * 20, 28, 16, 8, def_player_icon(), game_pallet(GAME_WHITE), sprite_renderer_sprite_16x8_p1);
 		}
 		for (uint32_t i = 0; i < _smart && i < DEF_HUD_ICONS; ++i) {
-			def_spr_add(16 + i * 12, 40, 8, 6, &_tile_smart, def_pallet(DEF_RED), sprite_renderer_sprite_8x8_p1);
+			game_spr_add(16 + i * 12, 40, 8, 6, &_tile_smart, game_pallet(GAME_RED), sprite_renderer_sprite_8x8_p1);
 		}
 	}
 }

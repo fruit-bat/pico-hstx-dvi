@@ -1,13 +1,13 @@
 #include "def_player.h"
 #include "def_world.h"
-#include "def_render.h"
-#include "def_pallet.h"
+#include "game_render.h"
+#include "game_pallet.h"
 #include "def_input.h"
-#include "def_util.h"
-#include "def_fx.h"
+#include "game_util.h"
+#include "game_fx.h"
 #include "def_hud.h"
 #include "def_enemy.h"
-#include "def_art.h"
+#include "game_art.h"
 
 #define DEF_SHIP_MAX_VX DEF_PX(10)
 #define DEF_SHIP_ACCEL 96
@@ -70,7 +70,7 @@ static const char* const _art_ship[] = {
 	"..WWWWWWWWWWWWWWWWWWWWWW........",
 	"....GGGGGGGGGGGGGGGGG...........",
 };
-static const uint8_t _ship_colours[] = { DEF_WHITE, DEF_CYAN, DEF_RED, DEF_PURPLE, DEF_GREY };
+static const uint8_t _ship_colours[] = { GAME_WHITE, GAME_CYAN, GAME_RED, GAME_PURPLE, GAME_GREY };
 
 // The exhaust, two frames of flicker
 static const char* const _art_flame[2][5] = {
@@ -89,11 +89,11 @@ static const char* const _art_flame[2][5] = {
 		"............FFF.",
 	},
 };
-static const uint8_t _flame_colours[] = { DEF_YELLOW };
+static const uint8_t _flame_colours[] = { GAME_YELLOW };
 
 // Right and left facing
-static DefArt_t _ship[2];
-static DefArt_t _flame[2][2];
+static GameArt_t _ship[2];
+static GameArt_t _flame[2][2];
 
 // A smaller ship to count the lives with
 static Tile16x8p2_t _tile_icon = {{
@@ -110,11 +110,11 @@ static Tile16x8p2_t _tile_icon = {{
 static bool _art_made = false;
 
 static void make_art(void) {
-	def_art_make(&_ship[0], _art_ship, DEF_ART_ROWS(_art_ship), "WCRPG", _ship_colours);
-	def_art_mirror(&_ship[1], &_ship[0]);
+	game_art_make(&_ship[0], _art_ship, GAME_ART_ROWS(_art_ship), "WCRPG", _ship_colours);
+	game_art_mirror(&_ship[1], &_ship[0]);
 	for (uint32_t i = 0; i < 2; ++i) {
-		def_art_make(&_flame[0][i], _art_flame[i], DEF_ART_ROWS(_art_flame[i]), "F", _flame_colours);
-		def_art_mirror(&_flame[1][i], &_flame[0][i]);
+		game_art_make(&_flame[0][i], _art_flame[i], GAME_ART_ROWS(_art_flame[i]), "F", _flame_colours);
+		game_art_mirror(&_flame[1][i], &_flame[0][i]);
 	}
 	_art_made = true;
 }
@@ -165,12 +165,12 @@ static void update_lasers(void) {
 }
 
 static void hyperspace(void) {
-	def_fx_explode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 16, DEF_PX(2));
-	_x = def_rand() % DEF_WORLD_W_FP;
-	_y = DEF_PLAY_TOP + def_rand() % (DEF_TERRAIN_TOP - DEF_PLAY_TOP);
+	game_fx_explode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), GAME_WHITE, 16, DEF_PX(2));
+	_x = game_rand() % DEF_WORLD_W_FP;
+	_y = DEF_PLAY_TOP + game_rand() % (DEF_TERRAIN_TOP - DEF_PLAY_TOP);
 	_vx = 0;
 	def_player_clear_lasers();
-	def_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 16, 20);
+	game_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), GAME_WHITE, 16, 20);
 }
 
 void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8_t pressed) {
@@ -191,9 +191,9 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 			}
 			else {
 				_vx -= _vx / 24;
-				if (def_abs(_vx) < 16) _vx = 0;
+				if (game_abs(_vx) < 16) _vx = 0;
 			}
-			_vx = def_clamp(_vx, -DEF_SHIP_MAX_VX, DEF_SHIP_MAX_VX);
+			_vx = game_clamp(_vx, -DEF_SHIP_MAX_VX, DEF_SHIP_MAX_VX);
 			_x = def_wrap(_x + _vx);
 
 			// Up and down together is hyperspace
@@ -206,7 +206,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 			else if (input & DEF_INP_BIT_D) {
 				_y += DEF_SHIP_VY;
 			}
-			_y = def_clamp(_y, DEF_PLAY_TOP, DEF_SCREEN_H - DEF_SHIP_H - 2);
+			_y = game_clamp(_y, DEF_PLAY_TOP, GAME_SCREEN_H - DEF_SHIP_H - 2);
 
 			if (_fire_timer) --_fire_timer;
 			if ((pressed & DEF_INP_BIT_F) || ((input & DEF_INP_BIT_F) && !_fire_timer)) {
@@ -216,7 +216,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 
 			if ((pressed & DEF_INP_BIT_B) && def_hud_use_smart_bomb()) {
 				def_enemy_smart_bomb();
-				def_fx_flash(DEF_SMART_FLASH);
+				game_fx_flash(DEF_SMART_FLASH);
 			}
 			break;
 		}
@@ -227,7 +227,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 					_vx = 0;
 					_y = DEF_SHIP_START_Y;
 					def_enemy_clear_bullets();
-					def_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), DEF_WHITE, 24, 30);
+					game_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), GAME_WHITE, 24, 30);
 				}
 				else {
 					_state = DEF_PLAYER_OVER;
@@ -241,8 +241,8 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 	}
 
 	// The ship swings across the screen to see what is ahead
-	const int32_t target = _right ? DEF_SHIP_OFFSET : DEF_SCREEN_W - DEF_SHIP_OFFSET - DEF_SHIP_W;
-	_offset += def_clamp(target - _offset, -DEF_SHIP_SWING, DEF_SHIP_SWING);
+	const int32_t target = _right ? DEF_SHIP_OFFSET : GAME_SCREEN_W - DEF_SHIP_OFFSET - DEF_SHIP_W;
+	_offset += game_clamp(target - _offset, -DEF_SHIP_SWING, DEF_SHIP_SWING);
 	def_world_set_camera(_x - DEF_PX(_offset));
 }
 
@@ -250,11 +250,11 @@ void __not_in_flash_func(def_player_draw)(uint32_t frame) {
 	if (_state != DEF_PLAYER_ALIVE) return;
 	const int32_t sx = def_world_screen_x(_x);
 	const uint32_t f = _right ? 0 : 1;
-	def_art_draw(&_ship[f], sx, _y, NULL);
+	game_art_draw(&_ship[f], sx, _y, NULL);
 	if (_thrust) {
 		// The colour changes slowly enough to see, while the shape flickers
-		const uint8_t c[1] = { ((frame >> DEF_FLAME_COLOUR_SHIFT) & 1) ? DEF_YELLOW : DEF_RED };
-		def_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + 4, c);
+		const uint8_t c[1] = { ((frame >> DEF_FLAME_COLOUR_SHIFT) & 1) ? GAME_YELLOW : GAME_RED };
+		game_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + 4, c);
 	}
 }
 
@@ -265,7 +265,7 @@ void __not_in_flash_func(def_player_draw_lasers)(uint32_t frame) {
 		const int32_t len = l->head - l->tail;
 		if (len <= 0) continue;
 		const int32_t sx = def_world_screen_x(l->x);
-		def_spr_laser(l->dir > 0 ? sx + l->tail : sx - l->head, l->y, len, l->dir < 0, def_pallet_rainbow(frame + i));
+		game_spr_laser(l->dir > 0 ? sx + l->tail : sx - l->head, l->y, len, l->dir < 0, game_pallet_rainbow(frame + i));
 	}
 }
 
@@ -275,8 +275,8 @@ void def_player_kill(void) {
 	_timer = DEF_PLAYER_DEAD_FRAMES;
 	const int32_t cx = def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1));
 	const int32_t cy = DEF_PX(_y + (DEF_SHIP_H >> 1));
-	def_fx_explode(cx, cy, DEF_COLOUR_RANDOM, 64, DEF_PX(4));
-	def_fx_explode(cx, cy, DEF_WHITE, 32, DEF_PX(2));
+	game_fx_explode(cx, cy, GAME_COLOUR_RANDOM, 64, DEF_PX(4));
+	game_fx_explode(cx, cy, GAME_WHITE, 32, DEF_PX(2));
 	def_player_clear_lasers();
 }
 

@@ -13,7 +13,8 @@ extern "C" {
 #define INV_BULLET_COLLISION_MASK  ((SpriteCollisionMask)0x0008)
 #define INV_BOMB_COLLISION_MASK    ((SpriteCollisionMask)0x0010)
 #define INV_BASE_COLLISION_MASK    ((SpriteCollisionMask)0x0100)
-#define INV_BASE_COLLISION_MASKS   ((SpriteCollisionMask)0x0f00)
+// One for each base sprite
+#define INV_BASE_COLLISION_MASKS   ((SpriteCollisionMask)0xff00)
 
 #ifdef __cplusplus
 }

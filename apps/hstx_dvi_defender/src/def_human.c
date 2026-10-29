@@ -1,13 +1,13 @@
 #include "def_human.h"
 #include "def_world.h"
-#include "def_render.h"
-#include "def_pallet.h"
+#include "game_render.h"
+#include "game_pallet.h"
 #include "def_player.h"
 #include "def_scanner.h"
 #include "def_hud.h"
-#include "def_fx.h"
-#include "def_util.h"
-#include "def_art.h"
+#include "game_fx.h"
+#include "game_util.h"
+#include "game_art.h"
 
 #define DEF_HUMAN_GRAVITY 20
 #define DEF_HUMAN_MAX_FALL DEF_PX(3)
@@ -46,11 +46,11 @@ static const char* const _art_human[] = {
 	".P..P...........",
 	"PP..PP..........",
 };
-static const uint8_t _human_colours[] = { DEF_PINK, DEF_GREEN, DEF_PURPLE };
+static const uint8_t _human_colours[] = { GAME_PINK, GAME_GREEN, GAME_PURPLE };
 // Waving for help when in trouble
-static const uint8_t _human_alarm[] = { DEF_WHITE, DEF_YELLOW, DEF_PURPLE };
+static const uint8_t _human_alarm[] = { GAME_WHITE, GAME_YELLOW, GAME_PURPLE };
 
-static DefArt_t _human;
+static GameArt_t _human;
 static bool _art_made = false;
 
 static __force_inline int32_t standing_y(const int32_t x) {
@@ -59,7 +59,7 @@ static __force_inline int32_t standing_y(const int32_t x) {
 
 void def_human_init(uint32_t count) {
 	if (!_art_made) {
-		def_art_make(&_human, _art_human, DEF_ART_ROWS(_art_human), "KGP", _human_colours);
+		game_art_make(&_human, _art_human, GAME_ART_ROWS(_art_human), "KGP", _human_colours);
 		_art_made = true;
 	}
 	for (uint32_t i = 0; i < DEF_HUMAN_MAX; ++i) {
@@ -69,8 +69,8 @@ void def_human_init(uint32_t count) {
 			continue;
 		}
 		h->state = DEF_HS_GROUND;
-		h->dir = (def_rand() & 1) ? 1 : -1;
-		h->x = def_wrap(DEF_PX(i * (DEF_WORLD_W / count) + def_rand() % 200));
+		h->dir = (game_rand() & 1) ? 1 : -1;
+		h->x = def_wrap(DEF_PX(i * (DEF_WORLD_W / count) + game_rand() % 200));
 		h->y = standing_y(h->x);
 		h->vy = 0;
 	}
@@ -81,7 +81,7 @@ static void land(DefHuman_t* h, const uint32_t points) {
 	h->vy = 0;
 	h->y = standing_y(h->x);
 	def_hud_add_score(points);
-	def_fx_popup(h->x, (h->y >> DEF_FP) - 12, points);
+	game_fx_popup(h->x, (h->y >> DEF_FP) - 12, points);
 }
 
 void __not_in_flash_func(def_human_update)(uint32_t frame) {
@@ -91,7 +91,7 @@ void __not_in_flash_func(def_human_update)(uint32_t frame) {
 			case DEF_HS_GROUND: {
 				// Wander about
 				if ((frame & 7) == 0) h->x = def_wrap(h->x + DEF_PX(h->dir));
-				if ((def_rand() & 255) == 0) h->dir = -h->dir;
+				if ((game_rand() & 255) == 0) h->dir = -h->dir;
 				h->y = standing_y(h->x);
 				break;
 			}
@@ -102,7 +102,7 @@ void __not_in_flash_func(def_human_update)(uint32_t frame) {
 				if (def_player_hit(h->x, h->y >> DEF_FP, DEF_HUMAN_W, DEF_HUMAN_H)) {
 					h->state = DEF_HS_CAUGHT;
 					def_hud_add_score(DEF_HUMAN_CATCH_SCORE);
-					def_fx_popup(h->x, (h->y >> DEF_FP) - 12, DEF_HUMAN_CATCH_SCORE);
+					game_fx_popup(h->x, (h->y >> DEF_FP) - 12, DEF_HUMAN_CATCH_SCORE);
 				}
 				else if (h->y >= standing_y(h->x)) {
 					if (def_world_ground_y(h->x) - h->fall_y > DEF_HUMAN_SAFE_FALL) {
@@ -137,16 +137,16 @@ void __not_in_flash_func(def_human_draw)(uint32_t frame) {
 		const DefHuman_t* h = &_humans[i];
 		if (h->state == DEF_HS_DEAD) continue;
 		const int32_t sx = def_world_screen_x(h->x);
-		if (sx <= -8 || sx >= DEF_SCREEN_W) continue;
+		if (sx <= -8 || sx >= GAME_SCREEN_W) continue;
 		const bool alarm = (h->state == DEF_HS_CARRIED || h->state == DEF_HS_FALLING) && (frame & 8);
-		def_art_draw(&_human, sx, h->y >> DEF_FP, alarm ? _human_alarm : NULL);
+		game_art_draw(&_human, sx, h->y >> DEF_FP, alarm ? _human_alarm : NULL);
 	}
 }
 
 void def_human_scan(void) {
 	for (uint32_t i = 0; i < DEF_HUMAN_MAX; ++i) {
 		const DefHuman_t* h = &_humans[i];
-		if (h->state != DEF_HS_DEAD) def_scanner_dot(h->x, h->y >> DEF_FP, DEF_PINK);
+		if (h->state != DEF_HS_DEAD) def_scanner_dot(h->x, h->y >> DEF_FP, GAME_PINK);
 	}
 }
 
@@ -164,7 +164,7 @@ int32_t def_human_pick(void) {
 		if (_humans[i].state == DEF_HS_GROUND) ++n;
 	}
 	if (!n) return -1;
-	uint32_t k = def_rand() % n;
+	uint32_t k = game_rand() % n;
 	for (uint32_t i = 0; i < DEF_HUMAN_MAX; ++i) {
 		if (_humans[i].state == DEF_HS_GROUND && k-- == 0) return i;
 	}
@@ -207,9 +207,9 @@ void def_human_kill(int32_t i) {
 	DefHuman_t* h = &_humans[i];
 	if (h->state == DEF_HS_DEAD) return;
 	h->state = DEF_HS_DEAD;
-	def_fx_explode(def_wrap(h->x + DEF_PX(DEF_HUMAN_W >> 1)), h->y + DEF_PX(DEF_HUMAN_H >> 1), DEF_PINK, 20, DEF_PX(2));
+	game_fx_explode(def_wrap(h->x + DEF_PX(DEF_HUMAN_W >> 1)), h->y + DEF_PX(DEF_HUMAN_H >> 1), GAME_PINK, 20, DEF_PX(2));
 }
 
 void def_human_draw_icon(int32_t sx, int32_t sy) {
-	def_art_draw(&_human, sx, sy, NULL);
+	game_art_draw(&_human, sx, sy, NULL);
 }

@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define INV_GUN_W 24
+
 SpriteId inv_gun_init(SpriteId start);
 
 // input is the button state, from the player or the demo

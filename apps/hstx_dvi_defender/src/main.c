@@ -15,7 +15,7 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include "def_input.h"
-#include "def_pallet.h"
+#include "game_pallet.h"
 #include "def_hiscore.h"
 #include "def_hud.h"
 #include "def_world.h"
@@ -46,9 +46,10 @@ int main(void)
 	stdio_init_all();
 	app_led_on();
 
-	def_input_init();
-	def_pallet_init();
-	def_hiscore_init();
+	game_input_init(DEF_INP_GPIO_START, DEF_INP_GPIO_COUNT);
+	game_pallet_init();
+	game_hiscore_init(def_hiscore_defaults());
+	game_fx_set_view(def_world_fx_view());
 	def_hud_reset();
 	def_world_init();
 

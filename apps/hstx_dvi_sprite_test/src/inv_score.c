@@ -1,10 +1,10 @@
 #include "inv_score.h"
 #include "font_inv.h"
 #include <stdio.h>
-#include "inv_pallet.h"
+#include "game_pallet.h"
 #include "inv_gun.h"
 #include "inv_level.h"
-#include "inv_hiscore.h"
+#include "game_hiscore.h"
 #include <string.h>
 
 #define INV_SCORE_TEXT_WIDTH 72
@@ -27,7 +27,7 @@ static void put_text(const uint32_t at, const char* fmt, const unsigned long v) 
 }
 
 void __not_in_flash_func(inv_score_update)(void) {
-	const uint32_t top = inv_hiscore_top();
+	const uint32_t top = game_hiscore_top();
 	put_text(0, "SCORE %06lu", _score % 1000000);
 	put_text(26, "HI %06lu", (_score > top ? _score : top) % 1000000);
 	if (_in_game) {
@@ -49,7 +49,7 @@ SpriteId inv_score_init(SpriteId start, bool in_game) {
 		1*8,
 		SF_ENABLE,
 		&_textGrid1,
-		inv_pallet_green(),
+		game_pallet(GAME_GREEN),
 		text_renderer_8x8_p1);
 
 	return _sprite_index + 1;

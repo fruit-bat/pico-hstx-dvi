@@ -11,7 +11,9 @@ SpriteId inv_bombs_init(SpriteId start);
 
 void inv_bombs_update(void);
 
-void inv_bombs_fire(SpriteId invSpriteId);
+// Drops a bomb with its top left at x, y. Each kind of invader has its own
+// kind of bomb, see inv_alien.h.
+void inv_bombs_fire(int32_t x, int32_t y, uint32_t kind);
 
 void inv_bombs_clear(void);
 

@@ -1,15 +1,9 @@
 
 add_executable(hstx_dvi_defender
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_input.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_util.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_pallet.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_render.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_art.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_world.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_scanner.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_hud.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/def_fx.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_player.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_enemy.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_human.c
@@ -33,6 +27,7 @@ target_link_libraries(hstx_dvi_defender
   hardware_pio
   pico_sync
   pico_hstx_dvi
+  game_common
 )
 
 # create map/bin/hex file etc.

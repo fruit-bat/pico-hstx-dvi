@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pico/stdlib.h"
+#include "game_input.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,10 +12,11 @@ extern "C" {
 #define INV_INP_BIT_F 4
 #define INV_INP_BIT_S 8
 
-void init_inv_input();
-uint8_t get_inv_input();
-// Buttons that have gone down since the last call
-uint8_t inv_input_pressed();
+// Left, right, fire and start on consecutive GPIOs from here
+#ifndef INV_INP_GPIO_START
+#define INV_INP_GPIO_START 6
+#endif
+#define INV_INP_GPIO_COUNT 4
 
 bool __force_inline is_inv_input_left(uint8_t input) {
     return (input & INV_INP_BIT_L) != 0;
@@ -35,4 +37,3 @@ bool __force_inline is_inv_input_play(uint8_t input) {
 #ifdef __cplusplus
 }
 #endif
-

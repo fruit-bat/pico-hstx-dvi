@@ -11,7 +11,8 @@ SpriteId inv_bullets_init(SpriteId start);
 
 void inv_bullets_update(void);
 
-void inv_bullets_fire(SpriteId gunSpriteId);
+// x is where the bullet goes up, y the bottom of it
+void inv_bullets_fire(int32_t x, int32_t y);
 
 void inv_bullets_clear(void);
 
