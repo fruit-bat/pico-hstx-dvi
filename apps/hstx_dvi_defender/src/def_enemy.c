@@ -43,6 +43,8 @@ typedef struct {
 	int32_t vx, vy;
 	int32_t base_y;
 	uint32_t anim;
+	// So they do not all move in step
+	uint8_t phase;
 } DefEnemy_t;
 
 typedef struct {
@@ -62,78 +64,283 @@ typedef struct {
 	// Chance out of 4096 of firing each frame
 	uint16_t fire;
 	DefArt_t* art;
+	uint8_t frames;
+	// Each frame is shown for 1 << rate frames
+	uint8_t rate;
 } DefEnemyInfo_t;
 
 static DefEnemy_t _enemies[DEF_ENEMY_MAX];
 static DefBullet_t _bullets[DEF_BULLET_MAX];
 static uint32_t _wave = 1;
 
-static const char* const _art_lander[] = {
+// The lander is put together from parts, so it can look about and flex its legs
+static const char* const _lander_top[] = {
 	"....GGGGGGGG....",
 	"..GGGGGGGGGGGG..",
-	".GGGRRGGGGRRGGG.",
-	".GGRRRRGGRRRRGG.",
-	".GGGRRGGGGRRGGG.",
+};
+
+static const char* const _lander_eyes[4][3] = {
+	{
+		".GGGRRGGGGRRGGG.",
+		".GGRRRRGGRRRRGG.",
+		".GGGRRGGGGRRGGG.",
+	},
+	{
+		".GGRRGGGGRRGGGG.",
+		".GRRRRGGRRRRGGG.",
+		".GGRRGGGGRRGGGG.",
+	},
+	{
+		".GGGGRRGGGGRRGG.",
+		".GGGRRRRGGRRRRG.",
+		".GGGGRRGGGGRRGG.",
+	},
+	{
+		".GGGGGGGGGGGGGG.",
+		".GGRRRRGGRRRRGG.",
+		".GGGGGGGGGGGGGG.",
+	},
+};
+
+static const char* const _lander_middle[] = {
 	"..GGGGGGGGGGGG..",
 	"...GG.GGGG.GG...",
-	"....GGGGGGGG....",
-	"...WW......WW...",
-	"..WW........WW..",
-	".WW..........WW.",
-	"WW............WW",
 };
 
-static const char* const _art_baiter[] = {
+// Lights that run round the rim
+static const char* const _lander_rim[4] = {
+	"....WGGGWGGG....",
+	"....GWGGGWGG....",
+	"....GGWGGGWG....",
+	"....GGGWGGGW....",
+};
+
+static const char* const _lander_legs[3][4] = {
+	{
+		"...WW......WW...",
+		"..WW........WW..",
+		".WW..........WW.",
+		"WW............WW",
+	},
+	{
+		"...WW......WW...",
+		"...WW......WW...",
+		"..WW........WW..",
+		".WW..........WW.",
+	},
+	// Clutching a humanoid
+	{
+		"...WW......WW...",
+		"....WW....WW....",
+		".....WW..WW.....",
+		"......W..W......",
+	},
+};
+
+static const char* const _mutant_legs[2][4] = {
+	{
+		"..W..W....W..W..",
+		".W....W..W....W.",
+		"..W..W....W..W..",
+		".W....W..W....W.",
+	},
+	{
+		".W....W..W....W.",
+		"..W..W....W..W..",
+		".W....W..W....W.",
+		"..W..W....W..W..",
+	},
+};
+
+#define DEF_EYES_CENTRE 0
+#define DEF_EYES_LEFT 1
+#define DEF_EYES_RIGHT 2
+#define DEF_EYES_BLINK 3
+#define DEF_LANDER_FRAMES 8
+#define DEF_LANDER_CLUTCH DEF_LANDER_FRAMES
+#define DEF_MUTANT_FRAMES 4
+
+static const uint8_t _lander_look[DEF_LANDER_FRAMES] = {
+	DEF_EYES_CENTRE, DEF_EYES_CENTRE, DEF_EYES_LEFT, DEF_EYES_LEFT,
+	DEF_EYES_CENTRE, DEF_EYES_BLINK, DEF_EYES_RIGHT, DEF_EYES_RIGHT,
+};
+
+// The baiter's windows go dark one after the other and the lights underneath wink
+static const char* const _baiter_top[] = {
 	"...........GGGGGGGGGG...........",
 	"......GGGGGGGGGGGGGGGGGGGG......",
-	"...GGGGWWGGWWGGWWGGWWGGWWGGGG...",
+};
+
+static const char* const _baiter_windows[4] = {
+	"...GGGGGGGGWWGGWWGGWWGGGGGGGG...",
+	"...GGGGWWGGGGGGWWGGWWGGWWGGGG...",
+	"...GGGGWWGGWWGGGGGGWWGGWWGGGG...",
+	"...GGGGWWGGWWGGWWGGGGGGWWGGGG...",
+};
+
+static const char* const _baiter_bottom[] = {
 	"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
 	"...GGGGGGGGGGGGGGGGGGGGGGGGGG...",
+};
+
+static const char* const _baiter_lights[2] = {
 	"......RR....RR....RR....RR......",
+	"........RR....RR....RR....RR....",
 };
 
-static const char* const _art_bomber[] = {
-	"..BBBBBBBBBBBB..",
-	".BBBBBBBBBBBBBB.",
-	"BBYYBBBBBBBBYYBB",
-	"BBYYBBBBBBBBYYBB",
-	"BBBBBB....BBBBBB",
-	"BBBBB.YYYY.BBBBB",
-	"BBBBB.YYYY.BBBBB",
-	"BBBBB.YYYY.BBBBB",
-	"BBBBB.YYYY.BBBBB",
-	"BBBBBB....BBBBBB",
-	"BBYYBBBBBBBBYYBB",
-	"BBYYBBBBBBBBYYBB",
-	".BBBBBBBBBBBBBB.",
-	"..BBBBBBBBBBBB..",
+#define DEF_BAITER_FRAMES 4
+
+// The lights go round the bomber as its middle pulses
+#define DEF_BOMBER_FRAMES 4
+#define DEF_BOMBER_H 14
+
+static const char* const _art_bomber[DEF_BOMBER_FRAMES][DEF_BOMBER_H] = {
+	{
+		"..BBBBBBBBBBBB..",
+		".BBBBBBBBBBBBBB.",
+		"BBYYBBBBBBBBYYBB",
+		"BBYYBBBBBBBBYYBB",
+		"BBBBBB....BBBBBB",
+		"BBBBB.YYYY.BBBBB",
+		"BBBBB.YYYY.BBBBB",
+		"BBBBB.YYYY.BBBBB",
+		"BBBBB.YYYY.BBBBB",
+		"BBBBBB....BBBBBB",
+		"BBYYBBBBBBBBYYBB",
+		"BBYYBBBBBBBBYYBB",
+		".BBBBBBBBBBBBBB.",
+		"..BBBBBBBBBBBB..",
+	},
+	{
+		"..BBBBBBBBBBBB..",
+		".BBBBBBYYBBBBBB.",
+		"BBBBBBBYYBBBBBBB",
+		"BBBBBBBBBBBBBBBB",
+		"BBBBBB....BBBBBB",
+		"BBBBB......BBBBB",
+		"BYYBB..YY..BBYYB",
+		"BYYBB..YY..BBYYB",
+		"BBBBB......BBBBB",
+		"BBBBBB....BBBBBB",
+		"BBBBBBBBBBBBBBBB",
+		"BBBBBBBYYBBBBBBB",
+		".BBBBBBYYBBBBBB.",
+		"..BBBBBBBBBBBB..",
+	},
+	{
+		"..BBBBBBBBBBBB..",
+		".BBBBBBBBBBBBBB.",
+		"BBYYBBBBBBBBYYBB",
+		"BBYYBBBBBBBBYYBB",
+		"BBBBBB....BBBBBB",
+		"BBBBB......BBBBB",
+		"BBBBB......BBBBB",
+		"BBBBB......BBBBB",
+		"BBBBB......BBBBB",
+		"BBBBBB....BBBBBB",
+		"BBYYBBBBBBBBYYBB",
+		"BBYYBBBBBBBBYYBB",
+		".BBBBBBBBBBBBBB.",
+		"..BBBBBBBBBBBB..",
+	},
+	{
+		"..BBBBBBBBBBBB..",
+		".BBBBBBYYBBBBBB.",
+		"BBBBBBBYYBBBBBBB",
+		"BBBBBBBBBBBBBBBB",
+		"BBBBBB....BBBBBB",
+		"BBBBB......BBBBB",
+		"BYYBB..YY..BBYYB",
+		"BYYBB..YY..BBYYB",
+		"BBBBB......BBBBB",
+		"BBBBBB....BBBBBB",
+		"BBBBBBBBBBBBBBBB",
+		"BBBBBBBYYBBBBBBB",
+		".BBBBBBYYBBBBBB.",
+		"..BBBBBBBBBBBB..",
+	},
 };
 
-static const char* const _art_pod[] = {
-	"P......PP......P",
-	".P.....PP.....P.",
-	"..P..PPPPPP..P..",
-	"...PPPPPPPPPP...",
-	"...PPRRRRRRPP...",
-	"..PPRRWWWWRRPP..",
-	"PPPPRWWWWWWRPPPP",
-	"PPPPRWWWWWWRPPPP",
-	"..PPRRWWWWRRPP..",
-	"...PPRRRRRRPP...",
-	"...PPPPPPPPPP...",
-	"..P..PPPPPP..P..",
-	".P.....PP.....P.",
-	"P......PP......P",
+// The pod's spikes turn as its core throbs
+#define DEF_POD_FRAMES 2
+#define DEF_POD_H 14
+
+static const char* const _art_pod[DEF_POD_FRAMES][DEF_POD_H] = {
+	{
+		"P..............P",
+		".P............P.",
+		"..P..PPPPPP..P..",
+		"...PPPPPPPPPP...",
+		"...PPRRRRRRPP...",
+		"..PPRRWWWWRRPP..",
+		"..PPRWWWWWWRPP..",
+		"..PPRWWWWWWRPP..",
+		"..PPRRWWWWRRPP..",
+		"...PPRRRRRRPP...",
+		"...PPPPPPPPPP...",
+		"..P..PPPPPP..P..",
+		".P............P.",
+		"P..............P",
+	},
+	{
+		".......PP.......",
+		".......PP.......",
+		".....PPPPPP.....",
+		"...PPPPPPPPPP...",
+		"...PPRRRRRRPP...",
+		"..PPRRRWWRRRPP..",
+		"PPPPRRWWWWRRPPPP",
+		"PPPPRRWWWWRRPPPP",
+		"..PPRRRWWRRRPP..",
+		"...PPRRRRRRPP...",
+		"...PPPPPPPPPP...",
+		".....PPPPPP.....",
+		".......PP.......",
+		".......PP.......",
+	},
 };
 
-static const char* const _art_swarmer[] = {
-	"......RRRR......",
-	"....RRRRRRRR....",
-	"..RRRRYYYYRRRR..",
-	"RRRRRYYYYYYRRRRR",
-	"..RRRRYYYYRRRR..",
-	"....RRRRRRRR....",
-	"......RRRR......",
+// The swarmer flaps its wings
+#define DEF_SWARMER_FRAMES 4
+#define DEF_SWARMER_H 7
+
+static const char* const _art_swarmer[DEF_SWARMER_FRAMES][DEF_SWARMER_H] = {
+	{
+		"......RRRR......",
+		"....RRRRRRRR....",
+		"..RRRRYYYYRRRR..",
+		"RRRRRYYYYYYRRRRR",
+		"..RRRRYYYYRRRR..",
+		"....RRRRRRRR....",
+		"......RRRR......",
+	},
+	{
+		"R.....RRRR.....R",
+		".RR.RRRRRRRR.RR.",
+		"..RRRRYYYYRRRR..",
+		"....RYYYYYYR....",
+		"....RRYYYYRR....",
+		".....RRRRRR.....",
+		"......RRRR......",
+	},
+	{
+		"......RRRR......",
+		"....RRRRRRRR....",
+		"..RRRRYYYYRRRR..",
+		"RRRRRYYYYYYRRRRR",
+		"..RRRRYYYYRRRR..",
+		"....RRRRRRRR....",
+		"......RRRR......",
+	},
+	{
+		"......RRRR......",
+		".....RRRRRR.....",
+		"....RRYYYYRR....",
+		"....RYYYYYYR....",
+		"..RRRRYYYYRRRR..",
+		".RR.RRRRRRRR.RR.",
+		"R.....RRRR.....R",
+	},
 };
 
 static const uint8_t _lander_colours[] = { DEF_GREEN, DEF_RED, DEF_WHITE };
@@ -145,12 +352,13 @@ static const uint8_t _bomber_colours[] = { DEF_BLUE, DEF_YELLOW };
 static const uint8_t _pod_colours[] = { DEF_PURPLE, DEF_RED, DEF_WHITE };
 static const uint8_t _swarmer_colours[] = { DEF_RED, DEF_YELLOW };
 
-static DefArt_t _lander;
-static DefArt_t _mutant;
-static DefArt_t _baiter;
-static DefArt_t _bomber;
-static DefArt_t _pod;
-static DefArt_t _swarmer;
+// The lander has an extra frame on the end for when it is carrying a humanoid
+static DefArt_t _lander[DEF_LANDER_FRAMES + 1];
+static DefArt_t _mutant[DEF_MUTANT_FRAMES];
+static DefArt_t _baiter[DEF_BAITER_FRAMES];
+static DefArt_t _bomber[DEF_BOMBER_FRAMES];
+static DefArt_t _pod[DEF_POD_FRAMES];
+static DefArt_t _swarmer[DEF_SWARMER_FRAMES];
 static bool _art_made = false;
 
 static Tile8x8p2_t _tile_bullet[2] = {
@@ -168,21 +376,49 @@ static Tile8x8p2_t _tile_bullet[2] = {
 
 static const DefEnemyInfo_t _info[DEF_ENEMY_TYPE_COUNT] = {
 	{ 0 },
-	{ 16, 12, DEF_GREEN,  DEF_RED,    150,  "LANDER",  24,  &_lander },
-	{ 16, 12, DEF_PURPLE, DEF_GREEN,  150,  "MUTANT",  60,  &_mutant },
-	{ 16, 14, DEF_BLUE,   DEF_YELLOW, 250,  "BOMBER",  0,   &_bomber },
-	{ 16, 14, DEF_PURPLE, DEF_RED,    1000, "POD",     0,   &_pod },
-	{ 16, 7,  DEF_RED,    DEF_YELLOW, 150,  "SWARMER", 40,  &_swarmer },
-	{ 32, 6,  DEF_GREEN,  DEF_WHITE,  200,  "BAITER",  120, &_baiter },
+	{ 16, 12, DEF_GREEN,  DEF_RED,    150,  "LANDER",  24,  _lander,  DEF_LANDER_FRAMES,  3 },
+	{ 16, 12, DEF_PURPLE, DEF_GREEN,  150,  "MUTANT",  60,  _mutant,  DEF_MUTANT_FRAMES,  2 },
+	{ 16, 14, DEF_BLUE,   DEF_YELLOW, 250,  "BOMBER",  0,   _bomber,  DEF_BOMBER_FRAMES,  3 },
+	{ 16, 14, DEF_PURPLE, DEF_RED,    1000, "POD",     0,   _pod,     DEF_POD_FRAMES,     3 },
+	{ 16, 7,  DEF_RED,    DEF_YELLOW, 150,  "SWARMER", 40,  _swarmer, DEF_SWARMER_FRAMES, 2 },
+	{ 32, 6,  DEF_GREEN,  DEF_WHITE,  200,  "BAITER",  120, _baiter,  DEF_BAITER_FRAMES,  2 },
 };
 
+static void make_lander(DefArt_t* a, const uint32_t look, const uint32_t rim, const char* const* legs, const uint8_t* colours) {
+	const char* rows[12] = {
+		_lander_top[0], _lander_top[1],
+		_lander_eyes[look][0], _lander_eyes[look][1], _lander_eyes[look][2],
+		_lander_middle[0], _lander_middle[1],
+		_lander_rim[rim],
+		legs[0], legs[1], legs[2], legs[3],
+	};
+	def_art_make(a, rows, 12, "GRW", colours);
+}
+
 static void make_art(void) {
-	def_art_make(&_lander, _art_lander, DEF_ART_ROWS(_art_lander), "GRW", _lander_colours);
-	def_art_make(&_mutant, _art_lander, DEF_ART_ROWS(_art_lander), "GRW", _mutant_colours);
-	def_art_make(&_baiter, _art_baiter, DEF_ART_ROWS(_art_baiter), "GWR", _baiter_colours);
-	def_art_make(&_bomber, _art_bomber, DEF_ART_ROWS(_art_bomber), "BY", _bomber_colours);
-	def_art_make(&_pod, _art_pod, DEF_ART_ROWS(_art_pod), "PRW", _pod_colours);
-	def_art_make(&_swarmer, _art_swarmer, DEF_ART_ROWS(_art_swarmer), "RY", _swarmer_colours);
+	for (uint32_t f = 0; f < DEF_LANDER_FRAMES; ++f) {
+		make_lander(&_lander[f], _lander_look[f], f & 3, _lander_legs[f & 1], _lander_colours);
+	}
+	make_lander(&_lander[DEF_LANDER_CLUTCH], DEF_EYES_CENTRE, 0, _lander_legs[2], _lander_colours);
+	// Mutants glance wildly about and writhe
+	for (uint32_t f = 0; f < DEF_MUTANT_FRAMES; ++f) {
+		make_lander(&_mutant[f], f & 2 ? DEF_EYES_RIGHT : DEF_EYES_LEFT, f & 3, _mutant_legs[f & 1], _mutant_colours);
+	}
+	for (uint32_t f = 0; f < DEF_BAITER_FRAMES; ++f) {
+		const char* rows[6] = {
+			_baiter_top[0], _baiter_top[1], _baiter_windows[f], _baiter_bottom[0], _baiter_bottom[1], _baiter_lights[f & 1],
+		};
+		def_art_make(&_baiter[f], rows, 6, "GWR", _baiter_colours);
+	}
+	for (uint32_t f = 0; f < DEF_BOMBER_FRAMES; ++f) {
+		def_art_make(&_bomber[f], _art_bomber[f], DEF_BOMBER_H, "BY", _bomber_colours);
+	}
+	for (uint32_t f = 0; f < DEF_POD_FRAMES; ++f) {
+		def_art_make(&_pod[f], _art_pod[f], DEF_POD_H, "PRW", _pod_colours);
+	}
+	for (uint32_t f = 0; f < DEF_SWARMER_FRAMES; ++f) {
+		def_art_make(&_swarmer[f], _art_swarmer[f], DEF_SWARMER_H, "RY", _swarmer_colours);
+	}
 	_art_made = true;
 }
 
@@ -270,6 +506,7 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 		e->vy = 0;
 		e->base_y = y;
 		e->anim = def_rand();
+		e->phase = def_rand();
 		switch (type) {
 			case DEF_ENEMY_LANDER: {
 				const int32_t s = DEF_LANDER_SPEED + (int32_t)(_wave > 8 ? 8 : _wave) * 16;
@@ -479,7 +716,8 @@ void __not_in_flash_func(def_enemy_update)(uint32_t frame, bool frozen) {
 	}
 }
 
-static void draw_enemy(const uint32_t type, const int32_t sx, const int32_t sy, const uint32_t frame) {
+// step counts animation frames, not video frames
+static void draw_enemy(const uint32_t type, const int32_t sx, const int32_t sy, const uint32_t frame, const uint32_t step, const bool clutching) {
 	const DefEnemyInfo_t* info = &_info[type];
 	// Mutants and baiters flicker
 	const uint8_t* colours = NULL;
@@ -487,7 +725,8 @@ static void draw_enemy(const uint32_t type, const int32_t sx, const int32_t sy, 
 		if (type == DEF_ENEMY_MUTANT) colours = _mutant_flicker;
 		else if (type == DEF_ENEMY_BAITER) colours = _baiter_flicker;
 	}
-	def_art_draw(info->art, sx, sy, colours);
+	const uint32_t f = clutching ? DEF_LANDER_CLUTCH : step % info->frames;
+	def_art_draw(&info->art[f], sx, sy, colours);
 }
 
 void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
@@ -497,7 +736,8 @@ void __not_in_flash_func(def_enemy_draw)(uint32_t frame) {
 		int32_t sx = def_world_screen_x(e->x);
 		if (sx <= -_info[e->type].w || sx >= DEF_SCREEN_W) continue;
 		if (e->type == DEF_ENEMY_MUTANT) sx += (int32_t)(def_rand() % 3) - 1;
-		draw_enemy(e->type, sx, e->y >> DEF_FP, frame);
+		const bool clutching = e->type == DEF_ENEMY_LANDER && e->state == DEF_ES_ASCEND;
+		draw_enemy(e->type, sx, e->y >> DEF_FP, frame, (frame >> _info[e->type].rate) + e->phase, clutching);
 	}
 }
 
@@ -607,7 +847,7 @@ bool def_enemy_bullet_near(int32_t x, int32_t y, int32_t range, int32_t* by) {
 void def_enemy_draw_icon(uint32_t type, int32_t sx, int32_t sy, uint32_t frame) {
 	if (type == DEF_ENEMY_NONE || type >= DEF_ENEMY_TYPE_COUNT) return;
 	if (!_art_made) make_art();
-	draw_enemy(type, sx, sy, frame);
+	draw_enemy(type, sx, sy, frame, frame >> _info[type].rate, false);
 }
 
 uint32_t def_enemy_width(uint32_t type) {
