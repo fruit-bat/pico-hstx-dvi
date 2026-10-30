@@ -20,6 +20,9 @@ typedef enum {
 	GAME_GREY,
 	GAME_BROWN,
 	GAME_NAVY,
+	GAME_BLACK,
+	GAME_PEACH,
+	GAME_DARK_BROWN,
 	GAME_COLOUR_COUNT
 } GameColour_e;
 

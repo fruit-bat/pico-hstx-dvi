@@ -42,7 +42,7 @@ The title with the enemies materialising, a demo game played by the Pico, and th
 The sprites are handed out afresh every frame, so only what is on the screen uses one.
 The mountains, scanner, laser beams and big text have their own renderers that draw straight into the row.
 The mountains and scanner are drawn into one buffer while the other is shown.
-These, along with the colours, pictures, explosions and high score table, are in `../common/game`, shared with the invaders app.
+These, along with the colours, pictures, explosions and high score table, are in `../common/game`, shared with the other games.
 
 ## Running on the PC
 
@@ -62,4 +62,4 @@ every 10 seconds of game time.
 
 Each saved frame is about 1MB, so keep the gap between them large on long runs.
 
-The harness itself is in `../common/host`, shared with the invaders app; `host/scenario.c` is what presses the buttons.
+The harness itself is in `../common/host`, shared with the other games; `host/scenario.c` is what presses the buttons.

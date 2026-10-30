@@ -62,4 +62,4 @@ printed every 10 seconds of game time.
 Each saved frame is about 1MB, so keep the gap between them large on long runs.
 
 The harness is in `../common/host` and the colours, pictures, explosions and high score table
-in `../common/game`, shared with the defender app.
+in `../common/game`, shared with the other games.

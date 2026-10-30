@@ -14,6 +14,9 @@ static hstx_dvi_pixel_t _bright[GAME_COLOUR_COUNT] = {
 	HSTX_DVI_PIXEL_RGB(128, 128, 128), // Grey
 	HSTX_DVI_PIXEL_RGB(200, 100, 32),  // Brown
 	HSTX_DVI_PIXEL_RGB(0, 0, 160),     // Navy
+	HSTX_DVI_PIXEL_RGB(0, 0, 0),       // Black
+	HSTX_DVI_PIXEL_RGB(255, 192, 128), // Peach
+	HSTX_DVI_PIXEL_RGB(128, 64, 0),    // Dark brown
 };
 
 static hstx_dvi_pixel_t _dim[GAME_COLOUR_COUNT];
