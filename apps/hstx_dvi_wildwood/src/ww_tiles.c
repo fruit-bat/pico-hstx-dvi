@@ -40,19 +40,19 @@ static __force_inline void put(uint32_t t, int32_t x, int32_t y, uint8_t p) {
 	((uint8_t*)_gfx[t])[(y << WW_TILE_SHIFT) + x] = p;
 }
 
-// -16..15, for patterns that repeat every tile
-static __force_inline int32_t wrap32(int32_t d) {
-	return ((d + 16) & 31) - 16;
+// For patterns that repeat every size pixels, a power of 2
+static __force_inline int32_t wrap(int32_t d, int32_t size) {
+	return ((d + (size >> 1)) & (size - 1)) - (size >> 1);
 }
 
 static uint8_t grass(int32_t x, int32_t y, uint32_t seed) {
 	const uint32_t h = hash(x, y, seed);
 	// Little blades, two pixels tall
 	const uint32_t b = hash(x, y >> 1, seed + 1);
-	if ((b & 31) == 0) return (y & 1) ? RGB(64, 128, 0) : RGB(96, 192, 0);
-	if ((h & 15) == 0) return RGB(0, 64, 0);
-	if ((h & 15) == 1) return RGB(32, 128, 0);
-	return RGB(0, 96, 0);
+	if ((b & 31) == 0) return (y & 1) ? RGB(32, 96, 0) : RGB(64, 128, 0);
+	if ((h & 15) == 0) return RGB(0, 32, 0);
+	if ((h & 15) == 1) return RGB(0, 96, 0);
+	return RGB(0, 64, 0);
 }
 
 static void fill_grass(uint32_t t, uint32_t seed) {
@@ -85,15 +85,19 @@ static void mushroom(uint32_t t, int32_t cx, int32_t cy, int32_t r) {
 	}
 }
 
+// How far each side of a bush is pulled in along its length, so it bulges
+// out in a row of round lumps
+static const int8_t _scallop[8] = { 4, 2, 1, 0, 0, 1, 2, 4 };
+// The gentler wobble of a pond's bank
+static const int8_t _bank[8] = { 0, 1, 2, 2, 1, 0, 1, 2 };
+
 // Whether a pixel is inside a bush or pond, given which sides join up.
-// The open sides are pulled in with a wobble and their corners rounded.
-static bool blob_inside(int32_t x, int32_t y, uint32_t join, int32_t margin, uint32_t seed) {
-	static const int8_t wobble[8] = { 0, 1, 2, 2, 1, 0, 1, 2 };
-	if (!(join & WW_JOIN_N) && y < margin + wobble[(x + seed) & 7]) return false;
-	if (!(join & WW_JOIN_S) && y > 31 - margin - wobble[(x + seed + 3) & 7]) return false;
-	if (!(join & WW_JOIN_W) && x < margin + wobble[(y + seed + 5) & 7]) return false;
-	if (!(join & WW_JOIN_E) && x > 31 - margin - wobble[(y + seed + 1) & 7]) return false;
-	const int32_t r = 10;
+// The open sides are pulled in by the wobble and their corners rounded.
+static bool blob_inside(int32_t x, int32_t y, uint32_t join, int32_t margin, int32_t r, const int8_t* wobble) {
+	if (!(join & WW_JOIN_N) && y < margin + wobble[x & 7]) return false;
+	if (!(join & WW_JOIN_S) && y > 31 - margin - wobble[(x + 4) & 7]) return false;
+	if (!(join & WW_JOIN_W) && x < margin + wobble[(y + 4) & 7]) return false;
+	if (!(join & WW_JOIN_E) && x > 31 - margin - wobble[y & 7]) return false;
 	const int32_t lo = margin + r;
 	const int32_t hi = 31 - margin - r;
 	int32_t dx = 0, dy = 0;
@@ -106,37 +110,35 @@ static bool blob_inside(int32_t x, int32_t y, uint32_t join, int32_t margin, uin
 	return true;
 }
 
-// Overlapping leaves, repeating every tile so neighbouring bushes run together.
-// Returns 0 in the gaps between them.
-static uint8_t leaves(int32_t x, int32_t y, uint32_t seed, uint32_t count, const uint8_t* shades) {
-	uint8_t c = 0;
+// Round clumps of leaves lit from the top left, repeating every size pixels
+// so neighbouring bushes run together. shades are light, middle and dark,
+// with the dark showing in the gaps between them.
+static uint8_t clumps(int32_t x, int32_t y, uint32_t seed, uint32_t count, int32_t size, const uint8_t* shades) {
+	uint8_t c = shades[2];
 	for (uint32_t k = 0; k < count; ++k) {
-		const int32_t dx = wrap32(x - (int32_t)(hash(k, 1, seed) & 31));
-		const int32_t dy = wrap32(y - (int32_t)(hash(k, 2, seed) & 31));
-		const bool slope = hash(k, 3, seed) & 1;
-		const int32_t u = slope ? dx + dy : dx - dy;
-		const int32_t v = slope ? dx - dy : dx + dy;
-		const int32_t e = u * u + 4 * v * v;
-		if (e > 110) continue;
-		// Lit from the top left, with a darker rim and a vein down the middle
-		if (e > 80) c = shades[2];
-		else if (v == 0 && game_abs(u) < 7) c = shades[3];
-		else c = (v + u < 0) ? shades[0] : shades[1];
+		const int32_t r = 7 + (int32_t)(hash(k, 3, seed) % 3);
+		const int32_t dx = wrap(x - (int32_t)(hash(k, 1, seed) % size), size);
+		const int32_t dy = wrap(y - (int32_t)(hash(k, 2, seed) % size), size);
+		const int32_t d2 = dx * dx + dy * dy;
+		if (d2 > r * r) continue;
+		if (d2 > (r - 1) * (r - 1) && dx + dy > 0) c = shades[2];
+		else if (dx + dy < -r / 2) c = shades[0];
+		else c = shades[1];
 	}
 	return c;
 }
 
 static void make_bush(uint32_t t, uint32_t join, uint32_t variant) {
-	static const uint8_t shades[2][4] = {
-		{ RGB(96, 224, 0), RGB(0, 192, 0), RGB(0, 128, 0), RGB(160, 255, 64) },
-		{ RGB(0, 224, 64), RGB(0, 160, 32), RGB(0, 96, 32), RGB(128, 255, 128) },
+	static const uint8_t shades[2][3] = {
+		{ RGB(96, 224, 0), RGB(0, 176, 0), RGB(0, 112, 0) },
+		{ RGB(64, 224, 64), RGB(0, 160, 32), RGB(0, 96, 32) },
 	};
 	const uint32_t seed = 100 + variant * 17;
 	static bool in[WW_TILE + 2][WW_TILE + 2];
 	for (int32_t y = -1; y <= WW_TILE; ++y) {
 		for (int32_t x = -1; x <= WW_TILE; ++x) {
 			in[y + 1][x + 1] = x >= 0 && y >= 0 && x < WW_TILE && y < WW_TILE
-				? blob_inside(x, y, join, 3, seed)
+				? blob_inside(x, y, join, 2, 12, _scallop)
 				: true;
 		}
 	}
@@ -150,8 +152,7 @@ static void make_bush(uint32_t t, uint32_t join, uint32_t variant) {
 				p = RGB(0, 32, 0);
 			}
 			else {
-				p = leaves(x, y, seed, 22, shades[variant]);
-				if (!p) p = RGB(0, 64, 0);
+				p = clumps(x, y, seed, 9, WW_TILE, shades[variant]);
 			}
 			put(t, x, y, p);
 		}
@@ -162,10 +163,10 @@ static void make_water(uint32_t t, uint32_t join, uint32_t phase) {
 	for (int32_t y = 0; y < WW_TILE; ++y) {
 		for (int32_t x = 0; x < WW_TILE; ++x) {
 			uint8_t p;
-			if (!blob_inside(x, y, join, 2, 3)) {
+			if (!blob_inside(x, y, join, 2, 10, _bank)) {
 				p = grass(x, y, 7);
 			}
-			else if (!blob_inside(x, y, join, 4, 3)) {
+			else if (!blob_inside(x, y, join, 4, 10, _bank)) {
 				p = RGB(128, 96, 32);
 			}
 			else {
@@ -201,7 +202,7 @@ static void make_rock(uint32_t t) {
 			const int32_t sx = x - 19, sy = y - 21;
 			const int32_t e = dx * dx * 100 + dy * dy * 169;
 			if (e > 16900) {
-				if (sx * sx * 100 + sy * sy * 169 <= 16900) put(t, x, y, RGB(0, 64, 0));
+				if (sx * sx * 100 + sy * sy * 169 <= 16900) put(t, x, y, RGB(0, 32, 0));
 				continue;
 			}
 			uint8_t p = RGB(128, 128, 128);
@@ -217,7 +218,7 @@ static void make_rock(uint32_t t) {
 
 // A tree in a 64 pixel square, split across 4 tiles
 static void make_tree(void) {
-	static const uint8_t shades[4] = { RGB(64, 192, 64), RGB(0, 160, 64), RGB(0, 96, 32), RGB(128, 224, 96) };
+	static const uint8_t shades[3] = { RGB(64, 192, 64), RGB(0, 144, 64), RGB(0, 80, 32) };
 	for (uint32_t q = 0; q < 4; ++q) fill_grass(WW_GFX_TREE + q, 11 + q);
 	for (int32_t y = 0; y < 2 * WW_TILE; ++y) {
 		for (int32_t x = 0; x < 2 * WW_TILE; ++x) {
@@ -232,10 +233,9 @@ static void make_tree(void) {
 					p = RGB(0, 32, 0);
 				}
 				else {
-					p = leaves(x & 31, y & 31, 300 + (x >> 5) + (y >> 5) * 2, 24, shades);
-					if (!p) p = RGB(0, 64, 32);
+					p = clumps(x, y, 300, 30, 2 * WW_TILE, shades);
 					// Shaded away from the light
-					if (dx + dy > 16 && p != RGB(0, 64, 32)) p = shades[2];
+					if (dx + dy > 18) p = shades[2];
 				}
 			}
 			else if (x >= 27 && x <= 36 && y >= 44) {
@@ -247,7 +247,7 @@ static void make_tree(void) {
 				p = RGB(128, 64, 0);
 			}
 			else if (dx * dx + (y - 56) * (y - 56) * 4 <= 22 * 22) {
-				p = RGB(0, 64, 0);
+				p = RGB(0, 32, 0);
 			}
 			if (p) put(t, tx, ty, p);
 		}

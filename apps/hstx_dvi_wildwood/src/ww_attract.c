@@ -97,7 +97,7 @@ static void draw_stars(uint32_t frame) {
 
 // The witch walking along with her friends behind her
 static void draw_parade(uint32_t frame, int32_t y) {
-	static const uint8_t friends[] = { WW_OWLET, WW_BUNNY, WW_HEDGEHOG, WW_FOX, WW_DEER, WW_WOLF };
+	static const uint8_t friends[] = { WW_OWLET, WW_BUNNY, WW_HEDGEHOG, WW_BADGER, WW_FOX, WW_DEER, WW_WOLF };
 	const int32_t span = GAME_SCREEN_W + 400;
 	const int32_t x = (int32_t)((frame * 3 / 2) % span) - 40;
 	ww_witch_draw_at(x, y - WW_WITCH_H - ((frame >> 3) & 1), WW_VIEW_RIGHT, 1 + ((frame >> 4) & 1));

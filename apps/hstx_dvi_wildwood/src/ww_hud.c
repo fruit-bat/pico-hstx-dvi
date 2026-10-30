@@ -12,7 +12,7 @@
 #define WW_HUD_SAYS 6
 #define WW_HUD_SAY_FRAMES 90
 #define WW_HUD_MOON_X 236
-#define WW_HUD_MOON_R 14
+#define WW_HUD_MOON_R 15
 
 typedef struct {
 	int32_t x;
@@ -34,8 +34,9 @@ static WwSay_t _says[WW_HUD_SAYS];
 
 static GameArt_t _heart;
 static GameArt_t _hat;
-static GameArt_t _moon[WW_PIECES];
-static GameArt_t _moon_gap[WW_PIECES];
+// The moon from new to full, a phase for each piece
+static WwArt_t _moon[WW_PIECES + 1];
+static GameArt_t _piece;
 
 static const char* const _heart_rows[] = {
 	"..PPP...PPP.....",
@@ -66,41 +67,60 @@ static const char* const _hat_rows[] = {
 
 static const uint8_t _heart_colours[] = { GAME_PINK, GAME_WHITE };
 static const uint8_t _hat_colours[] = { GAME_PURPLE, GAME_YELLOW };
-static const uint8_t _moon_colours[] = { GAME_YELLOW, GAME_ORANGE };
-static const uint8_t _gap_colours[] = { GAME_GREY };
+static const uint8_t _moon_colours[] = { GAME_WHITE, GAME_GREY };
 
-// A quarter of a round moon, with a few craters
-static void make_moon(uint32_t q) {
-	GameArtCanvas_t c;
-	GameArtCanvas_t g;
-	game_art_canvas_clear(&c, 16, 16);
-	game_art_canvas_clear(&g, 16, 16);
-	static const int8_t craters[][3] = { { -7, -6, 3 }, { 6, -3, 2 }, { -2, 7, 3 }, { 8, 6, 2 }, { -9, 3, 1 } };
-	for (int32_t y = 0; y < 16; ++y) {
-		for (int32_t x = 0; x < 16; ++x) {
-			// Doubled, from the middle of the whole moon
-			const int32_t dx2 = 2 * x + 1 - ((q & 1) ? 0 : 32);
-			const int32_t dy2 = 2 * y + 1 - ((q & 2) ? 0 : 32);
-			const int32_t d2 = dx2 * dx2 + dy2 * dy2;
-			const int32_t r2 = 4 * WW_HUD_MOON_R * WW_HUD_MOON_R;
-			if (d2 > r2) continue;
-			char ch = 'Y';
+static int32_t isqrt(int32_t v) {
+	int32_t r = 0;
+	while ((r + 1) * (r + 1) <= v) ++r;
+	return r;
+}
+
+// The moon lit from the right by the given number of pieces out of WW_PIECES,
+// the edge of the light curving across it so it waxes as a crescent
+static void make_moon(uint32_t phase) {
+	static const int8_t craters[][3] = { { -6, -5, 3 }, { 5, -6, 2 }, { 6, 4, 3 }, { -3, 7, 2 }, { -8, 3, 1 }, { 1, -1, 1 } };
+	WwCanvas_t c;
+	ww_canvas_clear(&c, 32, 32);
+	const int32_t r2 = 4 * WW_HUD_MOON_R * WW_HUD_MOON_R;
+	for (int32_t y = 0; y < 32; ++y) {
+		// Doubled, from the middle of the moon
+		const int32_t dy2 = 2 * y + 1 - 32;
+		if (dy2 * dy2 > r2) continue;
+		const int32_t h2 = isqrt(r2 - dy2 * dy2);
+		const int32_t edge = h2 * (int32_t)(WW_PIECES - 2 * phase) / WW_PIECES;
+		for (int32_t x = 0; x < 32; ++x) {
+			const int32_t dx2 = 2 * x + 1 - 32;
+			if (dx2 * dx2 + dy2 * dy2 > r2) continue;
+			char ch = dx2 > edge ? 'W' : 'G';
 			for (uint32_t k = 0; k < sizeof(craters) / sizeof(craters[0]); ++k) {
 				const int32_t cx = dx2 - 2 * craters[k][0], cy = dy2 - 2 * craters[k][1];
-				if (cx * cx + cy * cy <= 4 * craters[k][2] * craters[k][2]) ch = 'O';
+				if (cx * cx + cy * cy <= 4 * craters[k][2] * craters[k][2]) ch = 'G';
 			}
-			game_art_canvas_set(&c, x, y, ch);
-			if (d2 > 4 * (WW_HUD_MOON_R - 1) * (WW_HUD_MOON_R - 1)) game_art_canvas_set(&g, x, y, 'G');
+			ww_canvas_set(&c, x, y, ch);
 		}
 	}
-	game_art_canvas_make(&_moon[q], &c, "YO", _moon_colours);
-	game_art_canvas_make(&_moon_gap[q], &g, "G", _gap_colours);
+	ww_art_make(&_moon[phase], &c, "WG", _moon_colours);
+}
+
+// A little crescent, for a piece on its own
+static void make_piece(void) {
+	GameArtCanvas_t c;
+	game_art_canvas_clear(&c, 16, 16);
+	for (int32_t y = 0; y < 16; ++y) {
+		for (int32_t x = 0; x < 16; ++x) {
+			const int32_t ax = 2 * x - 15, ay = 2 * y - 15;
+			const int32_t bx = 2 * x - 9, by = 2 * y - 13;
+			if (ax * ax + ay * ay <= 13 * 13 && bx * bx + by * by > 11 * 11) game_art_canvas_set(&c, x, y, 'W');
+		}
+	}
+	game_art_canvas_make(&_piece, &c, "W", _moon_colours);
 }
 
 void ww_hud_init(void) {
 	game_art_make(&_heart, _heart_rows, GAME_ART_ROWS(_heart_rows), "PW", _heart_colours);
 	game_art_make(&_hat, _hat_rows, GAME_ART_ROWS(_hat_rows), "PY", _hat_colours);
-	for (uint32_t q = 0; q < WW_PIECES; ++q) make_moon(q);
+	for (uint32_t p = 0; p <= WW_PIECES; ++p) make_moon(p);
+	make_piece();
 }
 
 void ww_hud_reset(void) {
@@ -153,19 +173,17 @@ bool ww_hud_charm_whole(void) {
 }
 
 void ww_hud_piece_pos(uint32_t i, int32_t* x, int32_t* y) {
-	*x = WW_HUD_MOON_X + (i & 1) * 16;
-	*y = (i & 2) * 8;
+	// They all fly to the middle of the moon
+	*x = WW_HUD_MOON_X + 8;
+	*y = 8;
 }
 
 void ww_hud_draw_piece(uint32_t i, int32_t sx, int32_t sy) {
-	ww_art_draw_small(&_moon[i % WW_PIECES], sx, sy, NULL);
+	ww_art_draw_small(&_piece, sx, sy, NULL);
 }
 
 void ww_hud_draw_charm(int32_t x, int32_t y, uint32_t pieces) {
-	for (uint32_t q = 0; q < WW_PIECES; ++q) {
-		const int32_t qx = x + (q & 1) * 16, qy = y + (q & 2) * 8;
-		ww_art_draw_small((pieces & (1u << q)) ? &_moon[q] : &_moon_gap[q], qx, qy, NULL);
-	}
+	ww_art_draw(&_moon[__builtin_popcount(pieces & WW_PIECES_ALL)], x, y, NULL);
 }
 
 void ww_hud_draw(uint32_t night, uint32_t frame, bool in_game) {
@@ -189,7 +207,7 @@ void ww_hud_draw(uint32_t night, uint32_t frame, bool in_game) {
 	for (uint32_t i = 0; i < _lives; ++i) {
 		ww_art_draw_small(&_hat, 132 + i * 18, 20, NULL);
 	}
-	// The charm, with the newest piece twinkling
+	// The charm waxes like the moon as the pieces come in
 	ww_hud_draw_charm(WW_HUD_MOON_X, 0, _pieces);
 
 	snprintf(t, sizeof(t), "NIGHT %lu", (unsigned long)night);

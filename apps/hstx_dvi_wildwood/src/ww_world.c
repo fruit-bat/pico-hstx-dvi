@@ -165,11 +165,16 @@ static void place(uint8_t* m, uint32_t exits, bool start, int32_t c0, int32_t r0
 				return;
 			}
 			uint8_t* p = cell(m, c, r);
+			const uint8_t was = *p & WW_L_TYPE;
 			// Trees go on clear ground
-			if (type == WW_L_TREE && (*p & WW_L_TYPE) != WW_L_GRASS) {
+			if (type == WW_L_TREE && was != WW_L_GRASS) {
 				memcpy(m, keep, sizeof(keep));
 				return;
 			}
+			// Nothing goes over part of a tree, and big clumps have their corners rounded off
+			if (was >= WW_L_TREE) continue;
+			const bool corner = (r == r0 || r == r0 + h - 1) && (c == c0 || c == c0 + w - 1);
+			if (type == WW_L_BUSH && w >= 3 && h >= 3 && corner) continue;
 			*p = type == WW_L_TREE ? WW_L_TREE + (r - r0) * 2 + (c - c0) : type;
 		}
 	}
@@ -200,7 +205,7 @@ static void make_room(uint32_t room) {
 		const int32_t c = game_rand() % WW_ROOM_COLS;
 		const int32_t r = game_rand() % WW_ROOM_ROWS;
 		if (k < 55) {
-			place(m, exits, start, c, r, 1 + game_rand() % 4, 1 + game_rand() % 3, WW_L_BUSH);
+			place(m, exits, start, c, r, 1 + game_rand() % 4, 1 + game_rand() % 4, WW_L_BUSH);
 		}
 		else if (k < 72) {
 			place(m, exits, start, c, r, 2, 2, WW_L_TREE);

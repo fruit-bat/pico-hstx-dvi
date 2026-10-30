@@ -11,7 +11,8 @@ extern "C" {
 #define WW_HUD_START_LIVES 3
 #define WW_HUD_MAX_LIVES 5
 
-// The moon charm comes in pieces, one for each way of helping out
+// The moon charm comes in pieces, one for each way of helping out. It is
+// shown as the moon, waxing from new to full as they are found.
 #define WW_PIECE_HEAL 0
 #define WW_PIECE_CALM 1
 #define WW_PIECE_HELP 2
@@ -36,7 +37,7 @@ void ww_hud_clear_pieces(void);
 bool ww_hud_charm_whole(void);
 // Where a piece goes in the HUD, on the screen
 void ww_hud_piece_pos(uint32_t i, int32_t* x, int32_t* y);
-// One piece of the charm, sx and sy being its top left on the screen
+// A piece of the charm on its own, sx and sy being its top left on the screen
 void ww_hud_draw_piece(uint32_t i, int32_t sx, int32_t sy);
 // A picture of the whole charm, for outside of the game
 void ww_hud_draw_charm(int32_t x, int32_t y, uint32_t pieces);
