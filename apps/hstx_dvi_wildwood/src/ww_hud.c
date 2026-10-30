@@ -67,7 +67,8 @@ static const char* const _hat_rows[] = {
 
 static const uint8_t _heart_colours[] = { GAME_PINK, GAME_WHITE };
 static const uint8_t _hat_colours[] = { GAME_PURPLE, GAME_YELLOW };
-static const uint8_t _moon_colours[] = { GAME_WHITE, GAME_GREY };
+// The lit side, the craters and the side in shadow
+static const uint8_t _moon_colours[] = { GAME_WHITE, GAME_GREY, GAME_DARK_GREY };
 
 static int32_t isqrt(int32_t v) {
 	int32_t r = 0;
@@ -91,7 +92,7 @@ static void make_moon(uint32_t phase) {
 		for (int32_t x = 0; x < 32; ++x) {
 			const int32_t dx2 = 2 * x + 1 - 32;
 			if (dx2 * dx2 + dy2 * dy2 > r2) continue;
-			char ch = dx2 > edge ? 'W' : 'G';
+			char ch = dx2 > edge ? 'W' : 'D';
 			for (uint32_t k = 0; k < sizeof(craters) / sizeof(craters[0]); ++k) {
 				const int32_t cx = dx2 - 2 * craters[k][0], cy = dy2 - 2 * craters[k][1];
 				if (cx * cx + cy * cy <= 4 * craters[k][2] * craters[k][2]) ch = 'G';
@@ -99,7 +100,7 @@ static void make_moon(uint32_t phase) {
 			ww_canvas_set(&c, x, y, ch);
 		}
 	}
-	ww_art_make(&_moon[phase], &c, "WG", _moon_colours);
+	ww_art_make(&_moon[phase], &c, "WGD", _moon_colours);
 }
 
 // A little crescent, for a piece on its own

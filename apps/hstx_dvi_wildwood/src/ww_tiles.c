@@ -216,27 +216,35 @@ static void make_rock(uint32_t t) {
 	}
 }
 
-// A tree in a 64 pixel square, split across 4 tiles
+// A tree in a 64 pixel square, split across 4 tiles. The leaves are a
+// brighter, yellower green than the bushes, in a lumpy cloud of a canopy.
+#define WW_TREE_LOBES 9
+
 static void make_tree(void) {
-	static const uint8_t shades[3] = { RGB(64, 192, 64), RGB(0, 144, 64), RGB(0, 80, 32) };
+	static const uint8_t shades[3] = { RGB(160, 255, 64), RGB(96, 208, 32), RGB(0, 144, 32) };
+	int32_t lx[WW_TREE_LOBES], ly[WW_TREE_LOBES], lr[WW_TREE_LOBES];
+	for (uint32_t k = 0; k < WW_TREE_LOBES; ++k) {
+		const uint32_t a = k * 256 / WW_TREE_LOBES + hash(k, 5, 7) % 12;
+		lx[k] = 32 + game_sin(a + 64) * 17 / 127;
+		ly[k] = 27 + game_sin(a) * 15 / 127;
+		lr[k] = 8 + hash(k, 6, 7) % 3;
+	}
 	for (uint32_t q = 0; q < 4; ++q) fill_grass(WW_GFX_TREE + q, 11 + q);
 	for (int32_t y = 0; y < 2 * WW_TILE; ++y) {
 		for (int32_t x = 0; x < 2 * WW_TILE; ++x) {
 			const uint32_t t = WW_GFX_TREE + (y >> WW_TILE_SHIFT) * 2 + (x >> WW_TILE_SHIFT);
 			const int32_t tx = x & 31, ty = y & 31;
-			const int32_t dx = x - 32, dy = y - 26;
-			const int32_t d2 = dx * dx + dy * dy;
-			const int32_t r = 27;
+			const int32_t dx = x - 32, dy = y - 27;
+			bool leafy = dx * dx + dy * dy <= 19 * 19;
+			for (uint32_t k = 0; k < WW_TREE_LOBES && !leafy; ++k) {
+				const int32_t ex = x - lx[k], ey = y - ly[k];
+				leafy = ex * ex + ey * ey <= lr[k] * lr[k];
+			}
 			uint8_t p = 0;
-			if (d2 <= r * r) {
-				if (d2 > (r - 1) * (r - 1)) {
-					p = RGB(0, 32, 0);
-				}
-				else {
-					p = clumps(x, y, 300, 30, 2 * WW_TILE, shades);
-					// Shaded away from the light
-					if (dx + dy > 18) p = shades[2];
-				}
+			if (leafy) {
+				p = clumps(x, y, 300, 30, 2 * WW_TILE, shades);
+				// Shaded away from the light
+				if (dx + dy > 16) p = shades[2];
 			}
 			else if (x >= 27 && x <= 36 && y >= 44) {
 				// The trunk, with bark lines and roots
@@ -246,7 +254,7 @@ static void make_tree(void) {
 			else if (y >= 58 && x >= 23 && x <= 40 && (x < 27 ? y >= 58 + (27 - x) : x > 36 ? y >= 58 + (x - 36) : 1)) {
 				p = RGB(128, 64, 0);
 			}
-			else if (dx * dx + (y - 56) * (y - 56) * 4 <= 22 * 22) {
+			else if (dx * dx + (y - 57) * (y - 57) * 4 <= 22 * 22) {
 				p = RGB(0, 32, 0);
 			}
 			if (p) put(t, tx, ty, p);

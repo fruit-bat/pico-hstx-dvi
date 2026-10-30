@@ -48,27 +48,27 @@ typedef struct {
 	uint8_t wake;  // how near the witch can come while it sleeps
 } WwAnimalInfo_t;
 
-// A round puff of fur, with curls picked out in grey
+// Sitting up, with a rounded back, tall ears and a puff of a tail
 static const char* const _bunny[] = {
-	"................WW.WW...",
-	"...............WPWWPW...",
-	"...............WPWWPW...",
-	"................WWWW....",
-	"..............WWWWWWWW..",
-	".............WWWWWWWWWW.",
-	".....WW.WW..WWWWWWWWWWWW",
-	"....WWWWWWWWWWWWWEWWWWWP",
-	"..WWWWWWWWWWWWWWWEWWWWWW",
-	".WWWWWGWWWWWGWWWWWWWWW..",
-	"WWWWWWWWWWWWWWWWWWWW....",
-	"WWWGWWWWWGWWWWWWGWWWW...",
-	".WWWWWWWWWWWWWWWWWWWWW..",
-	"WWWWWWWGWWWWWGWWWWWWW...",
-	".WWWGWWWWWWWWWWWWWWW....",
+	"...............WW.WW....",
+	"..............WPWWPW....",
+	"..............WPWWPW....",
+	"..............WPWWPW....",
+	"...............WPWPW....",
+	"......WWWWW....WWWWWW...",
+	"....WWWWWWWWW.WWWWWWWW..",
+	"...WWWWWWWWWWWWWWWEWWWW.",
+	"..WWWWWWWWWWWWWWWWEWWWWP",
+	".WWWWWWWWWWWWWWWWWWWWWW.",
+	"WWWWWWWWWWWWWWGWWWWWWW..",
+	"WGWWWWWWWWWWWWGWWWWWW...",
+	"WWWWWWWWWWWWWGWWWWWW....",
+	".WWWWWWWWWWWWGWWWWWW....",
+	"..WWWWWWWWWWWWWWWWWW....",
 };
 static const char* const _bunny_legs[2][3] = {
-	{ "..WWWWWWWWWWWWWWWWW.....", "...WW.WWWWWWWWW.WW......", "....GG...GG...GG........" },
-	{ "..WWWWWWWWWWWWWWWWW.....", ".WWW.............WWW....", "GGW...............WGG..." },
+	{ "...WWWWWWWWWWWWWWWWW....", "..WWWWWWWG....WWW.WW....", "..GGGGGG......GG..GG...." },
+	{ "...WWWWWWWWWWWWWWWW.....", ".WWWWWW.........WWW.....", "GGGG..............GG...." },
 };
 
 static const char* const _frog[] = {
@@ -137,23 +137,23 @@ static const char* const _fox_legs[2][3] = {
 static const char* const _badger[] = {
 	"....................WKW.........",
 	"...................WKKW.........",
-	"...........GGGGGGGWWWWWWWW......",
-	"........GGGGWGGGGWWWWWWWWWWW....",
-	"......GGGGGGGGGGKKKKKKKWWWWWW...",
-	"....GGGGGWGGGGGGKKKKKEKKKKWWWW..",
-	"GG.GGGGGGGGGGGGGKKKKKKKKKKKKKWW.",
-	".GGGGGGGGGGGGGGGWWWWWWKKKKKKKKKK",
-	"GGGGGWGGGGGGGGGGWWWWWWWWWWWWW...",
-	"GGGGGGGGGGGGGGGGKKWWWWWWWW......",
-	"GGGGGGGGWGGGGGGGKKKKKKK.........",
-	"GGGGGGGGGGGGGGGGKKKKKKK.........",
-	".GGGGGGGGGGGGGGGKKKKKKK.........",
-	"..KKKKKKKKKKKKKKKKKKKKK.........",
-	"...KKKKKKKKKKKKKKKKKKKK.........",
+	"......GGGGGGGGGGGGWWWWWWWW......",
+	"...GGGGGGWGGGGGGGGWWWWWWWWWW....",
+	"..GGGGGGGGGGGGWGGGKKKKKWWWWWW...",
+	".GGGWGGGGGGGGGGGGGKKKEKKKKWWWW..",
+	"GGGGGGGGGGGWGGGGGGKKKKKKKKKKKWW.",
+	"GGGGGGGGGGGGGGGGGGWWWWKKKKKKKKKK",
+	"GGGGGWGGGGGGGGGGGGWWWWWWWWWWW...",
+	"GGGGGGGGGGGGGWGGGGKWWWWWWW......",
+	".GGGGGGGGGGGGGGGGGKKKKK.........",
+	".GGGWGGGGGGGGGGGGGKKKK..........",
+	"..GGGGGGGGGGGGGGGKKKK...........",
+	"...GKGGKGGKGGKGKKKKKKKK.........",
+	"....KKKKKKKKKKKKKKKKKK..........",
 };
 static const char* const _badger_legs[2][4] = {
-	{ "...KKKK.KKK.......KKKK.KKK......", "...KKKK.KKK.......KKKK.KKK......", "...KKK..KKK.......KKK..KKK......", "...WKW..WKW.......WKW..WKW......" },
-	{ "..KKKK...KKK.....KKKK...KKK.....", ".KKKK.....KKK...KKKK.....KKK....", ".KKK......KKK...KKK......KKK....", ".WKW......WKW...WKW......WKW...." },
+	{ "....KKK.KKK....KKK.KKK..........", "....KKK.KKK....KKK.KKK..........", "....KKK.KKK....KKK.KKK..........", "....WKW.WKW....WKW.WKW.........." },
+	{ "....KKK.KKK....KKK.KKK..........", "...KKK...KKK..KKK...KKK.........", "..KKK.....KKKKKK.....KKK........", "..WKW.....WKWWKW.....WKW........" },
 };
 
 static const char* const _deer[] = {
@@ -344,7 +344,7 @@ static const WwAnimalInfo_t _info[WW_ANIMAL_TYPES] = {
 		32, GAME_ART_ROWS(_deer), 9, _deer, { _deer_legs[0], _deer_legs[1] }, 11, false, 3, 1, GAME_PX(1), 500, 100, 80 },
 	{ "BOAR", "NBWE", { GAME_DARK_BROWN, GAME_BROWN, GAME_WHITE, GAME_BLACK }, GAME_DARK_BROWN,
 		32, GAME_ART_ROWS(_boar), 3, _boar, { _boar_legs[0], _boar_legs[1] }, 11, false, 1, 4, GAME_PX(1) + 192, 100, 500, 80 },
-	{ "BEAR", "BSKE", { GAME_BROWN, GAME_PEACH, GAME_BLACK, GAME_BLACK }, GAME_BROWN,
+	{ "BEAR", "BSKE", { GAME_DARK_BROWN, GAME_PEACH, GAME_BLACK, GAME_BLACK }, GAME_DARK_BROWN,
 		32, GAME_ART_ROWS(_bear), 5, _bear, { _bear_legs[0], _bear_legs[1] }, 12, false, 1, 5, GAME_PX(1) + 100, 100, 500, 100 },
 	{ "OWL", "BSYE", { GAME_DARK_BROWN, GAME_PEACH, GAME_YELLOW, GAME_BLACK }, GAME_DARK_BROWN,
 		24, GAME_ART_ROWS(_owl), 2, _owl, { _owl_legs[0], _owl_legs[1] }, 10, false, 1, 1, 0, 100, 50, 60 },
