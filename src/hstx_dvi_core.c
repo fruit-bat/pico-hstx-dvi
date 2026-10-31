@@ -301,7 +301,13 @@ void __not_in_flash_func(hstx_dvi_fill_row)(hstx_dvi_row_t* r, hstx_dvi_pixel_t 
     uint32_t *x = (uint32_t*)r;
 #if MODE_BYTES_PER_PIXEL == 1
     const uint32_t w = hstx_dvi_row_enc_pixel_quad(p, p, p, p);
-    for (int i = 0; i < MODE_H_ACTIVE_PIXELS >> 2; ++i) {
+    // 8 words at a time, which the compiler can store together
+    int i = 0;
+    for (; i + 8 <= MODE_H_ACTIVE_PIXELS >> 2; i += 8, x += 8) {
+        x[0] = w; x[1] = w; x[2] = w; x[3] = w;
+        x[4] = w; x[5] = w; x[6] = w; x[7] = w;
+    }
+    for (; i < MODE_H_ACTIVE_PIXELS >> 2; ++i) {
         *x++ = w;
     }
 #elif MODE_BYTES_PER_PIXEL == 2
