@@ -44,7 +44,7 @@
 #endif
 
 // Enough for the scene
-#define MAX_OBJECTS 100
+#define MAX_OBJECTS 128
 #define MAX_PRIMS 1200
 #define MAX_ALL_BANDS 2400
 #define MAX_VERTS 48
@@ -60,6 +60,8 @@
 #define DOT_SIZE 6.0f
 // Smaller than this and a ship has no dark outlines when outlined
 #define OUTLINE_SIZE 40.0f
+// Smaller than this and a wireframe is just its outline
+#define DETAIL_SIZE 32.0f
 // The view, a little shorter than the screen to leave room for the text
 // The view, between the text at the top and the dashboard
 #define VIEW_TOP 36
@@ -470,6 +472,19 @@ static void draw_model(const Object_t* o, Style_e style) {
 		if (i < model->nh && cam[i].z < NEAR_Z) behind = true;
 	}
 
+	// Small and far away, a wireframe is just its outline. A convex outline
+	// crosses each row twice, where all the edges can cross it many times,
+	// and each costs about as much on a row however short it is.
+	if (!behind && size < DETAIL_SIZE && (style == STYLE_SOLID || style == STYLE_WIRE)) {
+		Vec2_t p[MAX_VERTS], q[2 * MAX_VERTS];
+		for (uint32_t i = 0; i < model->nh; ++i) p[i] = project(&cam[i]);
+		const uint32_t n = outline(p, model->nh, q);
+		const hstx_dvi_pixel_t c = shade(o->rgb, 1.0f);
+		for (uint32_t i = 0; i < n; ++i) add_line(q[i], q[(i + 1) % n], c);
+		if (style == STYLE_SOLID) add_fill(q, n, hstx_dvi_pixel_rgb(0, 0, 0));
+		return;
+	}
+
 	// A face is facing us if we are in front of it, and lit by how much it faces the light
 	bool facing[MAX_FACES];
 	float light[MAX_FACES];
@@ -639,7 +654,6 @@ static void draw_sun(Style_e style, uint32_t frame) {
 	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
 	const Vec2_t m = project(&c);
 	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
-	if (!object_begin()) return;
 	const hstx_dvi_pixel_t edge = hstx_dvi_pixel_rgb(255, 255, 0);
 	const hstx_dvi_pixel_t ray = hstx_dvi_pixel_rgb(255, 146, 0);
 	Vec2_t outline[SUN_SIDES];
@@ -647,19 +661,32 @@ static void draw_sun(Style_e style, uint32_t frame) {
 		const float a = 2.0f * 3.1416f * (float)i / SUN_SIDES;
 		outline[i] = (Vec2_t){ m.x + rp * cosf(a), m.y + rp * sinf(a) };
 	}
-	for (uint32_t i = 0; i < SUN_SIDES; ++i) add_line(outline[i], outline[(i + 1) % SUN_SIDES], edge);
+	// It is in a few objects, as an object's sprite looks at all its parts on
+	// every row it covers: each half of the outline, then what fills it
+	for (uint32_t h = 0; h < 2; ++h) {
+		if (!object_begin()) return;
+		for (uint32_t i = 0; i < SUN_SIDES / 2; ++i) {
+			const uint32_t k = i + h * SUN_SIDES / 2;
+			add_line(outline[k], outline[(k + 1) % SUN_SIDES], edge);
+		}
+		object_end();
+	}
+	if (style != STYLE_WIRE && object_begin()) {
+		add_fill(outline, SUN_SIDES, style == STYLE_SOLID ? hstx_dvi_pixel_rgb(0, 0, 0) : edge);
+		object_end();
+	}
+	// And each ray
 	const float turn = (float)frame * 0.004f;
 	for (uint32_t i = 0; i < SUN_RAYS; ++i) {
+		if (!object_begin()) return;
 		const float a = turn + 2.0f * 3.1416f * (float)i / SUN_RAYS;
 		const float len = (i & 1 ? SUN_RAY_SHORT : SUN_RAY_LONG) + 0.06f * (float)(rand() % 3);
 		const float ca = cosf(a), sa = sinf(a);
 		add_line(
 			(Vec2_t){ m.x + rp * SUN_RAY_GAP * ca, m.y + rp * SUN_RAY_GAP * sa },
 			(Vec2_t){ m.x + rp * len * ca, m.y + rp * len * sa }, ray);
+		object_end();
 	}
-	if (style == STYLE_SOLID) add_fill(outline, SUN_SIDES, hstx_dvi_pixel_rgb(0, 0, 0));
-	else if (style != STYLE_WIRE) add_fill(outline, SUN_SIDES, edge);
-	object_end();
 }
 
 

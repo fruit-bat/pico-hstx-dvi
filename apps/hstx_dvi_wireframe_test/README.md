@@ -20,10 +20,11 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
   so this takes one shape. Close up, when part of an object is behind us, each face is filled instead.
 - The objects are added nearest first. Lower sprite ids take priority, so the nearer ones cover the ones behind without a depth buffer.
   This goes wrong only if objects pass through each other.
-- Far away an object is just a dot.
+- Far away an object is just a dot, and in the wireframe styles a small one is just its outline. A convex outline crosses each row twice,
+  where all the edges of a ship can cross it many times, and each costs about as much on a row however short it is.
 - When outlined, the dark edges are only drawn between faces we can see, on objects at least 40 pixels across,
   as the outlines cost as much as a wireframe on top of the faces, and hardly show round the outside or on small ships.
-- The sun is drawn after everything else so it is behind the ships. It is an outline with rays that turn and flicker, made of parts like the ships,
+- The sun is drawn after everything else so it is behind the ships, in a few objects so no sprite looks at too many parts on a row. It is an outline with rays that turn and flicker, made of parts like the ships,
   filled in black for the solid wireframes and in yellow when filled.
 - The other core turns, moves, lights and projects everything each frame, with floats, and cuts the edges and shapes to the view.
   The renderer reads the sprites of the frame it is drawing while the next is worked out, so there are two sets.
