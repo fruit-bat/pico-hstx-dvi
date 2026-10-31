@@ -21,6 +21,8 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `DEF_INP_GPIO_START` in CMakeLists.txt.
 
+Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad for the directions, A to fire and B for a smart bomb.
+
 ## The game
 
 - The world wraps round and is several screens wide. The scanner at the top shows all of it.

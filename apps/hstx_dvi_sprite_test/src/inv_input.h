@@ -18,6 +18,9 @@ extern "C" {
 #endif
 #define INV_INP_GPIO_COUNT 4
 
+// The gamepad buttons for each input bit
+#define INV_INP_PAD_MAP { GAME_PAD_LEFT, GAME_PAD_RIGHT, GAME_PAD_A | GAME_PAD_B, GAME_PAD_START }
+
 bool __force_inline is_inv_input_left(uint8_t input) {
     return (input & INV_INP_BIT_L) != 0;
 }

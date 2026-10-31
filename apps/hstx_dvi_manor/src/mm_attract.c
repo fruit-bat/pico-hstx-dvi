@@ -31,6 +31,8 @@
 #define MM_ATTRACT_ROLL_H 54
 #define MM_ATTRACT_STARS 48
 #define MM_ATTRACT_TOUR_SPEED (GAME_PX(3) / 2)
+// Where the floor goes in the view, so it is just above the band at the bottom
+#define MM_ATTRACT_TOUR_FLOOR 336
 
 typedef struct {
 	uint8_t what;
@@ -51,11 +53,13 @@ static const MmRoll_t _roll[] = {
 };
 #define MM_ATTRACT_ROLL_COUNT (sizeof(_roll) / sizeof(_roll[0]))
 
-// Places for the title to show off, in house pixels
+// Places for the title to show off: house pixels across, and the row of the
+// floor to stand the view on, so it pans along each floor in turn
 static const int16_t _tour[][2] = {
-	{ 320, 960 }, { 900, 960 }, { 1400, 900 }, { 1100, 600 }, { 1800, 600 },
-	{ 2400, 600 }, { 2500, 260 }, { 1500, 260 }, { 900, 260 }, { 2300, 960 },
-	{ 2000, 1300 }, { 900, 1300 },
+	{ 320, 35 }, { 900, 35 }, { 1500, 35 },
+	{ 1100, 24 }, { 1800, 24 }, { 2500, 24 },
+	{ 2500, 13 }, { 1500, 13 }, { 800, 13 },
+	{ 1600, 24 }, { 2300, 35 }, { 1700, 35 },
 };
 #define MM_ATTRACT_TOUR_STOPS (sizeof(_tour) / sizeof(_tour[0]))
 
@@ -160,7 +164,8 @@ bool mm_attract_title(void) {
 		if (is_mm_input_play(game_input_pressed())) return true;
 		// Drifts round the house, a few seconds at each place
 		if (frame % 100 == 99) stop = (stop + 1) % MM_ATTRACT_TOUR_STOPS;
-		mm_camera_glide(_tour[stop][0], _tour[stop][1], MM_ATTRACT_TOUR_SPEED * 4);
+		const int32_t floor = _tour[stop][1] * MM_TILE;
+		mm_camera_glide(_tour[stop][0], floor - MM_ATTRACT_TOUR_FLOOR + MM_VIEW_H / 2, MM_ATTRACT_TOUR_SPEED * 4);
 
 		game_spr_begin();
 		mm_game_tour_frame(frame);

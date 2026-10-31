@@ -14,6 +14,16 @@ cmake ..                       # or e.g. cmake -DPICO_BOARD=pico2_w ..
 make -j
 ```
 
+The games can also read NES or SNES gamepads, alongside the buttons, with
+[pico-nespad](https://github.com/fruit-bat/pico-nespad) checked out next to this project:
+
+```sh
+cmake -DGAME_NESPAD=ON ..
+```
+
+Both pads control the game. They share CLK on GPIO 26 and LATCH on GPIO 27, with DATA
+from pad 1 on GPIO 20 and pad 2 on GPIO 21 (see `apps/common/game/CMakeLists.txt`).
+
 ## CP/M (hstx_dvi_cpm)
 
 `hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen with

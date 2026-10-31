@@ -20,6 +20,9 @@ extern "C" {
 #endif
 #define MM_INP_GPIO_COUNT 6
 
+// The gamepad buttons for each input bit, with A to jump as is usual
+#define MM_INP_PAD_MAP { GAME_PAD_LEFT, GAME_PAD_RIGHT, GAME_PAD_UP, GAME_PAD_DOWN, GAME_PAD_B, GAME_PAD_A }
+
 __force_inline bool is_mm_input_play(const uint8_t input) {
 	return (input & (MM_INP_BIT_F | MM_INP_BIT_J)) != 0;
 }

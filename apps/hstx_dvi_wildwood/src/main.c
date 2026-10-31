@@ -50,7 +50,8 @@ int main(void)
 	stdio_init_all();
 	app_led_on();
 
-	game_input_init(WW_INP_GPIO_START, WW_INP_GPIO_COUNT);
+	static const uint16_t pad_map[WW_INP_GPIO_COUNT] = WW_INP_PAD_MAP;
+	game_input_init(WW_INP_GPIO_START, WW_INP_GPIO_COUNT, pad_map);
 	game_pallet_init();
 	game_hiscore_init(ww_hiscore_defaults());
 	ww_hud_init();

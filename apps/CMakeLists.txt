@@ -43,6 +43,12 @@ add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-
 include(${PICO_FOLDER}/pimoroni-pico/drivers/fatfs/fatfs.cmake)
 include(${PICO_FOLDER}/pimoroni-pico/drivers/sdcard/sdcard.cmake)
 
+# NES or SNES gamepads for the games, as well as the buttons, e.g. cmake -DGAME_NESPAD=ON ..
+option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" OFF)
+if (GAME_NESPAD)
+  add_subdirectory(${PICO_FOLDER}/pico-nespad "${CMAKE_CURRENT_BINARY_DIR}/pico-nespad")
+endif()
+
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
 
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")

@@ -24,6 +24,8 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `MM_INP_GPIO_START` in CMakeLists.txt.
 
+Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad to move, A to jump and B to cast.
+
 ## The game
 
 - The house is a cut away doll's house of a garden, hall, library, kitchen, cellar, landing, bedroom, gallery and attic, and the view scrolls smoothly round it after Hazel.

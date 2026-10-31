@@ -50,7 +50,8 @@ int main(void)
     app_led_on();
 
 	// Initialize the gpio input
-	game_input_init(INV_INP_GPIO_START, INV_INP_GPIO_COUNT);
+	static const uint16_t pad_map[INV_INP_GPIO_COUNT] = INV_INP_PAD_MAP;
+	game_input_init(INV_INP_GPIO_START, INV_INP_GPIO_COUNT, pad_map);
 
 	game_pallet_init();
 	game_hiscore_init(inv_hiscore_defaults());
