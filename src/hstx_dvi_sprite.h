@@ -289,6 +289,10 @@ typedef struct {
 	uint32_t line_max;   // the slowest row
 	uint32_t window_max; // the slowest run of rows that fits in the row FIFO
 	uint32_t frame;      // all the rows
+	// The least time the rows were ready ahead of the display, from the row
+	// FIFO being full at the top of the frame. Below 0 a row was late and the
+	// frame was dropped.
+	int32_t ahead_min;
 	uint32_t calls_max;  // the most sprite renderer calls in a run of rows that fits in the row FIFO
 	uint32_t pixels_max; // the most pixels filled by sprite_render_span in such a run
 } HstxDviSpriteTiming_t;

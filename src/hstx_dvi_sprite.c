@@ -42,6 +42,8 @@ static __force_inline uint32_t timing_now(void) { return 0; }
 #endif
 // The row FIFO lets a slow row borrow time from the rows around it
 #define TIMING_WINDOW HSTX_DVI_ROW_FIFO_SIZE
+// The system clock runs at the HSTX clock, 10 times the pixel clock
+#define TIMING_LINE_CYCLES ((MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS) * 10)
 volatile HstxDviSpriteTiming_t hstx_dvi_sprite_timing;
 #if defined(HSTX_DVI_SPRITE_TIMING)
 // The pixels filled by sprite_render_span on this row
@@ -733,6 +735,10 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 	uint32_t window_sum = 0, line_max = 0, window_max = 0, frame = 0;
 	uint32_t calls_window[TIMING_WINDOW] = {0}, pixels_window[TIMING_WINDOW] = {0};
 	uint32_t calls_sum = 0, calls_max = 0, pixels_sum = 0, pixels_max = 0;
+	// How far ahead of the display the rows are, starting with the FIFO full
+	// after the vertical blank
+	const int32_t ahead_full = TIMING_WINDOW * TIMING_LINE_CYCLES;
+	int32_t ahead = ahead_full, ahead_min = ahead_full;
 
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
@@ -779,6 +785,10 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 		window_sum += t - window[y % TIMING_WINDOW];
 		window[y % TIMING_WINDOW] = t;
 		if (window_sum > window_max) window_max = window_sum;
+		ahead -= (int32_t)t;
+		if (ahead < ahead_min) ahead_min = ahead;
+		ahead += TIMING_LINE_CYCLES;
+		if (ahead > ahead_full) ahead = ahead_full;
 		const uint32_t w = y % TIMING_WINDOW;
 		calls_sum += TIMING_COUNT(calls) - calls_window[w];
 		calls_window[w] = TIMING_COUNT(calls);
@@ -792,6 +802,7 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 	hstx_dvi_sprite_timing.line_max = line_max;
 	hstx_dvi_sprite_timing.window_max = window_max;
 	hstx_dvi_sprite_timing.frame = frame;
+	hstx_dvi_sprite_timing.ahead_min = ahead_min;
 	hstx_dvi_sprite_timing.calls_max = calls_max;
 	hstx_dvi_sprite_timing.pixels_max = pixels_max;
 }
