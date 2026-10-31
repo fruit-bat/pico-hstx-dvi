@@ -572,6 +572,8 @@ static __force_inline void render_span_word(
 	}
 	// Only the free pixels, all at once
 	const uint32_t taken = taken_bytes(ids) & bm;
+	// All taken, as behind something nearer, so there is nothing to draw
+	if (taken == bm && !_anyCollisionMasks) return;
 	const uint32_t free = bm & ~taken;
 	r->w[wi] = (r->w[wi] & ~free) | (pq & free);
 	_spriteIdRow.word[wi] = ids | (idq & free);
