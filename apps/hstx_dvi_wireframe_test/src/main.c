@@ -44,7 +44,7 @@
 #endif
 
 // Enough for the scene
-#define MAX_OBJECTS 40
+#define MAX_OBJECTS 100
 #define MAX_PRIMS 1200
 #define MAX_ALL_BANDS 2400
 #define MAX_VERTS 48
@@ -59,8 +59,9 @@
 // Smaller than this, in pixels across, and a ship is just a dot
 #define DOT_SIZE 6.0f
 // The view, a little shorter than the screen to leave room for the text
-#define VIEW_TOP 40
-#define VIEW_BOTTOM (GAME_SCREEN_H - 40)
+// The view, between the text at the top and the dashboard
+#define VIEW_TOP 36
+#define VIEW_BOTTOM 332
 #define CENTRE_X (GAME_SCREEN_W / 2)
 #define CENTRE_Y ((VIEW_TOP + VIEW_BOTTOM) / 2)
 // The fixed point the renderer uses for the x of the edges and shapes
@@ -135,7 +136,7 @@ static hstx_dvi_pixel_t _star_colours[3];
 
 // The sun, far away, as a circle with rays round it
 #define SUN_X 5200.0f
-#define SUN_Y 2600.0f
+#define SUN_Y 1500.0f
 #define SUN_Z 9000.0f
 #define SUN_RADIUS 1600.0f
 #define SUN_SIDES 24
@@ -208,6 +209,10 @@ static Vec2_t project(const Vec3_t* v) {
 	return (Vec2_t){ CENTRE_X + FOCAL * v->x / v->z, CENTRE_Y - FOCAL * v->y / v->z };
 }
 
+// The rows lines and shapes are cut to: the view, or the whole screen for the HUD
+static int32_t _clip_top = VIEW_TOP;
+static int32_t _clip_bottom = VIEW_BOTTOM;
+
 // Cuts a line down to the part inside the view, returning false if none of it is
 static bool clip_line(Vec2_t* a, Vec2_t* b) {
 	const float dx = b->x - a->x;
@@ -216,8 +221,8 @@ static bool clip_line(Vec2_t* a, Vec2_t* b) {
 	const float q[4] = {
 		a->x,
 		(float)(GAME_SCREEN_W - 1) - a->x,
-		a->y - (float)VIEW_TOP,
-		(float)(VIEW_BOTTOM - 1) - a->y
+		a->y - (float)_clip_top,
+		(float)(_clip_bottom - 1) - a->y
 	};
 	float t0 = 0.0f, t1 = 1.0f;
 	for (uint32_t i = 0; i < 4; ++i) {
@@ -320,8 +325,8 @@ static void add_fill(const Vec2_t* corners, uint32_t n, hstx_dvi_pixel_t colour)
 	Vec2_t p[MAX_POLY + 4], q[MAX_POLY + 4];
 	uint32_t m = clip_side(corners, n, q, 0, 0.0f, false);
 	m = clip_side(q, m, p, 0, (float)GAME_SCREEN_W, true);
-	m = clip_side(p, m, q, 1, (float)VIEW_TOP, false);
-	m = clip_side(q, m, p, 1, (float)VIEW_BOTTOM, true);
+	m = clip_side(p, m, q, 1, (float)_clip_top, false);
+	m = clip_side(q, m, p, 1, (float)_clip_bottom, true);
 	if (m < 3 || _band_count + m > MAX_ALL_BANDS) return;
 
 	// Walk down both sides from the top corner, a band at a time
@@ -578,7 +583,7 @@ static Vec3_t ship_path(uint32_t i, float t) {
 	const float r = LOOP_RADIUS + 120.0f * sinf((float)i * 1.3f);
 	return (Vec3_t){
 		r * sinf(a),
-		220.0f * sinf((float)i * 2.4f) + 40.0f * sinf(t * 0.5f + (float)i),
+		150.0f * sinf((float)i * 2.4f) + 30.0f * sinf(t * 0.5f + (float)i),
 		STATION_Z - r * cosf(a)
 	};
 }
@@ -649,6 +654,226 @@ static void draw_sun(Style_e style, uint32_t frame) {
 	if (style == STYLE_SOLID) add_fill(outline, SUN_SIDES, hstx_dvi_pixel_rgb(0, 0, 0));
 	else if (style != STYLE_WIRE) add_fill(outline, SUN_SIDES, edge);
 	object_end();
+}
+
+
+// ----------------------------------------------------------------------------
+// The dashboard under the view, after the original game: gauges either side
+// of the scanner, which shows where the ships are round us, and a compass
+// pointing to the station. It is drawn in outlines for the wireframe styles,
+// and solid for the filled ones.
+//
+// Each part of it is an object of its own, as an object's sprite looks at all
+// its parts on every row it covers.
+
+#define DASH_TOP 336
+#define DASH_BOTTOM 477
+#define GAUGE_ROWS 7
+#define GAUGE_X0 32
+#define GAUGE_X1 168
+#define GAUGE_RIGHT_X0 492
+#define GAUGE_RIGHT_X1 628
+#define GAUGE_H 9
+#define SCANNER_X 320
+#define SCANNER_Y 410
+#define SCANNER_RX 112.0f
+#define SCANNER_RY 46.0f
+#define SCANNER_SIDES 24
+// How far the scanner sees
+#define SCANNER_RANGE 3200.0f
+#define COMPASS_X 438
+#define COMPASS_Y 356
+#define COMPASS_R 12.0f
+#define MISSILES 4
+
+typedef enum {
+	GAUGE_FS = 0, GAUGE_AS, GAUGE_FV, GAUGE_CT, GAUGE_LT, GAUGE_AL,
+	GAUGE_SP, GAUGE_RL, GAUGE_DC, GAUGE_E1, GAUGE_E2, GAUGE_E3, GAUGE_E4,
+	GAUGES
+} Gauge_e;
+
+static const char* const _gauge_names[GAUGES] = {
+	"FS", "AS", "FV", "CT", "LT", "AL", "SP", "RL", "DC", "1", "2", "3", "4"
+};
+static GameText_t _gauge_labels[GAUGES];
+
+#define PANELS 3
+static const float _panels[PANELS][2] = { { 4, 178 }, { 184, 456 }, { 462, 636 } };
+
+static hstx_dvi_pixel_t hud_rgb(uint8_t r, uint8_t g, uint8_t b) {
+	return hstx_dvi_pixel_rgb(r, g, b);
+}
+
+static void hud_box(float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) {
+	add_line((Vec2_t){ x0, y0 }, (Vec2_t){ x1, y0 }, c);
+	add_line((Vec2_t){ x1, y0 }, (Vec2_t){ x1, y1 }, c);
+	add_line((Vec2_t){ x1, y1 }, (Vec2_t){ x0, y1 }, c);
+	add_line((Vec2_t){ x0, y1 }, (Vec2_t){ x0, y0 }, c);
+}
+
+// Fills the pixels from x0 up to x1 and y0 up to y1
+static void hud_rect(float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) {
+	const Vec2_t r[4] = { { x0, y0 }, { x1, y0 }, { x1, y1 }, { x0, y1 } };
+	add_fill(r, 4, c);
+}
+
+// A box that is filled or outlined, to suit the style
+static void hud_block(bool filled, float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) {
+	if (filled) hud_rect(x0, y0, x1 + 1.0f, y1 + 1.0f, c);
+	else hud_box(x0, y0, x1, y1, c);
+}
+
+static void hud_ellipse(Vec2_t* p, uint32_t n, float cx, float cy, float rx, float ry) {
+	for (uint32_t i = 0; i < n; ++i) {
+		const float a = 2.0f * 3.1416f * (float)i / (float)n;
+		p[i] = (Vec2_t){ cx + rx * cosf(a), cy + ry * sinf(a) };
+	}
+}
+
+static float clamp01(float v) {
+	return v < 0.0f ? 0.0f : v > 1.0f ? 1.0f : v;
+}
+
+// The y of the bar of a gauge
+static float gauge_y(uint32_t row) {
+	return (float)DASH_TOP + 6.0f + (float)row * ((float)(DASH_BOTTOM - DASH_TOP - 12) / GAUGE_ROWS);
+}
+
+// A bar, filled from the left to v, with a dim track for the whole length
+static void hud_bar(bool filled, float x0, float x1, float y, float v, hstx_dvi_pixel_t c, hstx_dvi_pixel_t track) {
+	if (!object_begin()) return;
+	const float x = x0 + (x1 - x0) * clamp01(v);
+	if (x > x0 + 1.0f) hud_block(filled, x0, y, x, y + GAUGE_H - 1, c);
+	hud_box(x0, y, x1, y + GAUGE_H - 1, track);
+	object_end();
+}
+
+// A marker on a track, from -1 at the left to 1 at the right
+static void hud_marker(bool filled, float x0, float x1, float y, float v, hstx_dvi_pixel_t c, hstx_dvi_pixel_t track) {
+	if (!object_begin()) return;
+	const float m = x0 + (x1 - x0) * 0.5f * (clamp01(0.5f + 0.5f * v) * 2.0f);
+	hud_block(filled, m - 3.0f, y, m + 3.0f, y + GAUGE_H - 1, c);
+	add_line((Vec2_t){ (x0 + x1) * 0.5f, y }, (Vec2_t){ (x0 + x1) * 0.5f, y + GAUGE_H - 1 }, track);
+	hud_box(x0, y, x1, y + GAUGE_H - 1, track);
+	object_end();
+}
+
+// A ship on the scanner: a blob above or below where it is, on a stalk
+static void hud_blip(const Object_t* o, uint32_t i) {
+	const float x = o->pos.x / SCANNER_RANGE;
+	const float z = o->pos.z / SCANNER_RANGE;
+	if (x * x + z * z > 1.0f) return;
+	const float sx = SCANNER_X + SCANNER_RX * x;
+	const float sy = SCANNER_Y - SCANNER_RY * z;
+	const float by = sy - o->pos.y / SCANNER_RANGE * SCANNER_RY * 2.0f;
+	if (!object_begin()) return;
+	const hstx_dvi_pixel_t c = shade(o->rgb, 1.0f);
+	const float w = i == OBJ_STATION ? 3.0f : 2.0f;
+	hud_rect(sx - w, by - 1.0f, sx + w, by + 1.0f, c);
+	if (fabsf(by - sy) > 1.0f) add_line((Vec2_t){ sx, sy }, (Vec2_t){ sx, by }, c);
+	object_end();
+}
+
+static void draw_hud(Style_e style, uint32_t frame) {
+	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
+	const float t = (float)frame / 60.0f;
+	const hstx_dvi_pixel_t frame_c = hud_rgb(36, 109, 219);
+	const hstx_dvi_pixel_t track = hud_rgb(36, 73, 109);
+	const hstx_dvi_pixel_t scan = hud_rgb(0, 146, 182);
+	_clip_top = 0;
+	_clip_bottom = GAME_SCREEN_H;
+
+	// The sights in the middle of the view
+	if (object_begin()) {
+		const hstx_dvi_pixel_t c = hud_rgb(255, 255, 255);
+		add_line((Vec2_t){ CENTRE_X - 26, CENTRE_Y }, (Vec2_t){ CENTRE_X - 8, CENTRE_Y }, c);
+		add_line((Vec2_t){ CENTRE_X + 8, CENTRE_Y }, (Vec2_t){ CENTRE_X + 26, CENTRE_Y }, c);
+		add_line((Vec2_t){ CENTRE_X, CENTRE_Y - 18 }, (Vec2_t){ CENTRE_X, CENTRE_Y - 6 }, c);
+		add_line((Vec2_t){ CENTRE_X, CENTRE_Y + 6 }, (Vec2_t){ CENTRE_X, CENTRE_Y + 18 }, c);
+		object_end();
+	}
+
+	// The gauges, with made up values that change over time
+	const hstx_dvi_pixel_t yellow = hud_rgb(255, 255, 0);
+	const hstx_dvi_pixel_t green = hud_rgb(0, 255, 0);
+	const hstx_dvi_pixel_t red = hud_rgb(255, 73, 0);
+	const float energy = 0.8f + 0.2f * sinf(t * 0.2f);
+	const float left[6] = {
+		0.75f + 0.25f * sinf(t * 0.7f),
+		0.6f + 0.3f * sinf(t * 0.5f + 1.0f),
+		0.85f,
+		0.3f + 0.1f * sinf(t * 0.3f),
+		0.15f + 0.6f * fmaxf(0.0f, sinf(t * 1.3f)),
+		0.0f
+	};
+	const hstx_dvi_pixel_t left_c[6] = { yellow, yellow, green, red, red, green };
+	for (uint32_t g = GAUGE_FS; g <= GAUGE_AL; ++g) {
+		hud_bar(filled, GAUGE_X0, GAUGE_X1, gauge_y(g), left[g], left_c[g], track);
+	}
+	hud_bar(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(0), 0.55f + 0.3f * sinf(t * 0.3f), yellow, track);
+	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(1), sinf(t * 0.4f), green, track);
+	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(2), 0.6f * sinf(t * 0.25f), green, track);
+	for (uint32_t b = 0; b < 4; ++b) {
+		// The banks empty from the top
+		hud_bar(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(3 + b), energy * 4.0f - (float)(3 - b), yellow, track);
+	}
+
+	// The ships on the scanner, over it
+	for (uint32_t i = 0; i < OBJECTS; ++i) hud_blip(&_objects[i], i);
+
+	// The compass, with a dot towards the station, red when it is behind us
+	if (object_begin()) {
+		const Vec3_t* s = &_objects[OBJ_STATION].pos;
+		const float l = sqrtf(s->x * s->x + s->y * s->y + s->z * s->z);
+		const float dx = COMPASS_X + COMPASS_R * s->x / l;
+		const float dy = COMPASS_Y - COMPASS_R * s->y / l;
+		hud_rect(dx - 2.0f, dy - 2.0f, dx + 2.0f, dy + 2.0f, s->z >= 0.0f ? green : red);
+		Vec2_t c[16];
+		hud_ellipse(c, 16, COMPASS_X, COMPASS_Y, COMPASS_R + 2.0f, COMPASS_R + 2.0f);
+		for (uint32_t i = 0; i < 16; ++i) add_line(c[i], c[(i + 1) % 16], scan);
+		object_end();
+	}
+
+	// The missiles, two of them away
+	if (object_begin()) {
+		for (uint32_t i = 0; i < MISSILES; ++i) {
+			const float x = SCANNER_X - 112.0f + 14.0f * (float)i;
+			if (i < 2) hud_box(x, DASH_BOTTOM - 14, x + 9, DASH_BOTTOM - 6, track);
+			else hud_block(filled, x, DASH_BOTTOM - 14, x + 9, DASH_BOTTOM - 6, green);
+		}
+		object_end();
+	}
+
+	// The scanner: an ellipse, with lines showing ahead and to the sides
+	if (object_begin()) {
+		Vec2_t e[SCANNER_SIDES];
+		hud_ellipse(e, SCANNER_SIDES, SCANNER_X, SCANNER_Y, SCANNER_RX, SCANNER_RY);
+		for (uint32_t i = 0; i < SCANNER_SIDES; ++i) add_line(e[i], e[(i + 1) % SCANNER_SIDES], scan);
+		add_line((Vec2_t){ SCANNER_X - SCANNER_RX, SCANNER_Y }, (Vec2_t){ SCANNER_X + SCANNER_RX, SCANNER_Y }, track);
+		add_line((Vec2_t){ SCANNER_X, SCANNER_Y - SCANNER_RY }, (Vec2_t){ SCANNER_X, SCANNER_Y + SCANNER_RY }, track);
+		add_line((Vec2_t){ SCANNER_X, SCANNER_Y }, (Vec2_t){ SCANNER_X - SCANNER_RX * 0.7f, SCANNER_Y - SCANNER_RY * 0.7f }, track);
+		add_line((Vec2_t){ SCANNER_X, SCANNER_Y }, (Vec2_t){ SCANNER_X + SCANNER_RX * 0.7f, SCANNER_Y - SCANNER_RY * 0.7f }, track);
+		object_end();
+	}
+
+	// The panels
+	for (uint32_t i = 0; i < PANELS; ++i) {
+		if (!object_begin()) break;
+		hud_box(_panels[i][0], DASH_TOP, _panels[i][1], DASH_BOTTOM, frame_c);
+		object_end();
+	}
+
+	// The labels. Text draws straight into the row, so it goes after
+	// everything else to be drawn over it.
+	for (uint32_t g = 0; g < GAUGES; ++g) {
+		const bool right = g >= GAUGE_SP;
+		const uint32_t row = right ? g - GAUGE_SP : g;
+		game_spr_text(&_gauge_labels[g], right ? GAUGE_RIGHT_X0 - 22 : 8, (int32_t)gauge_y(row) + 1, game_pallet(GAME_CYAN));
+		++_sprite_count;
+	}
+
+	_clip_top = VIEW_TOP;
+	_clip_bottom = VIEW_BOTTOM;
 }
 
 static float distance2(const Vec3_t* v) {
@@ -834,8 +1059,9 @@ void main_loop(void) {
 		game_spr_begin();
 		GameText_t* title = &_title[frame & 1];
 		GameText_t* status = &_status[frame & 1];
-		game_spr_text_centre(title, 12, game_pallet(GAME_YELLOW));
-		game_spr_text_centre(status, GAME_SCREEN_H - 24, game_pallet(GAME_CYAN));
+		game_spr_text_centre(status, 4, game_pallet(GAME_CYAN));
+		game_spr_text_centre(title, 16, game_pallet(GAME_YELLOW));
+		draw_hud(style, frame);
 		draw_stars();
 
 		// Nearest first, so they cover the ones behind
@@ -866,7 +1092,7 @@ void main_loop(void) {
 		else {
 			snprintf(s, sizeof(s), "%s PARTS %u", _style_names[style], (unsigned)_prim_count);
 		}
-		game_text_set(status, s, 2);
+		game_text_set(status, s, 1);
 		if (timing.frame && frame % 60 == 0) {
 			printf("%s parts %u sprites %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", _style_names[style],
 				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)timing.calls_max, ahead,
@@ -899,8 +1125,9 @@ int main(void)
 
 	for (uint32_t i = 0; i < 2; ++i) {
 		game_text_set(&_title[i], "", 2);
-		game_text_set(&_status[i], "", 2);
+		game_text_set(&_status[i], "", 1);
 	}
+	for (uint32_t g = 0; g < GAUGES; ++g) game_text_set(&_gauge_labels[g], _gauge_names[g], 1);
 
 	// Initialize the HSTX DVI sprite system
 	hstx_dvi_sprite_init_all();

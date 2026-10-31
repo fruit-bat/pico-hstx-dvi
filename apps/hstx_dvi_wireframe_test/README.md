@@ -1,7 +1,7 @@
 # Wireframe ships
 
 Every type of ship from Elite flies round a spinning Coriolis space station, past a sun, through a field of stars,
-with missiles chasing two of them. The name of the nearest ship is shown at the top.
+with missiles chasing two of them. The name of the nearest ship is shown at the top, and a dashboard after the original game's at the bottom.
 Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces.
 
 ## How it works
@@ -26,9 +26,18 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
 - The other core turns, moves, lights and projects everything each frame, with floats, and cuts the edges and shapes to the view.
   The renderer reads the sprites of the frame it is drawing while the next is worked out, so there are two sets.
 
+## The dashboard
+
+- On the left, gauges for the fore and aft shields, fuel, cabin and laser temperatures and altitude.
+  On the right, speed, roll and dive or climb, and the four energy banks. The values are made up, and change over time.
+- In the middle, the scanner, with a blip on a stalk for each ship within range, above or below where it is round us,
+  a compass with a dot towards the station, red when it is behind us, and the missiles, two of them away.
+- It is drawn in outlines for the wireframe styles, and with solid bars for the filled ones, with the same lines and shapes as the ships.
+  Each gauge, blip and panel is an object of its own, as an object's sprite looks at all its parts on every row it covers.
+
 ## The meter
 
-The bottom line shows the style, and how well the renderer is keeping up with the display.
+The line at the top shows the style, and how well the renderer is keeping up with the display.
 
 - `AHEAD` is how far ahead of the display the rows were at the worst moment of the last frame, in rows.
   The row FIFO holds 8 rows, and is full at the top of each frame after the vertical blank,
