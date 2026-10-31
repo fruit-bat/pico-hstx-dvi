@@ -9,6 +9,7 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "app_led.h"
 #include "hstx_dvi_row_fifo.h"
 #include "hstx_dvi_row_buf.h"
 #include "hstx_dvi_sprite.h"
@@ -17,107 +18,50 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/sem.h"
-#include "font_inv.h"
 #include "inv_input.h"
-#include "inv_invaders.h"
-#include "inv_bullets.h"
-#include "inv_bombs.h"
-#include "inv_score.h"
-#include "inv_pallet.h"
-#include "inv_mot.h"
-#include "inv_gun.h"
-#include "inv_base.h"
+#include "inv_hiscore.h"
+#include "game_pallet.h"
+#include "inv_game.h"
+#include "inv_attract.h"
 
-
-
-void __not_in_flash_func(intro_loop)() {
-	hstx_dvi_sprite_disable_all();
-
-	uint32_t si = 0;	
-	si = inv_gun_init(si);
-	si = inv_base_init(si);
-	si = inv_score_init(si);
-	si = inv_invaders_init_title(si);
-	inv_score_update();
-
-	// Wait for the user to press a button
-	while (true) {
-		hstx_dvi_sprite_wait_for_frame();
-		// read the input
-		const uint8_t input = get_inv_input();
-
-		if( is_inv_input_fire(input) || is_inv_input_start(input)) {
-			break;
-		}
-	}
+// Cycles through the screens shown between games. Returns true when a player
+// wants to play, or false once it has been round them all.
+static bool attract_loop() {
+	return inv_attract_title()
+		|| inv_attract_score_table()
+		|| inv_game_demo()
+		|| inv_attract_hiscores(-1);
 }
 
-void __not_in_flash_func(game_over_loop)() {
-	for(uint32_t i = 0; i < 100; ++i) {
-		hstx_dvi_sprite_wait_for_frame();
-	}
-}
-
-void init_game() {
-	hstx_dvi_sprite_disable_all();
-
-	uint32_t si = 0;
-	si = inv_invaders_init(si);
-	si = inv_bullets_init(si);
-	si = inv_score_init(si);
-	si = inv_mot_init(si);
-	si = inv_gun_init(si);
-	si = inv_base_init(si);
-	si = inv_bombs_init(si);
-}
-
-// Main game loop
-void __not_in_flash_func(game_loop)() {
-
-	init_game();
-	for(uint32_t frame = 0; inv_gun_get_lives(); ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
-
-		inv_invader_update(frame);
-		inv_bullets_update();
-		inv_bombs_update();
-		inv_mot_update();
-		inv_base_update();
-		inv_gun_update(frame);
-		inv_score_update();
-	}
-}
-
-void __not_in_flash_func(main_loop)() {
-
+void main_loop() {
+	bool play = false;
 	while(1) {
-
-		intro_loop();
-		
-		// Start the game loop
-		game_loop();
-		
-		game_over_loop();
+		if (play || attract_loop()) {
+			inv_game_play();
+			// Pressing fire on the high score table goes straight into another game
+			play = inv_attract_game_over();
+		}
 	}
 }
 
 int main(void)
 {
-    // Initialize stdio and GPIO 25 for the onboard LED
     stdio_init_all();
-    gpio_init(25);
-    gpio_set_dir(25, GPIO_OUT);
-    gpio_put(25, 1); // Turn LED on
+    app_led_on();
 
 	// Initialize the gpio input
-	init_inv_input();
+	static const uint16_t pad_map[INV_INP_GPIO_COUNT] = INV_INP_PAD_MAP;
+	game_input_init(INV_INP_GPIO_START, INV_INP_GPIO_COUNT, pad_map);
+
+	game_pallet_init();
+	game_hiscore_init(inv_hiscore_defaults());
 
 	// Initialize the HSTX DVI sprite system
     hstx_dvi_sprite_init_all();
 
     sleep_ms(2000); // Allow time for initialization
 
-    printf("HSTX DVI Sprite Test\n");
+    printf("HSTX DVI Sprite Test - Invaders\n");
 
 	main_loop();
 }

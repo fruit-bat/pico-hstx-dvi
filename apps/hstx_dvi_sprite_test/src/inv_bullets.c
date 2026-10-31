@@ -1,11 +1,12 @@
 #include "inv_bullets.h"
-#include "inv_pallet.h"
+#include "game_pallet.h"
 #include "inv_collisions.h"
 #include "inv_base.h"
 
 #define INV_BULLET_COUNT 5
 
 static SpriteId _sprite_index = 0;
+static uint32_t _shots = 0;
 
 static Tile8x8p2_t tile8x8p2_bullets[] = {
 	{{
@@ -35,12 +36,13 @@ SpriteId inv_bullets_init(SpriteId start) {
 			8,  // height
 			0,  // flags
 			&tile8x8p2_bullets[0],
-			inv_pallet_red(),
+			game_pallet(GAME_RED),
 			sprite_renderer_sprite_8x8_p1);
 
 		hstx_dvi_sprite_set_sprite_collision_mask(si, INV_BULLET_COLLISION_MASK);
 	}
 
+	_shots = 0;
     return _sprite_index + INV_BULLET_COUNT;
 }
 
@@ -67,16 +69,27 @@ void __not_in_flash_func(inv_bullets_update)() {
     }
 }
 
-void __not_in_flash_func(inv_bullets_fire)(SpriteId gunSpriteId) {
+void __not_in_flash_func(inv_bullets_fire)(int32_t x, int32_t y) {
 	for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i)
 	{
 		SpriteId si = _sprite_index + i;
 		Sprite *sprite = hstx_dvi_sprite_get(si);
 		if (!(sprite->f & SF_ENABLE)) { // If the bullet is not enabled
-			sprite->x = 8 + hstx_dvi_sprite_get(gunSpriteId)->x; // Set bullet x to gun x
-			sprite->y = hstx_dvi_sprite_get(gunSpriteId)->y - 8; // Set bullet y above the gun
+			sprite->x = x;
+			sprite->y = y - 8;
 			sprite->f |= SF_ENABLE; // Enable the bullet
+			++_shots;
 			break; // Exit after firing one bullet
 		}
 	}
+}
+
+void inv_bullets_clear(void) {
+	for (uint32_t i = 0; i < INV_BULLET_COUNT; ++i) {
+		hstx_dvi_sprite_disable(_sprite_index + i);
+	}
+}
+
+uint32_t inv_bullets_get_shots(void) {
+	return _shots;
 }

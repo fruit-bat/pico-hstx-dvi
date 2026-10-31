@@ -1,20 +1,28 @@
 
 add_executable(hstx_dvi_sprite_test
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/inv_input.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_alien.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_invaders.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_title.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_bullets.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_bombs.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_score.c
-  ${CMAKE_CURRENT_LIST_DIR}/src/inv_pallet.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_mot.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_gun.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_base.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_level.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_hiscore.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_screen.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_demo.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_game.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_attract.c
 )
 
 target_compile_definitions(hstx_dvi_sprite_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
   MODE_BYTES_PER_PIXEL=1
+  # Buttons on GPIOs 6 to 9, leaving 2 to 5 for the SD card as in hstx_dvi_cpm
+  INV_INP_GPIO_START=6
 )
 
 target_link_libraries(hstx_dvi_sprite_test
@@ -25,6 +33,7 @@ target_link_libraries(hstx_dvi_sprite_test
   pico_sync
   pico_hstx_dvi
   pico_hstx_dvi_grid
+  game_common
 )
 
 # create map/bin/hex file etc.

@@ -10,32 +10,64 @@ Sprite _sprites[MAX_SPRITES];
 static Sprite _sprites_rdy[MAX_SPRITES];
 
 static SpriteCollisionMask _spriteCollisionMasks[MAX_SPRITES];
-static SpriteIdRow _spriteIdRow; 
+static SpriteCollisionMask _spriteCollisionMasksRdy[MAX_SPRITES];
+static SpriteIdRow _spriteIdRow;
 SpriteCollisions _spriteCollisions;
 static SpriteCollisions _spriteCollisionsFrame;
+// Sprites listed by the first line they appear on, rebuilt whenever _sprites_rdy changes.
+// _lineStart[y] and _nextStart[i] hold sprite id + 1, with 0 ending the list.
+#define ACTIVE_SPRITE_WORDS ((MAX_SPRITES + 31) >> 5)
+static uint8_t _lineStart[MODE_V_ACTIVE_LINES];
+static uint8_t _nextStart[MAX_SPRITES];
+// The line after the last one each listed sprite appears on
+static uint16_t _lineEnd[MAX_SPRITES];
+// Released by the application core when it has finished updating the sprites
+static struct semaphore _update_sem;
+// Released by the render core once the updates have been taken
 static struct semaphore _frame_sem;
 
 __force_inline void clear_sprite_collisions(SpriteCollisions* sc) {
 	for(uint32_t i = 0; i < MAX_SPRITES; ++i) sc->m[i] = 0;
 }
 
+// Lists the enabled sprites that are at least partly on screen by their first visible line
+static void __not_in_flash_func(build_sprite_lines)() {
+	memset(_lineStart, 0, sizeof(_lineStart));
+	for (int32_t i = MAX_SPRITES - 1; i >= 0; --i) {
+		const Sprite *sprite = &_sprites_rdy[i];
+		if (!(sprite->f & SF_ENABLE)) continue;
+		if ((sprite->x >= MODE_H_ACTIVE_PIXELS) || ((int64_t)sprite->x + sprite->w <= 0)) continue;
+		const int64_t y0 = sprite->y;
+		const int64_t y1 = y0 + sprite->h;
+		if ((y1 <= 0) || (y0 >= MODE_V_ACTIVE_LINES) || (y0 >= y1)) continue;
+		const uint32_t first = y0 < 0 ? 0 : (uint32_t)y0;
+		_lineEnd[i] = y1 > MODE_V_ACTIVE_LINES ? MODE_V_ACTIVE_LINES : (uint16_t)y1;
+		_nextStart[i] = _lineStart[first];
+		_lineStart[first] = i + 1;
+	}
+}
+
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
     hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
 
-    for(uint32_t frame_index = 0; true; ++frame_index) {
-        hstx_dvi_sprite_render_frame(frame_index);
-		// If the other core is waiting for the next frame
-		if(!sem_available(&_frame_sem)) {
+    while(true) {
+        hstx_dvi_sprite_render_frame();
+		// Only take the updates once the other core has finished making them.
+		// It stays blocked in hstx_dvi_sprite_wait_for_frame until the copy is done.
+		if(sem_try_acquire(&_update_sem)) {
 			memcpy(_sprites_rdy, _sprites, sizeof(_sprites));
+			memcpy(_spriteCollisionMasksRdy, _spriteCollisionMasks, sizeof(_spriteCollisionMasks));
 			memcpy(&_spriteCollisions, &_spriteCollisionsFrame, sizeof(_spriteCollisionsFrame));
 			clear_sprite_collisions(&_spriteCollisionsFrame);
+			sem_release(&_frame_sem);
+			build_sprite_lines();
 		}
-        sem_release(&_frame_sem);
     }
 }
 
 void __not_in_flash_func(hstx_dvi_sprite_wait_for_frame)(){
+    sem_release(&_update_sem);
     sem_acquire_blocking(&_frame_sem);
 }
 
@@ -56,7 +88,9 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 		_sprites[i].f = 0;
 		_sprites_rdy[i].f = 0;
 	}
-	// Set up the frame semaphore. Released at the end of every frame.
+	build_sprite_lines();
+	// Set up the frame handshake semaphores
+    sem_init(&_update_sem, 0, 1);
     sem_init(&_frame_sem, 0, 1);
 
     // Initialize the HSTX DVI row FIFO.
@@ -83,31 +117,77 @@ void __not_in_flash_func(render_row_mono)(
 
 static __force_inline void render_sprite_pixel(
 	hstx_dvi_row_t* r,
-    hstx_dvi_pixel_t p,
+	const hstx_dvi_pixel_t p,
 	const SpriteId spriteId,
-	const uint32_t j)
-{
+	const SpriteCollisionMask spriteCollisionMask,
+	SpriteCollisionMask* const spriteCollisionsPtr,
+	const uint32_t j
+) {
 	const SpriteId ncid = _spriteIdRow.id[j];
 	if (ncid)
 	{
 		const SpriteId cid = ncid - 1;
-		_spriteCollisionsFrame.m[cid] |= _spriteCollisionMasks[spriteId];
-		_spriteCollisionsFrame.m[spriteId] |= _spriteCollisionMasks[cid];
+		_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
+		*spriteCollisionsPtr |= _spriteCollisionMasksRdy[cid];
 	}
 	else
 	{
-        hstx_dvi_row_set_pixel(r, j, p);
+		hstx_dvi_row_set_pixel(r, j, p);
 		_spriteIdRow.id[j] = spriteId + 1;
 	}
 }
 
-static __force_inline void render_pixel(
-	hstx_dvi_row_t* r,
-    hstx_dvi_pixel_t p,
-    const uint32_t j
+// Clips a row of w pixels at x to the screen. m holds the pixels with bit 31
+// as the leftmost; on return it only holds visible pixels starting at ux.
+// Returns false if nothing is visible.
+static __force_inline bool clip_row(
+	uint32_t* const m,
+	uint32_t* const ux,
+	const int32_t x,
+	const uint32_t w
 ) {
-    hstx_dvi_row_set_pixel(r, j, p);
+	*ux = (uint32_t)x;
+	if (*ux <= (MODE_H_ACTIVE_PIXELS - w)) return true;
+	if (x < 0) {
+		const uint32_t s = 0u - *ux;
+		if (s >= w) return false;
+		*m <<= s;
+		*ux = 0;
+	}
+	else {
+		if (*ux >= MODE_H_ACTIVE_PIXELS) return false;
+		*m &= ~(0xffffffffu >> (MODE_H_ACTIVE_PIXELS - *ux));
+	}
+	return *m != 0;
 }
+
+#if MODE_BYTES_PER_PIXEL == 1
+// Byte masks for 4 pixels in a row word; nibble bit 3 is the leftmost (lowest address) pixel.
+// Placed in RAM to avoid flash cache misses while rendering.
+static const uint32_t __attribute__((section(".data._nibble_byte_mask"))) _nibble_byte_mask[16] = {
+	0x00000000, 0xff000000, 0x00ff0000, 0xffff0000,
+	0x0000ff00, 0xff00ff00, 0x00ffff00, 0xffffff00,
+	0x000000ff, 0xff0000ff, 0x00ff00ff, 0xffff00ff,
+	0x0000ffff, 0xff00ffff, 0x00ffffff, 0xffffffff
+};
+
+// Runs BODY for each row word wi holding visible pixels, with nib holding those
+// pixels (bit 3 leftmost). Words with no pixels are skipped. m and ux are as left by clip_row.
+#define FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, BODY) \
+	{ \
+		uint32_t wi = (ux) >> 2; \
+		uint64_t mm = ((uint64_t)(m) << 32) >> ((ux) & 3); \
+		while (mm) { \
+			const uint32_t z = __builtin_clzll(mm) & ~3u; \
+			mm <<= z; \
+			wi += z >> 2; \
+			const uint32_t nib = (uint32_t)(mm >> 60); \
+			BODY \
+			mm <<= 4; \
+			++wi; \
+		} \
+	}
+#endif
 
 static __force_inline void render_sprite_row_n_p1(
 	const uint32_t d,
@@ -117,58 +197,40 @@ static __force_inline void render_sprite_row_n_p1(
 	const SpriteId spriteId,
 	const uint32_t w
 ) {
-	if (d)
-	{
-		const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasks[spriteId];
-		SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
-		const uint32_t bm = 1 << (w-1);
-        const hstx_dvi_pixel_t p = p1[0];
-		const uint32_t ux = (uint32_t)x;
-		if (ux < (MODE_H_ACTIVE_PIXELS - w))
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = ux + i;
-				if (d & (bm >> i))
-				{
-					const SpriteId ncid = _spriteIdRow.id[j];
-					if (ncid)
-					{
-						const SpriteId cid = ncid - 1;
-						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
-						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
-					}
-					else
-					{
-						hstx_dvi_row_set_pixel(r, j, p);
-						_spriteIdRow.id[j] = spriteId + 1;
-					}
-				}
+	uint32_t m = d << (32 - w);
+	uint32_t ux;
+	if (!m || !clip_row(&m, &ux, x, w)) return;
+
+	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
+	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
+	const hstx_dvi_pixel_t p = p1[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	// Write 4 pixels at a time where none of them are already taken by another sprite
+	const uint32_t pq = p * 0x01010101u;
+	const uint32_t idq = (spriteId + 1) * 0x01010101u;
+	FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, {
+		const uint32_t bm = _nibble_byte_mask[nib];
+		const uint32_t ids = _spriteIdRow.word[wi];
+		if (!(ids & bm)) {
+			r->w[wi] = (r->w[wi] & ~bm) | (pq & bm);
+			_spriteIdRow.word[wi] = ids | (idq & bm);
+		}
+		else {
+			for (uint32_t b = nib; b; ) {
+				const uint32_t k = __builtin_clz(b) - 28;
+				b ^= 8u >> k;
+				render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, (wi << 2) + k);
 			}
 		}
-		else
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = ux + i;
-				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
-				{
-					const SpriteId ncid = _spriteIdRow.id[j];
-					if (ncid)
-					{
-						const SpriteId cid = ncid - 1;
-						_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
-						*spriteCollisionsPtr |= _spriteCollisionMasks[cid];
-					}
-					else
-					{
-						hstx_dvi_row_set_pixel(r, j, p);
-						_spriteIdRow.id[j] = spriteId + 1;
-					}
-				}
-			}
-		}
+	})
+#else
+	// Visit the set pixels only
+	while (m) {
+		const uint32_t i = __builtin_clz(m);
+		m ^= 0x80000000u >> i;
+		render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, ux + i);
 	}
+#endif
 }
 
 static __force_inline void render_row_n_p1(
@@ -178,33 +240,31 @@ static __force_inline void render_row_n_p1(
 	const int32_t x,
 	const uint32_t w
 ) {
-	if (d)
-	{
-        const hstx_dvi_pixel_t p = p1[0];
-		const uint32_t bm = 1 << (w-1);
-		if (((uint32_t)x) < (MODE_H_ACTIVE_PIXELS - w))
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = (uint32_t)x + i;
-				if (d & (bm >> i))
-				{
-					render_pixel(r, p, j);
-				}
-			}
-		}
-		else
-		{
-			for (int32_t i = 0; i < w; i++)
-			{
-				const uint32_t j = (uint32_t)x + i;
-				if ((j < MODE_H_ACTIVE_PIXELS) && (d & (bm >> i)))
-				{
-					render_pixel(r, p, j);
-				}
-			}
-		}
+	uint32_t m = d << (32 - w);
+	uint32_t ux;
+	if (!m || !clip_row(&m, &ux, x, w)) return;
+
+	const hstx_dvi_pixel_t p = p1[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t pq = p * 0x01010101u;
+	FOR_EACH_PIXEL_NIBBLE(m, ux, wi, nib, {
+		const uint32_t bm = _nibble_byte_mask[nib];
+		r->w[wi] = (r->w[wi] & ~bm) | (pq & bm);
+	})
+#else
+	while (m) {
+		const uint32_t i = __builtin_clz(m);
+		m ^= 0x80000000u >> i;
+		hstx_dvi_row_set_pixel(r, ux + i, p);
 	}
+#endif
+}
+
+// Characters outside the font are rendered as a space
+static __force_inline uint32_t text_grid8_glyph_offset(const uint8_t c, const uint32_t k) {
+	uint32_t g = (uint32_t)c - TEXT_GRID8_FIRST_CHAR;
+	if (g > (TEXT_GRID8_LAST_CHAR - TEXT_GRID8_FIRST_CHAR)) g = ' ' - TEXT_GRID8_FIRST_CHAR;
+	return k + (g << 3);
 }
 
 static __force_inline void render_row_text_8_p1(
@@ -220,12 +280,30 @@ static __force_inline void render_row_text_8_p1(
 	const uint32_t v = w >> 2;
     uint8_t* font_8x8 = tg->font;
 
+#if MODE_BYTES_PER_PIXEL == 1
+	// Whole grid on screen and word aligned: 2 masked word writes per character
+	if (!(x & 3) && ((w << 3) <= MODE_H_ACTIVE_PIXELS) && ((uint32_t)x <= MODE_H_ACTIVE_PIXELS - (w << 3))) {
+		const uint32_t pq = p1[0] * 0x01010101u;
+		uint32_t* rw = &r->w[(uint32_t)x >> 2];
+		for(uint32_t i = 0; i < w; ++i, rw += 2) {
+			const uint32_t d = font_8x8[text_grid8_glyph_offset(s[i], k)];
+			if (d) {
+				const uint32_t bm1 = _nibble_byte_mask[d >> 4];
+				const uint32_t bm2 = _nibble_byte_mask[d & 15];
+				rw[0] = (rw[0] & ~bm1) | (pq & bm1);
+				rw[1] = (rw[1] & ~bm2) | (pq & bm2);
+			}
+		}
+		return;
+	}
+#endif
+
 	for(uint32_t i = 0; i < v; ++i) {
 		const uint32_t q = i << 2;
-		const uint8_t d1 = font_8x8[k + ((s[q] -  32) << 3)];
-		const uint8_t d2 = font_8x8[k + ((s[q+1] -  32) << 3)];
-		const uint8_t d3 = font_8x8[k + ((s[q+2] -  32) << 3)];
-		const uint8_t d4 = font_8x8[k + ((s[q+3] -  32) << 3)];
+		const uint8_t d1 = font_8x8[text_grid8_glyph_offset(s[q], k)];
+		const uint8_t d2 = font_8x8[text_grid8_glyph_offset(s[q+1], k)];
+		const uint8_t d3 = font_8x8[text_grid8_glyph_offset(s[q+2], k)];
+		const uint8_t d4 = font_8x8[text_grid8_glyph_offset(s[q+3], k)];
 		const uint32_t g = (((uint32_t)d1) << 24) | (((uint32_t)d2) << 16) | (((uint32_t)d3) << 8) | d4;
 		render_row_n_p1(
 			g,
@@ -236,7 +314,7 @@ static __force_inline void render_row_text_8_p1(
 		);
 	}
 	for(uint32_t i = w & -4; i < w; ++i) {
-		const uint8_t d = font_8x8[k + ((s[i] -  32) << 3)];
+		const uint8_t d = font_8x8[text_grid8_glyph_offset(s[i], k)];
 		render_row_n_p1(
 			d,
 			p1,
@@ -396,6 +474,24 @@ void __not_in_flash_func(sprite_renderer_sprite_32x16_p1)(
 	);
 }
 
+void __not_in_flash_func(sprite_renderer_sprite_32xn_p1)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	render_sprite_row_n_p1(
+		((const uint32_t*)d1)[row],
+		d2,
+		r,
+		x,
+		spriteId,
+		32
+	);
+}
+
 void __not_in_flash_func(text_renderer_8x8_p1)(
 	const void* d1,
 	const void* d2,
@@ -424,14 +520,15 @@ void __not_in_flash_func(render_Tile16x16p2)(
     const hstx_dvi_pixel_t fg = p2[1];
 	uint16_t d = t->d[row];
 	for(int32_t i = 0; i < 16; i++) {
-		render_pixel(r, d & (1<<15) ? fg : bg, x + i);
+		hstx_dvi_row_set_pixel(r, x + i, d & (1<<15) ? fg : bg);
 		d <<= 1;
 	}
 }
 
-void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
-		
-	//clear_sprite_collisions();
+void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
+	// Sprites on the current line, one bit per sprite id
+	uint32_t active[ACTIVE_SPRITE_WORDS] = {0};
+
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
 		clear_sprite_id_row();
@@ -442,18 +539,26 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)(uint32_t frame_index) {
 			r,
 			hstx_dvi_pixel_rgb(0, 0, 0));
 
-		for (uint32_t i = 0; i < MAX_SPRITES; ++i)
-		{
-			const Sprite *sprite = &_sprites_rdy[i];
-			const uint32_t k = y - sprite->y;
-			if ((sprite-> f & SF_ENABLE) && k < sprite->h)
-			{
+		for (uint32_t n = _lineStart[y]; n; n = _nextStart[n - 1]) {
+			active[(n - 1) >> 5] |= 1u << ((n - 1) & 31);
+		}
+
+		// Render in ascending id order, so lower ids keep priority
+		for (uint32_t wi = 0; wi < ACTIVE_SPRITE_WORDS; ++wi) {
+			for (uint32_t bits = active[wi]; bits; bits &= bits - 1) {
+				const uint32_t b = __builtin_ctz(bits);
+				const uint32_t i = (wi << 5) + b;
+				if (y >= _lineEnd[i]) {
+					active[wi] &= ~(1u << b);
+					continue;
+				}
+				const Sprite *sprite = &_sprites_rdy[i];
 				(sprite->r)(
 					sprite->d1,
 					sprite->d2,
 					r,
 					sprite->x,
-					k,
+					y - sprite->y,
 					i);
 			}
 		}

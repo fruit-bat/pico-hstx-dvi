@@ -5,7 +5,6 @@
 
 static PIO _pio = pio0;
 static uint _sm = 0;
-static hstx_dvi_pixel_row_fetcher _row_fetcher;
 
 hstx_dvi_row_t* HSTX_DVI_MEM_LOC(hstx_dvi_row_fifo_get)(uint32_t row_index) {
     return (hstx_dvi_row_t*)hstx_dvi_fifo_get(_pio, _sm);
