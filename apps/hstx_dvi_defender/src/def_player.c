@@ -17,14 +17,19 @@
 // How fast the ship swings across the screen when it turns round
 #define DEF_SHIP_SWING 10
 #define DEF_SHIP_START_Y 220
-#define DEF_LASER_COUNT 4
+#define DEF_LASER_COUNT 6
 #define DEF_LASER_RANGE 600
 #define DEF_LASER_HEAD_SPEED 48
 #define DEF_LASER_TAIL_SPEED 28
 // Frames before the tail of a beam starts to follow the head
 #define DEF_LASER_TAIL_DELAY 3
-// Frames between shots while fire is held down
-#define DEF_LASER_REPEAT 8
+// Fire lets off a burst of shots. Holding it down gives another burst after
+// a pause, and pressing it again gives one straight away.
+#define DEF_BURST_SHOTS 3
+// Frames between the shots in a burst
+#define DEF_BURST_GAP 4
+// Frames after a burst before holding fire gives another
+#define DEF_BURST_PAUSE 30
 #define DEF_PLAYER_DEAD_FRAMES 150
 #define DEF_SMART_FLASH 6
 // The exhaust changes colour every 2 to the power of this many frames
@@ -55,22 +60,27 @@ static int32_t _offset = DEF_SHIP_OFFSET;
 static DefPlayerState_e _state = DEF_PLAYER_ALIVE;
 static uint32_t _timer = 0;
 static uint32_t _fire_timer = 0;
+// Shots left in the burst being fired
+static uint32_t _burst = 0;
 static DefLaser_t _lasers[DEF_LASER_COUNT];
 
 // Facing right; the left facing ones are made from them
-static const char* const _art_ship[] = {
-	"WW..............................",
-	"WWW.............................",
-	"WWWW............CCC.............",
-	"WWWWW..........CCCCC............",
-	"WWWWWWWWWWWWWWWWWWWWWWWW........",
-	"RWWWWWWWWWWWWWWWWWWWWWWWWWWW....",
-	"RRPPPPPPPPPPPPPPPPPPPPPWWWWWWWWW",
-	"RWWWWWWWWWWWWWWWWWWWWWWWWWWW....",
-	"..WWWWWWWWWWWWWWWWWWWWWW........",
-	"....GGGGGGGGGGGGGGGGG...........",
+static const char* const _art_ship[DEF_SHIP_H] = {
+	"RRR.............................",
+	"RWRR............................",
+	"RWWRR...........................",
+	"RWWWRR............CCCC..........",
+	"RWWWWRR.........CCCWWCC.........",
+	"RWWWWWWWWWWWWWWCCCCCCWWCW.......",
+	"RRWWWWWWWWWWWWWWWWWWWWWWWWWW....",
+	"RRPPPPPPPPPPPPPPPPPPPPPPPWWWWWWW",
+	"RRWWWWWWWWWWWWWWWWWWWWWWWWWWWW..",
+	"RWWWWWWWWWWWWWWWWWWWWWWWWWW.....",
+	".RRWWWWWWWWWWWWWWWWWWWWWW.......",
+	"..RRR.PPPPPPPPPPPPPPPPP.........",
+	".......RRRRR.....RRRRR..........",
 };
-static const uint8_t _ship_colours[] = { GAME_WHITE, GAME_CYAN, GAME_RED, GAME_PURPLE, GAME_GREY };
+static const uint8_t _ship_colours[] = { GAME_WHITE, GAME_CYAN, GAME_RED, GAME_PURPLE };
 
 // The exhaust, two frames of flicker
 static const char* const _art_flame[2][5] = {
@@ -98,19 +108,19 @@ static GameArt_t _flame[2][2];
 // A smaller ship to count the lives with
 static Tile16x8p2_t _tile_icon = {{
 	0b1100000000000000,
-	0b1110000000000000,
-	0b1111111110000000,
+	0b1110000001100000,
+	0b1111000011110000,
 	0b1111111111111100,
-	0b0111111111111111,
-	0b0011111111100000,
-	0b0000000000000000,
-	0b0000000000000000,
+	0b1111111111111111,
+	0b1111111111111100,
+	0b0111111111110000,
+	0b0001100110000000,
 }};
 
 static bool _art_made = false;
 
 static void make_art(void) {
-	game_art_make(&_ship[0], _art_ship, GAME_ART_ROWS(_art_ship), "WCRPG", _ship_colours);
+	game_art_make(&_ship[0], _art_ship, GAME_ART_ROWS(_art_ship), "WCRP", _ship_colours);
 	game_art_mirror(&_ship[1], &_ship[0]);
 	for (uint32_t i = 0; i < 2; ++i) {
 		game_art_make(&_flame[0][i], _art_flame[i], GAME_ART_ROWS(_art_flame[i]), "F", _flame_colours);
@@ -133,6 +143,7 @@ void def_player_init(void) {
 	_offset = DEF_SHIP_OFFSET;
 	_state = DEF_PLAYER_ALIVE;
 	_fire_timer = 0;
+	_burst = 0;
 	def_player_clear_lasers();
 	def_world_set_camera(_x - DEF_PX(_offset));
 }
@@ -209,9 +220,14 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 			_y = game_clamp(_y, DEF_PLAY_TOP, GAME_SCREEN_H - DEF_SHIP_H - 2);
 
 			if (_fire_timer) --_fire_timer;
-			if ((pressed & DEF_INP_BIT_F) || ((input & DEF_INP_BIT_F) && !_fire_timer)) {
+			if (!_burst && ((pressed & DEF_INP_BIT_F) || ((input & DEF_INP_BIT_F) && !_fire_timer))) {
+				_burst = DEF_BURST_SHOTS;
+				_fire_timer = 0;
+			}
+			if (_burst && !_fire_timer) {
 				fire_laser();
-				_fire_timer = DEF_LASER_REPEAT;
+				--_burst;
+				_fire_timer = _burst ? DEF_BURST_GAP : DEF_BURST_PAUSE;
 			}
 
 			if ((pressed & DEF_INP_BIT_B) && def_hud_use_smart_bomb()) {
@@ -254,7 +270,7 @@ void __not_in_flash_func(def_player_draw)(uint32_t frame) {
 	if (_thrust) {
 		// The colour changes slowly enough to see, while the shape flickers
 		const uint8_t c[1] = { ((frame >> DEF_FLAME_COLOUR_SHIFT) & 1) ? GAME_YELLOW : GAME_RED };
-		game_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + 4, c);
+		game_art_draw(&_flame[f][(frame >> 1) & 1], _right ? sx - 16 : sx + DEF_SHIP_W, _y + DEF_SHIP_ENGINE, c);
 	}
 }
 
@@ -278,6 +294,7 @@ void def_player_kill(void) {
 	game_fx_explode(cx, cy, GAME_COLOUR_RANDOM, 64, DEF_PX(4));
 	game_fx_explode(cx, cy, GAME_WHITE, 32, DEF_PX(2));
 	def_player_clear_lasers();
+	_burst = 0;
 }
 
 bool __not_in_flash_func(def_player_alive)(void) {

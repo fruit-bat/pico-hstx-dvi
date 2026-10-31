@@ -74,81 +74,99 @@ static DefBullet_t _bullets[DEF_BULLET_MAX];
 static uint32_t _wave = 1;
 
 // The lander is put together from parts, so it can look about and flex its legs
+#define DEF_LANDER_W 24
+#define DEF_LANDER_H 16
+
 static const char* const _lander_top[] = {
-	"....GGGGGGGG....",
-	"..GGGGGGGGGGGG..",
+	"........GGGGGGGG........",
+	".....GGGGGGGGGGGGGG.....",
+	"...GGGGGGGGGGGGGGGGGG...",
 };
 
-static const char* const _lander_eyes[4][3] = {
+static const char* const _lander_eyes[4][4] = {
 	{
-		".GGGRRGGGGRRGGG.",
-		".GGRRRRGGRRRRGG.",
-		".GGGRRGGGGRRGGG.",
+		"..GGGGRRRGGGGGGRRRGGGG..",
+		"..GGGRRWRRGGGGRRWRRGGG..",
+		"..GGGRRRRRGGGGRRRRRGGG..",
+		"..GGGGRRRGGGGGGRRRGGGG..",
 	},
 	{
-		".GGRRGGGGRRGGGG.",
-		".GRRRRGGRRRRGGG.",
-		".GGRRGGGGRRGGGG.",
+		"..GGRRRGGGGGGRRRGGGGGG..",
+		"..GRWRRRGGGGRWRRRGGGGG..",
+		"..GRRRRRGGGGRRRRRGGGGG..",
+		"..GGRRRGGGGGGRRRGGGGGG..",
 	},
 	{
-		".GGGGRRGGGGRRGG.",
-		".GGGRRRRGGRRRRG.",
-		".GGGGRRGGGGRRGG.",
+		"..GGGGGGRRRGGGGGGRRRGG..",
+		"..GGGGGRRRWRGGGGRRRWRG..",
+		"..GGGGGRRRRRGGGGRRRRRG..",
+		"..GGGGGGRRRGGGGGGRRRGG..",
 	},
 	{
-		".GGGGGGGGGGGGGG.",
-		".GGRRRRGGRRRRGG.",
-		".GGGGGGGGGGGGGG.",
+		"..GGGGGGGGGGGGGGGGGGGG..",
+		"..GGGGGGGGGGGGGGGGGGGG..",
+		"..GGGRRRRRGGGGRRRRRGGG..",
+		"..GGGGGGGGGGGGGGGGGGGG..",
 	},
 };
 
 static const char* const _lander_middle[] = {
-	"..GGGGGGGGGGGG..",
-	"...GG.GGGG.GG...",
+	"...GGGGGGGGGGGGGGGGGG...",
+	".....GGG..GGGG..GGG.....",
 };
 
 // Lights that run round the rim
 static const char* const _lander_rim[4] = {
-	"....WGGGWGGG....",
-	"....GWGGGWGG....",
-	"....GGWGGGWG....",
-	"....GGGWGGGW....",
+	"....WGGGWGGGWGGGWGGG....",
+	"....GWGGGWGGGWGGGWGG....",
+	"....GGWGGGWGGGWGGGWG....",
+	"....GGGWGGGWGGGWGGGW....",
 };
 
-static const char* const _lander_legs[3][4] = {
+static const char* const _lander_legs[3][6] = {
 	{
-		"...WW......WW...",
-		"..WW........WW..",
-		".WW..........WW.",
-		"WW............WW",
+		".....WW..........WW.....",
+		"....WW............WW....",
+		"...WW..............WW...",
+		"..WW................WW..",
+		".WW..................WW.",
+		"WWW..................WWW",
 	},
 	{
-		"...WW......WW...",
-		"...WW......WW...",
-		"..WW........WW..",
-		".WW..........WW.",
+		".....WW..........WW.....",
+		".....WW..........WW.....",
+		"....WW............WW....",
+		"...WW..............WW...",
+		"..WW................WW..",
+		".WWW................WWW.",
 	},
 	// Clutching a humanoid
 	{
-		"...WW......WW...",
-		"....WW....WW....",
-		".....WW..WW.....",
-		"......W..W......",
+		".....WW..........WW.....",
+		"......WW........WW......",
+		".......WW......WW.......",
+		"........WW....WW........",
+		".........WW..WW.........",
+		".........WW..WW.........",
 	},
 };
 
-static const char* const _mutant_legs[2][4] = {
+static const char* const _mutant_legs[2][6] = {
 	{
-		"..W..W....W..W..",
-		".W....W..W....W.",
-		"..W..W....W..W..",
-		".W....W..W....W.",
+		"....W...W......W...W....",
+		"...W.....W....W.....W...",
+		"....W...W......W...W....",
+		"...W.....W....W.....W...",
+		"....W...W......W...W....",
+		"...W.....W....W.....W...",
 	},
 	{
-		".W....W..W....W.",
-		"..W..W....W..W..",
-		".W....W..W....W.",
-		"..W..W....W..W..",
+		"...W.....W....W.....W...",
+		"....W...W......W...W....",
+		"...W.....W....W.....W...",
+		"....W...W......W...W....",
+		"...W.....W....W.....W...",
+		"....W...W......W...W....",
 	},
 };
 
@@ -166,9 +184,13 @@ static const uint8_t _lander_look[DEF_LANDER_FRAMES] = {
 };
 
 // The baiter's windows go dark one after the other and the lights underneath wink
+#define DEF_BAITER_H 10
+
 static const char* const _baiter_top[] = {
+	"...............WW...............",
 	"...........GGGGGGGGGG...........",
-	"......GGGGGGGGGGGGGGGGGGGG......",
+	".......GGGGGGGGGGGGGGGGGG.......",
+	"....GGGGGGGGGGGGGGGGGGGGGGGG....",
 };
 
 static const char* const _baiter_windows[4] = {
@@ -180,7 +202,8 @@ static const char* const _baiter_windows[4] = {
 
 static const char* const _baiter_bottom[] = {
 	"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
-	"...GGGGGGGGGGGGGGGGGGGGGGGGGG...",
+	".GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG.",
+	"....GGGGGGGGGGGGGGGGGGGGGGGG....",
 };
 
 static const char* const _baiter_lights[2] = {
@@ -376,23 +399,23 @@ static Tile8x8p2_t _tile_bullet[2] = {
 
 static const DefEnemyInfo_t _info[DEF_ENEMY_TYPE_COUNT] = {
 	{ 0 },
-	{ 16, 12, GAME_GREEN,  GAME_RED,    150,  "LANDER",  24,  _lander,  DEF_LANDER_FRAMES,  3 },
-	{ 16, 12, GAME_PURPLE, GAME_GREEN,  150,  "MUTANT",  60,  _mutant,  DEF_MUTANT_FRAMES,  2 },
+	{ DEF_LANDER_W, DEF_LANDER_H, GAME_GREEN,  GAME_RED,    150,  "LANDER",  24,  _lander,  DEF_LANDER_FRAMES,  3 },
+	{ DEF_LANDER_W, DEF_LANDER_H, GAME_PURPLE, GAME_GREEN,  150,  "MUTANT",  60,  _mutant,  DEF_MUTANT_FRAMES,  2 },
 	{ 16, 14, GAME_BLUE,   GAME_YELLOW, 250,  "BOMBER",  0,   _bomber,  DEF_BOMBER_FRAMES,  3 },
 	{ 16, 14, GAME_PURPLE, GAME_RED,    1000, "POD",     0,   _pod,     DEF_POD_FRAMES,     3 },
 	{ 16, 7,  GAME_RED,    GAME_YELLOW, 150,  "SWARMER", 40,  _swarmer, DEF_SWARMER_FRAMES, 2 },
-	{ 32, 6,  GAME_GREEN,  GAME_WHITE,  200,  "BAITER",  120, _baiter,  DEF_BAITER_FRAMES,  2 },
+	{ 32, DEF_BAITER_H, GAME_GREEN,  GAME_WHITE,  200,  "BAITER",  120, _baiter,  DEF_BAITER_FRAMES,  2 },
 };
 
 static void make_lander(GameArt_t* a, const uint32_t look, const uint32_t rim, const char* const* legs, const uint8_t* colours) {
-	const char* rows[12] = {
-		_lander_top[0], _lander_top[1],
-		_lander_eyes[look][0], _lander_eyes[look][1], _lander_eyes[look][2],
+	const char* rows[DEF_LANDER_H] = {
+		_lander_top[0], _lander_top[1], _lander_top[2],
+		_lander_eyes[look][0], _lander_eyes[look][1], _lander_eyes[look][2], _lander_eyes[look][3],
 		_lander_middle[0], _lander_middle[1],
 		_lander_rim[rim],
-		legs[0], legs[1], legs[2], legs[3],
+		legs[0], legs[1], legs[2], legs[3], legs[4], legs[5],
 	};
-	game_art_make(a, rows, 12, "GRW", colours);
+	game_art_make(a, rows, DEF_LANDER_H, "GRW", colours);
 }
 
 static void make_art(void) {
@@ -405,10 +428,14 @@ static void make_art(void) {
 		make_lander(&_mutant[f], f & 2 ? DEF_EYES_RIGHT : DEF_EYES_LEFT, f & 3, _mutant_legs[f & 1], _mutant_colours);
 	}
 	for (uint32_t f = 0; f < DEF_BAITER_FRAMES; ++f) {
-		const char* rows[6] = {
-			_baiter_top[0], _baiter_top[1], _baiter_windows[f], _baiter_bottom[0], _baiter_bottom[1], _baiter_lights[f & 1],
+		// The windows are two rows deep
+		const char* rows[DEF_BAITER_H] = {
+			_baiter_top[0], _baiter_top[1], _baiter_top[2], _baiter_top[3],
+			_baiter_windows[f], _baiter_windows[f],
+			_baiter_bottom[0], _baiter_bottom[1], _baiter_bottom[2],
+			_baiter_lights[f & 1],
 		};
-		game_art_make(&_baiter[f], rows, 6, "GWR", _baiter_colours);
+		game_art_make(&_baiter[f], rows, DEF_BAITER_H, "GWR", _baiter_colours);
 	}
 	for (uint32_t f = 0; f < DEF_BOMBER_FRAMES; ++f) {
 		game_art_make(&_bomber[f], _art_bomber[f], DEF_BOMBER_H, "BY", _bomber_colours);
@@ -566,7 +593,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 			e->y += game_sign(e->base_y - e->y) * 64;
 			if (e->human >= 0 && def_human_on_ground(e->human)) {
 				// Heads for the humanoid it is after, the short way round
-				const int32_t dx = def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8));
+				const int32_t dx = def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(DEF_LANDER_W >> 1));
 				if (game_abs(dx) < DEF_PX(3)) {
 					e->state = DEF_ES_DESCEND;
 				}
@@ -586,7 +613,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 				e->human = -1;
 				break;
 			}
-			e->x = def_wrap(e->x + game_clamp(def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(8)), -DEF_PX(1), DEF_PX(1)));
+			e->x = def_wrap(e->x + game_clamp(def_dx(def_human_x(e->human) + DEF_PX(DEF_HUMAN_W >> 1), e->x + DEF_PX(DEF_LANDER_W >> 1)), -DEF_PX(1), DEF_PX(1)));
 			e->y += DEF_LANDER_DESCEND;
 			if ((e->y >> DEF_FP) + enemy_h(e) >= (def_human_y(e->human) >> DEF_FP)) {
 				def_human_grab(e->human);
@@ -596,14 +623,14 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 		}
 		case DEF_ES_ASCEND: {
 			e->y -= DEF_LANDER_ASCEND;
-			def_human_carry(e->human, def_wrap(e->x + DEF_PX(8 - (DEF_HUMAN_W >> 1))), e->y + DEF_PX(enemy_h(e)));
+			def_human_carry(e->human, def_wrap(e->x + DEF_PX((DEF_LANDER_W - DEF_HUMAN_W) >> 1)), e->y + DEF_PX(enemy_h(e)));
 			if (e->y <= DEF_PX(DEF_PLAY_TOP)) {
 				// Too late, it has been turned
 				def_human_kill(e->human);
 				e->human = -1;
 				e->type = DEF_ENEMY_MUTANT;
 				e->state = DEF_ES_SEEK;
-				game_fx_explode(def_wrap(e->x + DEF_PX(8)), e->y + DEF_PX(6), GAME_PURPLE, 16, DEF_PX(2));
+				game_fx_explode(def_wrap(e->x + DEF_PX(DEF_LANDER_W >> 1)), e->y + DEF_PX(DEF_LANDER_H >> 1), GAME_PURPLE, 16, DEF_PX(2));
 			}
 			break;
 		}

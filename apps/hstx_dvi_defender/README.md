@@ -16,6 +16,7 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 
 - Left and right turn the ship and thrust that way.
 - Up and down together jump into hyperspace.
+- Fire lets off a burst of three shots. Hold it for another burst after a short pause, or press it again for one straight away.
 - Fire or smart bomb starts a game.
 
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.

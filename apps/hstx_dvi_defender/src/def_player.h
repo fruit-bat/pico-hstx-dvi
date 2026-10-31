@@ -8,9 +8,11 @@ extern "C" {
 #endif
 
 #define DEF_SHIP_W 32
-#define DEF_SHIP_H 10
+#define DEF_SHIP_H 13
 // The row the lasers come out of
-#define DEF_SHIP_NOSE 6
+#define DEF_SHIP_NOSE 7
+// The top of the exhaust flame, from the top of the ship
+#define DEF_SHIP_ENGINE 5
 
 void def_player_init(void);
 
