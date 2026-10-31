@@ -156,6 +156,17 @@ void sprite_renderer_sprite_32x16_p1(
 	const SpriteId spriteId
 );
 
+// 32 pixels wide and as tall as the sprite, with d1 pointing at a uint32_t
+// for each row, bit 31 leftmost
+void sprite_renderer_sprite_32xn_p1(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
 void text_renderer_8x8_p1(
 	const void* d1,
 	const void* d2,

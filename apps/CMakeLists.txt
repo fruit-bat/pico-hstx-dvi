@@ -62,3 +62,4 @@ add_subdirectory(hstx_dvi_wildwood  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wildwo
 add_subdirectory(hstx_dvi_manor  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_manor")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
 add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
+add_subdirectory(hstx_dvi_android_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_android_test")
