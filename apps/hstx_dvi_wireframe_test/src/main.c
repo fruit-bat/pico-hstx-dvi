@@ -58,6 +58,8 @@
 #define NEAR_Z 16.0f
 // Smaller than this, in pixels across, and a ship is just a dot
 #define DOT_SIZE 6.0f
+// Smaller than this and a ship has no dark outlines when outlined
+#define OUTLINE_SIZE 40.0f
 // The view, a little shorter than the screen to leave room for the text
 // The view, between the text at the top and the dashboard
 #define VIEW_TOP 36
@@ -449,7 +451,8 @@ static void draw_model(const Object_t* o, Style_e style) {
 	if (o->pos.z < -model->radius) return;
 	const Vec2_t centre = project(&o->pos);
 	// Far away it is just a dot
-	if (o->pos.z > model->radius && FOCAL * model->radius * 2.0f / o->pos.z < DOT_SIZE) {
+	const float size = o->pos.z > model->radius ? FOCAL * model->radius * 2.0f / o->pos.z : (float)GAME_SCREEN_W;
+	if (size < DOT_SIZE) {
 		add_line(centre, (Vec2_t){ centre.x + 1.0f, centre.y + 1.0f }, shade(o->rgb, 1.0f));
 		return;
 	}
@@ -487,7 +490,10 @@ static void draw_model(const Object_t* o, Style_e style) {
 		if (style == STYLE_SOLID || style == STYLE_WIRE || e->colour == PART_TRIM) {
 			colour = shade(rgb, 1.0f);
 		}
-		else if (style == STYLE_OUTLINED && e->colour == PART_HULL) {
+		else if (style == STYLE_OUTLINED && e->colour == PART_HULL && size >= OUTLINE_SIZE && facing[e->f0] && facing[e->f1]) {
+			// Only between faces we can see, as dark edges round the outside
+			// hardly show against space. Each edge costs about as much on a
+			// row however short it is, so small ships have none.
 			colour = shade(rgb, 0.25f);
 		}
 		else {
