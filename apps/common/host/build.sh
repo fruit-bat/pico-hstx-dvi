@@ -19,5 +19,5 @@ cd "$B"
 rm -f "$B"/*.o
 gcc $FLAGS -Wno-return-type -Dmain=main_game -c "$GAME"/src/*.c
 gcc $FLAGS -c "$R"/apps/common/game/*.c "$R/src/font_inv.c" "$B/hstx_dvi_sprite.c" "$H/host.c" "$GAME/host/scenario.c"
-gcc -o "$B/$NAME" "$B"/*.o -lpthread
+gcc -o "$B/$NAME" "$B"/*.o -lpthread -lm
 echo "Built $B/$NAME"
