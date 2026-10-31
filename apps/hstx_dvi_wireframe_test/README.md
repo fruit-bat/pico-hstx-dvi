@@ -21,7 +21,8 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
 - The objects are added nearest first. Lower sprite ids take priority, so the nearer ones cover the ones behind without a depth buffer.
   This goes wrong only if objects pass through each other.
 - Far away an object is just a dot.
-- The sun is a sprite of its own, drawn after everything else so it is behind the ships, with a ragged edge that changes every frame.
+- The sun is drawn after everything else so it is behind the ships. It is an outline with rays that turn and flicker, made of parts like the ships,
+  filled in black for the solid wireframes and in yellow when filled.
 - The other core turns, moves, lights and projects everything each frame, with floats, and cuts the edges and shapes to the view.
   The renderer reads the sprites of the frame it is drawing while the next is worked out, so there are two sets.
 

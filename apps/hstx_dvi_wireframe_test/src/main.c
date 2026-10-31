@@ -133,24 +133,16 @@ static int32_t _box_top, _box_bottom, _box_left, _box_right;
 // Not const so they live in RAM; the renderer reads them every row
 static hstx_dvi_pixel_t _star_colours[3];
 
-// The sun, far away, as a disc with a ragged edge that flickers
+// The sun, far away, as a circle with rays round it
 #define SUN_X 5200.0f
 #define SUN_Y 2600.0f
 #define SUN_Z 9000.0f
 #define SUN_RADIUS 1600.0f
-// How much of it is the bright middle
-#define SUN_CORE 0.75f
-#define VIEW_ROWS (VIEW_BOTTOM - VIEW_TOP)
-
-// How far the sun reaches either side of its middle on each row
-typedef struct {
-	int32_t cx;
-	int16_t outer[VIEW_ROWS];
-	int16_t inner[VIEW_ROWS];
-	hstx_dvi_pixel_t core, rim;
-} Sun_t;
-
-static Sun_t _suns[2];
+#define SUN_SIDES 24
+#define SUN_RAYS 16
+#define SUN_RAY_GAP 1.2f
+#define SUN_RAY_LONG 1.65f
+#define SUN_RAY_SHORT 1.4f
 
 enum {
 	OBJ_STATION = 0,
@@ -166,22 +158,6 @@ static GameText_t _status[2];
 
 // Towards the light, up and to the left behind us
 static Vec3_t _light;
-
-// The middle of the sun first, so it keeps the pixels, then its rim round it
-static void __not_in_flash_func(sun_renderer)(
-	const void* d1,
-	const void* d2,
-	hstx_dvi_row_t* r,
-	const int32_t x,
-	const int32_t row,
-	const SpriteId spriteId
-) {
-	const Sun_t* s = (const Sun_t*)d1;
-	const int32_t i = s->inner[row];
-	const int32_t o = s->outer[row];
-	if (i >= 0) sprite_render_span(r, s->cx - i, s->cx + i + 1, s->core, spriteId);
-	sprite_render_span(r, s->cx - o, s->cx + o + 1, s->rim, spriteId);
-}
 
 // Starts an object, returning false if there is no room
 static bool object_begin(void) {
@@ -645,30 +621,34 @@ static void move_objects(uint32_t frame) {
 	}
 }
 
-// Adds the sun's sprite, with a ragged edge that changes every frame. It is
-// added after everything else, so it is behind them all bar the stars.
-static void draw_sun(void) {
+// Adds the sun, after everything else so it is behind them all bar the stars.
+// It is an outline with rays that turn slowly and flicker, made of parts like
+// the ships, filled in black for the solid wireframes and yellow when filled.
+static void draw_sun(Style_e style, uint32_t frame) {
 	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
 	const Vec2_t m = project(&c);
 	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
-	int32_t top = (int32_t)ceilf(m.y - rp);
-	int32_t bottom = (int32_t)floorf(m.y + rp);
-	if (top < VIEW_TOP) top = VIEW_TOP;
-	if (bottom > VIEW_BOTTOM - 1) bottom = VIEW_BOTTOM - 1;
-	if (bottom < top) return;
-	Sun_t* sun = &_suns[_set];
-	sun->cx = (int32_t)lroundf(m.x);
-	for (int32_t y = top; y <= bottom; ++y) {
-		const float dy = (float)y + 0.5f - m.y;
-		const float w = rp * rp - dy * dy;
-		const float hw = w > 0.0f ? sqrtf(w) : 0.0f;
-		sun->outer[y - top] = (int16_t)(hw + (float)(rand() % 4));
-		const float wi = rp * rp * SUN_CORE * SUN_CORE - dy * dy;
-		sun->inner[y - top] = wi > 0.0f ? (int16_t)(sqrtf(wi) - (float)(rand() % 3)) : -1;
+	if (!object_begin()) return;
+	const hstx_dvi_pixel_t edge = hstx_dvi_pixel_rgb(255, 255, 0);
+	const hstx_dvi_pixel_t ray = hstx_dvi_pixel_rgb(255, 146, 0);
+	Vec2_t outline[SUN_SIDES];
+	for (uint32_t i = 0; i < SUN_SIDES; ++i) {
+		const float a = 2.0f * 3.1416f * (float)i / SUN_SIDES;
+		outline[i] = (Vec2_t){ m.x + rp * cosf(a), m.y + rp * sinf(a) };
 	}
-	if (game_spr_add(sun->cx - (int32_t)rp - 4, top, (uint32_t)(2.0f * rp) + 9, bottom - top + 1, sun, NULL, sun_renderer)) {
-		++_sprite_count;
+	for (uint32_t i = 0; i < SUN_SIDES; ++i) add_line(outline[i], outline[(i + 1) % SUN_SIDES], edge);
+	const float turn = (float)frame * 0.004f;
+	for (uint32_t i = 0; i < SUN_RAYS; ++i) {
+		const float a = turn + 2.0f * 3.1416f * (float)i / SUN_RAYS;
+		const float len = (i & 1 ? SUN_RAY_SHORT : SUN_RAY_LONG) + 0.06f * (float)(rand() % 3);
+		const float ca = cosf(a), sa = sinf(a);
+		add_line(
+			(Vec2_t){ m.x + rp * SUN_RAY_GAP * ca, m.y + rp * SUN_RAY_GAP * sa },
+			(Vec2_t){ m.x + rp * len * ca, m.y + rp * len * sa }, ray);
 	}
+	if (style == STYLE_SOLID) add_fill(outline, SUN_SIDES, hstx_dvi_pixel_rgb(0, 0, 0));
+	else if (style != STYLE_WIRE) add_fill(outline, SUN_SIDES, edge);
+	object_end();
 }
 
 static float distance2(const Vec3_t* v) {
@@ -866,7 +846,7 @@ void main_loop(void) {
 			order[j] = i;
 		}
 		for (uint32_t i = 0; i < OBJECTS; ++i) draw_object(&_objects[order[i]], style);
-		draw_sun();
+		draw_sun(style, frame);
 		game_spr_end();
 
 		// The name of the nearest ship, which comes first bar the station
@@ -915,10 +895,6 @@ int main(void)
 	_star_colours[0] = hstx_dvi_pixel_rgb(73, 73, 109);
 	_star_colours[1] = hstx_dvi_pixel_rgb(146, 146, 182);
 	_star_colours[2] = hstx_dvi_pixel_rgb(255, 255, 255);
-	for (uint32_t i = 0; i < 2; ++i) {
-		_suns[i].core = hstx_dvi_pixel_rgb(255, 255, 182);
-		_suns[i].rim = hstx_dvi_pixel_rgb(255, 146, 0);
-	}
 	for (uint32_t i = 0; i < STARS; ++i) new_star(&_stars[i], rand_range(NEAR_Z, 2000.0f));
 
 	for (uint32_t i = 0; i < 2; ++i) {
