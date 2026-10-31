@@ -7,7 +7,8 @@ extern "C" {
 #endif
 
 // How positions get on to the screen. Positions are fixed point, see GAME_FP.
-// The popups are the exception, with y in pixels.
+// The popups are the exception, with y in pixels, on the screen unless the
+// view has screen_y.
 typedef struct {
 	// Turns an x position into a screen x in pixels
 	int32_t (*screen_x)(int32_t x);
@@ -16,6 +17,9 @@ typedef struct {
 	// Particles are only drawn between these screen rows
 	int32_t top;
 	int32_t bottom;
+	// Turns a y position into a screen y in pixels, for a world that scrolls
+	// up and down. NULL if y is already on the screen.
+	int32_t (*screen_y)(int32_t y);
 } GameFxView_t;
 
 // NULL for positions on the screen, which is how it starts off

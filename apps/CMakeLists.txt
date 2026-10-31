@@ -53,5 +53,6 @@ add_subdirectory(hstx_dvi_vt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_vt_test
 add_subdirectory(hstx_dvi_sprite_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_sprite_test")
 add_subdirectory(hstx_dvi_defender  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_defender")
 add_subdirectory(hstx_dvi_wildwood  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wildwood")
+add_subdirectory(hstx_dvi_manor  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_manor")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
 add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")

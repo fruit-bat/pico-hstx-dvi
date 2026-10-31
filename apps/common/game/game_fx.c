@@ -137,8 +137,13 @@ void game_fx_draw_popups(void) {
 		GamePopup_t* p = &_popups[i];
 		if (!p->life) continue;
 		const int32_t sx = _view->screen_x(p->x);
+		int32_t sy = p->y;
+		if (_view->screen_y) {
+			sy = _view->screen_y(GAME_PX(p->y));
+			if (sy < _view->top || sy >= _view->bottom) continue;
+		}
 		if (sx < -32 || sx >= GAME_SCREEN_W) continue;
-		game_spr_text(&p->text, sx, p->y, game_pallet(GAME_WHITE));
+		game_spr_text(&p->text, sx, sy, game_pallet(GAME_WHITE));
 	}
 }
 
@@ -147,7 +152,7 @@ void __not_in_flash_func(game_fx_draw_particles)(void) {
 		GameParticle_t* p = &_particles[i];
 		if (!p->life) continue;
 		const int32_t sx = _view->screen_x(p->x);
-		const int32_t sy = p->y >> GAME_FP;
+		const int32_t sy = _view->screen_y ? _view->screen_y(p->y) : p->y >> GAME_FP;
 		if (sx < -2 || sx >= GAME_SCREEN_W || sy < _view->top || sy >= _view->bottom) continue;
 		hstx_dvi_pixel_t* c = p->life < GAME_FX_FADE ? game_pallet_dim(p->colour) : game_pallet(p->colour);
 		game_spr_add(sx, sy, 8, 2, &_tile_particle, c, sprite_renderer_sprite_8x8_p1);

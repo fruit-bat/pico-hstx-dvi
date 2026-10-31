@@ -8,6 +8,8 @@
 // frames how many frames to run for
 // every  save a frame this often
 // out    where to save the frames
+//
+// HOST_FRAMES can list the frames to save instead, as in "430,470,1530".
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,6 +84,25 @@ static uint32_t _max_sprites = 0;
 // The first button, as set up by the game
 static uint32_t _gpio_first = 32;
 
+// Whether to save a frame, see HOST_FRAMES
+static bool wanted(uint32_t n) {
+	static const char* list = NULL;
+	static bool looked = false;
+	if (!looked) {
+		list = getenv("HOST_FRAMES");
+		looked = true;
+	}
+	if (!list) return n % _every == 0;
+	for (const char* s = list; *s; ) {
+		char* end;
+		const unsigned long f = strtoul(s, &end, 10);
+		if (end == s) break;
+		if (f == n) return true;
+		s = *end ? end + 1 : end;
+	}
+	return false;
+}
+
 static void save(uint32_t n) {
 	char name[256];
 	snprintf(name, sizeof(name), "%s/%s_%05u.ppm", _out, host_mode, n);
@@ -108,7 +129,7 @@ void hstx_dvi_row_fifo_put_blocking(hstx_dvi_row_t* r) {
 		uint32_t n = 0;
 		for (uint32_t i = 0; i < MAX_SPRITES; ++i) if (_sprites[i].f & SF_ENABLE) ++n;
 		if (n > _max_sprites) _max_sprites = n;
-		if (_frames % _every == 0) save(_frames);
+		if (wanted(_frames)) save(_frames);
 		host_frame(_frames, n);
 		if (++_frames >= _max_frames) {
 			printf("frames %u, most sprites %u\n", _frames, _max_sprites);
