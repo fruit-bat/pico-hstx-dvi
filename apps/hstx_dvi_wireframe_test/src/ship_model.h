@@ -10,10 +10,13 @@ typedef struct {
 	int16_t x, y, z;
 } WireVertex_t;
 
-// A face is only needed to say which way it points
+// The most corners on a face or a shape
+#define WIRE_MAX_LOOP 8
+
 typedef struct {
-	float nx, ny, nz;
-	uint8_t v; // a corner on the face
+	float nx, ny, nz; // pointing out
+	uint8_t n;
+	uint8_t v[WIRE_MAX_LOOP]; // the corners in order round the face
 } WireFace_t;
 
 // An edge is drawn if either of the faces it joins is facing us
@@ -23,14 +26,28 @@ typedef struct {
 	uint8_t colour;
 } WireEdge_t;
 
+// A shape drawn over a face, such as an engine
+typedef struct {
+	uint8_t f;
+	uint8_t colour;
+	uint8_t n;
+	uint8_t v[WIRE_MAX_LOOP];
+} WirePoly_t;
+
 typedef struct {
 	const WireVertex_t* v;
 	const WireFace_t* f;
 	const WireEdge_t* e;
-	uint8_t nv, nf, ne;
+	const WirePoly_t* p;
+	uint8_t nv;
+	uint8_t nh; // the first nh corners are the hull, the rest are details
+	uint8_t nf, ne, np;
+	float radius;
 } WireModel_t;
 
-extern const WireModel_t ship_cobra;
+extern const WireModel_t model_cobra;
+extern const WireModel_t model_coriolis;
+extern const WireModel_t model_missile;
 
 #ifdef __cplusplus
 }
