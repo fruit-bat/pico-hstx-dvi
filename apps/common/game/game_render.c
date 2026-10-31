@@ -131,6 +131,32 @@ static void __not_in_flash_func(pixels_renderer)(
 }
 
 // d1 points to a GameText_t, drawn scale times the size of the font
+#if MODE_BYTES_PER_PIXEL == 1
+// Byte masks for 4 pixels in a row word; nibble bit 3 is the leftmost (lowest address) pixel.
+// Placed in RAM to avoid flash cache misses while rendering.
+static const uint32_t __attribute__((section(".data._game_nibble_mask"))) _nibble_mask[16] = {
+	0x00000000, 0xff000000, 0x00ff0000, 0xffff0000,
+	0x0000ff00, 0xff00ff00, 0x00ffff00, 0xffffff00,
+	0x000000ff, 0xff0000ff, 0x00ff00ff, 0xffff00ff,
+	0x0000ffff, 0xff00ffff, 0x00ffffff, 0xffffffff
+};
+
+// Each bit of a byte doubled, for text at twice the size; made by game_text_set
+static uint16_t _double_bits[256];
+static bool _double_bits_made = false;
+
+static void make_double_bits(void) {
+	for (uint32_t d = 0; d < 256; ++d) {
+		uint32_t e = 0;
+		for (uint32_t b = 0; b < 8; ++b) {
+			if (d & (0x80 >> b)) e |= 0xc000u >> (b << 1);
+		}
+		_double_bits[d] = (uint16_t)e;
+	}
+	_double_bits_made = true;
+}
+#endif
+
 static void __not_in_flash_func(text_scaled_renderer)(
 	const void* d1,
 	const void* d2,
@@ -144,12 +170,50 @@ static void __not_in_flash_func(text_scaled_renderer)(
 	const uint8_t* font = t->grid.font;
 	const uint32_t k = (row / s) & 7;
 	const hstx_dvi_pixel_t p = ((const hstx_dvi_pixel_t*)d2)[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t pq = p * 0x01010101u;
+#endif
 	for (uint32_t i = 0; i < t->grid.w; ++i) {
 		const uint32_t c = t->s[i];
 		if (c < TEXT_GRID8_FIRST_CHAR || c > TEXT_GRID8_LAST_CHAR) continue;
 		const uint32_t d = font[((c - TEXT_GRID8_FIRST_CHAR) << 3) + k];
 		if (!d) continue;
-		const int32_t cx = x + (int32_t)(i << 3) * s;
+		int32_t cx = x + (int32_t)(i << 3) * s;
+#if MODE_BYTES_PER_PIXEL == 1
+		if (s <= 4) {
+			// The character's pixels as bits, leftmost highest, written 4 pixels at a time
+			int32_t n = 8 * s;
+			uint32_t e;
+			if (s == 2) {
+				e = _double_bits[d];
+			}
+			else {
+				e = 0;
+				const uint32_t run = (1u << s) - 1;
+				for (uint32_t b = 0; b < 8; ++b) {
+					if (d & (0x80 >> b)) e |= run << ((7 - b) * s);
+				}
+			}
+			// Cut off what is off the screen
+			if (cx < 0) {
+				if (-cx >= n) continue;
+				n += cx;
+				e &= n == 32 ? 0xffffffffu : (1u << n) - 1;
+				cx = 0;
+			}
+			if (cx + n > GAME_SCREEN_W) {
+				if (cx >= GAME_SCREEN_W) continue;
+				e >>= cx + n - GAME_SCREEN_W;
+				n = GAME_SCREEN_W - cx;
+			}
+			uint64_t v = (uint64_t)e << (64 - n - (cx & 3));
+			for (uint32_t wi = (uint32_t)cx >> 2; v; ++wi, v <<= 4) {
+				const uint32_t m = _nibble_mask[v >> 60];
+				if (m) r->w[wi] = (r->w[wi] & ~m) | (pq & m);
+			}
+			continue;
+		}
+#endif
 		for (uint32_t b = 0; b < 8; ++b) {
 			if (!(d & (0x80 >> b))) continue;
 			int32_t i0, i1;
@@ -182,6 +246,9 @@ void game_spr_pixels(int32_t x, int32_t y, uint32_t w, uint32_t h, const GamePix
 }
 
 void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale) {
+#if MODE_BYTES_PER_PIXEL == 1
+	if (!_double_bits_made) make_double_bits();
+#endif
 	uint32_t len = strlen(s);
 	if (len > GAME_TEXT_MAX) len = GAME_TEXT_MAX;
 	for (uint32_t i = 0; i < len; ++i) {
