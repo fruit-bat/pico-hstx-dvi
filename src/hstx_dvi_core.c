@@ -262,6 +262,10 @@ void hstx_dvi_init(hstx_dvi_pixel_row_fetcher row_fetcher) {
     // then chain to the opposite channel. Each time a channel finishes, we
     // reconfigure the one that just finished, meanwhile the opposite channel
     // is already making progress.
+    // Keep the channels from being handed out to anything else
+    if (!dma_channel_is_claimed(DMACH_PING)) dma_channel_claim(DMACH_PING);
+    if (!dma_channel_is_claimed(DMACH_PONG)) dma_channel_claim(DMACH_PONG);
+
     dma_channel_config c;
     c = dma_channel_get_default_config(DMACH_PING);
     channel_config_set_chain_to(&c, DMACH_PONG);
