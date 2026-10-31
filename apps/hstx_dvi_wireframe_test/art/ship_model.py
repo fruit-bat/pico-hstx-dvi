@@ -16,11 +16,41 @@ ENGINE = 1
 VENT = 2
 TRIM = 3
 
-# Each model has the corners of its hull, x right, y up, z forwards, and its
-# details: (name, corners, a shape or just lines?, colour)
+
+def sym(*pts):
+	# Corners mirrored left to right, for the many models that are the same both sides
+	out = []
+	for x, y, z in pts:
+		out.append((x, y, z))
+		if x:
+			out.append((-x, y, z))
+	return out
+
+
+def quad(x0, y0, x1, y1, z):
+	# A rectangle across the back, for engines
+	return [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)]
+
+
+def engines(x0, y0, x1, y1, z):
+	# A pair of engines, mirrored
+	return [
+		("right engine", quad(x0, y0, x1, y1, z), True, ENGINE),
+		("left engine", quad(-x1, y0, -x0, y1, z), True, ENGINE),
+	]
+
+
+def ring(n, r, y, turn=0.5):
+	# n corners round a circle across y
+	return [(round(r * math.cos(2 * math.pi * (i + turn) / n)), y, round(r * math.sin(2 * math.pi * (i + turn) / n))) for i in range(n)]
+
+
+# Each model has its name, colour and the corners of its hull, x right, y up,
+# z forwards, and its details: (name, corners, a shape or just lines?, colour).
+# The shapes follow the ships of the original game, though not exactly.
 MODELS = {
-	# As in the original game
 	"cobra": {
+		"name": "COBRA MK III", "rgb": (255, 255, 255),
 		"hull": [
 			(32, 0, 76), (-32, 0, 76), (0, 26, 24), (-120, -3, -8), (120, -3, -8),
 			(-88, 16, -40), (88, 16, -40), (128, -8, -40), (-128, -8, -40),
@@ -36,19 +66,21 @@ MODELS = {
 	},
 	# A cuboctahedron, with the docking slot on the square at the front
 	"coriolis": {
+		"name": "CORIOLIS STATION", "rgb": (255, 255, 255),
 		"hull": [
-			(s * 160, t * 160, 0) for s in (1, -1) for t in (1, -1)
+			(s * 400, t * 400, 0) for s in (1, -1) for t in (1, -1)
 		] + [
-			(s * 160, 0, t * 160) for s in (1, -1) for t in (1, -1)
+			(s * 400, 0, t * 400) for s in (1, -1) for t in (1, -1)
 		] + [
-			(0, s * 160, t * 160) for s in (1, -1) for t in (1, -1)
+			(0, s * 400, t * 400) for s in (1, -1) for t in (1, -1)
 		],
 		"details": [
-			("slot", [(-40, 12, 160), (40, 12, 160), (40, -12, 160), (-40, -12, 160)], True, TRIM),
+			("slot", [(-100, 30, 400), (100, 30, 400), (100, -30, 400), (-100, -30, 400)], True, TRIM),
 		],
 	},
 	# A pointed body with four fins at the back
 	"missile": {
+		"name": "MISSILE", "rgb": (255, 73, 73),
 		"hull": [
 			(0, 0, 68),
 			(8, 8, 36), (-8, 8, 36), (-8, -8, 36), (8, -8, 36),
@@ -59,7 +91,131 @@ MODELS = {
 			for sx, sy in ((1, 1), (-1, 1), (-1, -1), (1, -1))
 		],
 	},
+	"sidewinder": {
+		"name": "SIDEWINDER", "rgb": (255, 255, 0),
+		"hull": sym((32, 0, 36), (64, 0, -28), (0, 16, -28), (0, -16, -28)),
+		"details": [("engine", quad(-12, 6, 12, -6, -28), True, ENGINE)],
+	},
+	"viper": {
+		"name": "VIPER", "rgb": (0, 219, 255),
+		"hull": sym((0, 0, 72), (0, 16, 24), (0, -16, 24), (48, 0, -24), (24, 16, -24), (24, -16, -24)),
+		"details": engines(4, 8, 16, -8, -24),
+	},
+	"mamba": {
+		"name": "MAMBA", "rgb": (0, 255, 0),
+		"hull": sym((0, 0, 64), (64, -8, -32), (32, 8, -32), (0, -8, -32)),
+		"details": engines(8, 4, 24, -4, -32),
+	},
+	"krait": {
+		"name": "KRAIT", "rgb": (255, 146, 0),
+		"hull": sym((0, 0, 96), (0, 18, -48), (0, -18, -48), (90, 0, -3)),
+		"details": [
+			("right prong", [(60, 0, 30), (86, 0, 62)], False, TRIM),
+			("left prong", [(-60, 0, 30), (-86, 0, 62)], False, TRIM),
+		],
+	},
+	"adder": {
+		"name": "ADDER", "rgb": (182, 182, 182),
+		"hull": sym((18, 7, 40), (18, -7, 40), (36, 0, 0), (30, 7, -40), (30, -7, -40)),
+		"details": engines(4, 4, 16, -4, -40),
+	},
+	"gecko": {
+		"name": "GECKO", "rgb": (146, 255, 0),
+		"hull": sym((10, -4, 47), (16, 8, -23), (66, 0, -3), (20, -14, -23)),
+		"details": engines(4, 4, 12, -8, -23),
+	},
+	"cobra1": {
+		"name": "COBRA MK I", "rgb": (255, 182, 0),
+		"hull": sym((18, -1, 50), (66, 0, 7), (32, 12, -38), (54, -12, -38)),
+		"details": engines(10, 4, 24, -6, -38) + [("gun", [(0, -1, 50), (0, -1, 64)], False, TRIM)],
+	},
+	"asp": {
+		"name": "ASP MK II", "rgb": (219, 109, 255),
+		"hull": sym((26, 7, 73), (26, -7, 73), (43, 14, 28), (43, -14, 28), (69, 0, 0), (43, 0, -45), (0, 9, -45), (0, -9, -45)),
+		"details": [("engine", [(-14, 4, -45), (14, 4, -45), (14, -4, -45), (-14, -4, -45)], True, ENGINE)],
+	},
+	"python": {
+		"name": "PYTHON", "rgb": (255, 73, 73),
+		"hull": sym((0, 0, 224), (96, 0, -16), (0, 48, 48), (0, -48, 48), (0, 24, -112), (0, -24, -112), (48, 0, -112)),
+		"details": engines(8, 8, 28, -8, -112),
+	},
+	"anaconda": {
+		"name": "ANACONDA", "rgb": (0, 182, 109),
+		"hull": sym((0, 70, -94), (70, 20, -94), (45, -60, -94), (0, 30, 200), (30, 10, 200), (20, -25, 200), (0, 0, 254)),
+		"details": engines(10, 20, 30, -30, -94),
+	},
+	"boa": {
+		"name": "BOA", "rgb": (109, 146, 255),
+		"hull": sym((0, 0, 93), (0, 40, -87), (38, -25, -99), (0, 26, -17), (0, -30, -17), (40, 4, -40)),
+		"details": [],
+	},
+	"ferdelance": {
+		"name": "FER-DE-LANCE", "rgb": (255, 109, 182),
+		"hull": sym((0, -14, 108), (40, -14, -4), (12, -14, -52), (40, 14, -4), (12, 2, -52), (0, 18, -20)),
+		"details": [],
+	},
+	"moray": {
+		"name": "MORAY", "rgb": (0, 146, 219),
+		"hull": sym((15, 0, 65), (0, 18, -40), (60, 0, 0), (30, -27, -10), (0, -15, -40)),
+		"details": [],
+	},
+	"constrictor": {
+		"name": "CONSTRICTOR", "rgb": (255, 0, 255),
+		"hull": sym((20, -7, 80), (54, -7, 40), (54, -7, -40), (20, 13, -40), (20, 13, 5)),
+		"details": engines(4, 7, 14, -3, -40),
+	},
+	"cougar": {
+		"name": "COUGAR", "rgb": (146, 146, 146),
+		"hull": sym((0, 5, 67), (20, 0, 40), (40, 0, -40), (0, 14, -40), (0, -14, -40)),
+		"details": [],
+	},
+	"shuttle": {
+		"name": "ORBIT SHUTTLE", "rgb": (255, 219, 109),
+		"hull": sym((0, 0, 35), (0, -17, 23), (17, 0, 23), (0, 18, 23), (20, 20, -27), (20, -20, -27)),
+		"details": [("engine", quad(-8, 8, 8, -8, -27), True, ENGINE)],
+	},
+	"transporter": {
+		"name": "TRANSPORTER", "rgb": (182, 219, 109),
+		"hull": sym((30, 10, -26), (30, -6, -26), (25, 8, 24), (30, -6, 30)),
+		"details": engines(6, 4, 20, -4, -26),
+	},
+	"worm": {
+		"name": "WORM", "rgb": (146, 109, 255),
+		"hull": sym((10, -10, 35), (20, 10, -15), (35, -10, -15)),
+		"details": [],
+	},
+	"thargoid": {
+		"name": "THARGOID", "rgb": (182, 0, 255),
+		"hull": ring(8, 100, -8, 0.5) + ring(8, 50, 24, 0.5),
+		"details": [],
+	},
+	"thargon": {
+		"name": "THARGON", "rgb": (255, 109, 255),
+		"hull": [(-9, 0, 40), (-9, -38, 12), (-9, -24, -32), (-9, 24, -32), (-9, 38, 12), (9, 0, -8), (9, -10, -15), (9, 10, -15)],
+		"details": [],
+	},
+	"escapepod": {
+		"name": "ESCAPE POD", "rgb": (255, 146, 146),
+		"hull": [(-7, 0, 36), (-7, -14, -12), (-7, 14, -12), (21, 0, 0)],
+		"details": [],
+	},
+	"canister": {
+		"name": "CARGO CANISTER", "rgb": (219, 219, 219),
+		"hull": [(x, round(24 * math.cos(2 * math.pi * k / 5 + math.pi / 2)), round(24 * math.sin(2 * math.pi * k / 5 + math.pi / 2))) for x in (24, -24) for k in range(5)],
+		"details": [],
+	},
+	"asteroid": {
+		"name": "ASTEROID", "rgb": (146, 109, 73),
+		"hull": [(0, 80, 0), (0, -72, 10), (76, 6, 0), (-80, 0, 8), (10, 0, 84), (-6, 4, -78),
+			(46, 46, 40), (-40, 50, -44), (50, -44, -40), (-46, -40, 46), (44, -10, 50), (-50, 30, 30)],
+		"details": [],
+	},
 }
+
+# The ships that fly round the station, in this order
+SHIPS = ["sidewinder", "viper", "mamba", "krait", "adder", "gecko", "cobra1", "cobra", "asp", "python",
+	"anaconda", "boa", "ferdelance", "moray", "constrictor", "cougar", "shuttle", "transporter", "worm",
+	"thargoid", "thargon", "escapepod", "canister", "asteroid"]
 
 # How close two faces have to be to flat to have no edge between them
 CREASE = 0.999
@@ -169,7 +325,8 @@ def make_model(hull, details):
 	return verts, faces, loops, out_edges, polys, radius
 
 
-def emit_model(out, name, hull, details):
+def emit_model(out, name, m):
+	hull, details = m["hull"], m["details"]
 	verts, faces, loops, edges, polys, radius = make_model(hull, details)
 	out += [f"// {name}", f"static const WireVertex_t _{name}_vertices[{len(verts)}] = {{"]
 	out += [f"\t{{ {x}, {y}, {z} }}," for x, y, z in verts]
@@ -186,7 +343,8 @@ def emit_model(out, name, hull, details):
 	out += [
 		f"const WireModel_t model_{name} = {{",
 		f"\t_{name}_vertices, _{name}_faces, _{name}_edges, {f'_{name}_polys' if polys else 'NULL'},",
-		f"\t{len(verts)}, {len(hull)}, {len(faces)}, {len(edges)}, {len(polys)}, {radius:.1f}f",
+		f"\t{len(verts)}, {len(hull)}, {len(faces)}, {len(edges)}, {len(polys)}, {radius:.1f}f,",
+		f'\t"{m["name"]}", {{ {m["rgb"][0]}, {m["rgb"][1]}, {m["rgb"][2]} }}',
 		"};",
 		"",
 	]
@@ -200,7 +358,11 @@ def main():
 		"",
 	]
 	for name, m in MODELS.items():
-		emit_model(out, name, m["hull"], m["details"])
+		emit_model(out, name, m)
+	out += [f'_Static_assert(MODEL_SHIP_COUNT == {len(SHIPS)}, "MODEL_SHIP_COUNT in ship_model.h");', ""]
+	out += ["const WireModel_t* const model_ships[MODEL_SHIP_COUNT] = {"]
+	out += [f"\t&model_{name}," for name in SHIPS]
+	out += ["};", ""]
 	path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "ship_model.c")
 	with open(path, "w") as f:
 		f.write("\n".join(out))

@@ -43,11 +43,17 @@ typedef struct {
 	uint8_t nh; // the first nh corners are the hull, the rest are details
 	uint8_t nf, ne, np;
 	float radius;
+	const char* name;
+	uint8_t rgb[3];
 } WireModel_t;
 
 extern const WireModel_t model_cobra;
 extern const WireModel_t model_coriolis;
 extern const WireModel_t model_missile;
+
+// The ships that fly round the station
+#define MODEL_SHIP_COUNT 24
+extern const WireModel_t* const model_ships[MODEL_SHIP_COUNT];
 
 #ifdef __cplusplus
 }

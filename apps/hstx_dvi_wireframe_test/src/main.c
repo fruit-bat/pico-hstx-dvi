@@ -1,6 +1,7 @@
 // Copyright (c) 2024 fruit-bat.
 
-// A space station, ships and missiles in the style of Elite, drawn with sprites.
+// A space station, ships and missiles in the style of Elite, drawn with
+// sprites. Every type of ship flies round the station, past a sun.
 //
 // Each object is a sprite, with a list of the lines and convex shapes that
 // make it up, drawn by sprite_renderer_parts. On each row it works out the
@@ -44,10 +45,10 @@
 
 // Enough for the scene
 #define MAX_OBJECTS 40
-#define MAX_PRIMS 400
-#define MAX_ALL_BANDS 1200
-#define MAX_VERTS 32
-#define MAX_FACES 16
+#define MAX_PRIMS 1200
+#define MAX_ALL_BANDS 2400
+#define MAX_VERTS 48
+#define MAX_FACES 32
 // A shape can gain a corner for each side of the view it is cut by, and one at the near plane
 #define MAX_POLY 24
 #define STARS 40
@@ -56,7 +57,7 @@
 // Nothing closer than this is drawn
 #define NEAR_Z 16.0f
 // Smaller than this, in pixels across, and a ship is just a dot
-#define DOT_SIZE 4.0f
+#define DOT_SIZE 6.0f
 // The view, a little shorter than the screen to leave room for the text
 #define VIEW_TOP 40
 #define VIEW_BOTTOM (GAME_SCREEN_H - 40)
@@ -132,10 +133,29 @@ static int32_t _box_top, _box_bottom, _box_left, _box_right;
 // Not const so they live in RAM; the renderer reads them every row
 static hstx_dvi_pixel_t _star_colours[3];
 
+// The sun, far away, as a disc with a ragged edge that flickers
+#define SUN_X 5200.0f
+#define SUN_Y 2600.0f
+#define SUN_Z 9000.0f
+#define SUN_RADIUS 1600.0f
+// How much of it is the bright middle
+#define SUN_CORE 0.75f
+#define VIEW_ROWS (VIEW_BOTTOM - VIEW_TOP)
+
+// How far the sun reaches either side of its middle on each row
+typedef struct {
+	int32_t cx;
+	int16_t outer[VIEW_ROWS];
+	int16_t inner[VIEW_ROWS];
+	hstx_dvi_pixel_t core, rim;
+} Sun_t;
+
+static Sun_t _suns[2];
+
 enum {
 	OBJ_STATION = 0,
 	OBJ_SHIP,
-	OBJ_MISSILE = OBJ_SHIP + 4,
+	OBJ_MISSILE = OBJ_SHIP + MODEL_SHIP_COUNT,
 	OBJECTS = OBJ_MISSILE + 2
 };
 static Object_t _objects[OBJECTS];
@@ -146,6 +166,22 @@ static GameText_t _status[2];
 
 // Towards the light, up and to the left behind us
 static Vec3_t _light;
+
+// The middle of the sun first, so it keeps the pixels, then its rim round it
+static void __not_in_flash_func(sun_renderer)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	const Sun_t* s = (const Sun_t*)d1;
+	const int32_t i = s->inner[row];
+	const int32_t o = s->outer[row];
+	if (i >= 0) sprite_render_span(r, s->cx - i, s->cx + i + 1, s->core, spriteId);
+	sprite_render_span(r, s->cx - o, s->cx + o + 1, s->rim, spriteId);
+}
 
 // Starts an object, returning false if there is no room
 static bool object_begin(void) {
@@ -553,19 +589,21 @@ static void draw_stars(void) {
 }
 
 // The station spins slowly with its slot towards us
-#define STATION_Z 1100.0f
+#define STATION_Z 1700.0f
+// The ships fly round it in a loop that comes close to us
+#define LOOP_RADIUS 1300.0f
+#define LOOP_SPEED 0.12f
+// How long a missile is behind the ship it is chasing, in seconds
+#define MISSILE_LAG 1.2f
 
-// Where ship i is at time t, flying round the station on its own loop
+// Where ship i is at time t, spaced out round the loop at its own height
 static Vec3_t ship_path(uint32_t i, float t) {
-	static const float radius[4] = { 430.0f, 560.0f, 690.0f, 820.0f };
-	static const float depth[4] = { 0.55f, 0.6f, 0.5f, 0.9f };
-	static const float height[4] = { 150.0f, -170.0f, 40.0f, -40.0f };
-	static const float speed[4] = { 0.35f, -0.28f, 0.22f, -0.3f };
-	const float a = t * speed[i] + (float)i * 1.7f;
+	const float a = t * LOOP_SPEED + 2.0f * 3.1416f * (float)i / MODEL_SHIP_COUNT;
+	const float r = LOOP_RADIUS + 120.0f * sinf((float)i * 1.3f);
 	return (Vec3_t){
-		radius[i] * cosf(a),
-		height[i] + 50.0f * sinf(a * 2.0f),
-		STATION_Z + radius[i] * depth[i] * sinf(a)
+		r * sinf(a),
+		220.0f * sinf((float)i * 2.4f) + 40.0f * sinf(t * 0.5f + (float)i),
+		STATION_Z - r * cosf(a)
 	};
 }
 
@@ -585,25 +623,51 @@ static void move_objects(uint32_t frame) {
 	o->pitch = 0.15f;
 	o->roll = t * 0.3f;
 
-	for (uint32_t i = 0; i < 4; ++i) {
+	for (uint32_t i = 0; i < MODEL_SHIP_COUNT; ++i) {
 		o = &_objects[OBJ_SHIP + i];
 		o->pos = ship_path(i, t);
 		const Vec3_t next = ship_path(i, t + 0.1f);
-		face_along(o, &o->pos, &next, i & 1 ? -0.5f : 0.5f);
+		// Banked into the turn, and rocking a little
+		face_along(o, &o->pos, &next, 0.35f + 0.25f * sinf(t * 0.8f + (float)i));
 	}
 
 	// Each missile chases a ship, a little behind it and weaving
 	for (uint32_t i = 0; i < 2; ++i) {
 		o = &_objects[OBJ_MISSILE + i];
-		const uint32_t target = i ? 3 : 1;
-		const float lag = 1.0f + 0.3f * sinf(t * 0.7f + (float)i);
-		Vec3_t p = ship_path(target, t - lag);
-		Vec3_t next = ship_path(target, t - lag + 0.1f);
-		const float w = 30.0f * sinf(t * 3.0f + (float)i);
-		p.y += w;
-		next.y += 30.0f * sinf((t + 0.1f) * 3.0f + (float)i);
+		const uint32_t target = i ? 7 : 19;
+		const float lt = t - MISSILE_LAG;
+		Vec3_t p = ship_path(target, lt);
+		Vec3_t next = ship_path(target, lt + 0.1f);
+		p.y += 40.0f * sinf(t * 3.0f + (float)i);
+		next.y += 40.0f * sinf((t + 0.1f) * 3.0f + (float)i);
 		o->pos = p;
 		face_along(o, &p, &next, t * 4.0f);
+	}
+}
+
+// Adds the sun's sprite, with a ragged edge that changes every frame. It is
+// added after everything else, so it is behind them all bar the stars.
+static void draw_sun(void) {
+	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
+	const Vec2_t m = project(&c);
+	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
+	int32_t top = (int32_t)ceilf(m.y - rp);
+	int32_t bottom = (int32_t)floorf(m.y + rp);
+	if (top < VIEW_TOP) top = VIEW_TOP;
+	if (bottom > VIEW_BOTTOM - 1) bottom = VIEW_BOTTOM - 1;
+	if (bottom < top) return;
+	Sun_t* sun = &_suns[_set];
+	sun->cx = (int32_t)lroundf(m.x);
+	for (int32_t y = top; y <= bottom; ++y) {
+		const float dy = (float)y + 0.5f - m.y;
+		const float w = rp * rp - dy * dy;
+		const float hw = w > 0.0f ? sqrtf(w) : 0.0f;
+		sun->outer[y - top] = (int16_t)(hw + (float)(rand() % 4));
+		const float wi = rp * rp * SUN_CORE * SUN_CORE - dy * dy;
+		sun->inner[y - top] = wi > 0.0f ? (int16_t)(sqrtf(wi) - (float)(rand() % 3)) : -1;
+	}
+	if (game_spr_add(sun->cx - (int32_t)rp - 4, top, (uint32_t)(2.0f * rp) + 9, bottom - top + 1, sun, NULL, sun_renderer)) {
+		++_sprite_count;
 	}
 }
 
@@ -613,6 +677,13 @@ static float distance2(const Vec3_t* v) {
 
 static uint32_t percent(uint32_t cycles, uint32_t lines) {
 	return (cycles * 100u + lines * LINE_CYCLES / 2) / (lines * LINE_CYCLES);
+}
+
+// Cycles as rows of the display, to one place, such as "5.2" or "-0.3"
+static void rows_text(char* s, size_t n, int32_t cycles) {
+	const int32_t tenths = cycles * 10 / LINE_CYCLES;
+	const int32_t a = tenths < 0 ? -tenths : tenths;
+	snprintf(s, n, "%s%d.%d", tenths < 0 ? "-" : "", (int)(a / 10), (int)(a % 10));
 }
 
 // ----------------------------------------------------------------------------
@@ -795,25 +866,30 @@ void main_loop(void) {
 			order[j] = i;
 		}
 		for (uint32_t i = 0; i < OBJECTS; ++i) draw_object(&_objects[order[i]], style);
+		draw_sun();
 		game_spr_end();
 
+		// The name of the nearest ship, which comes first bar the station
+		const Object_t* nearest = &_objects[order[0]];
+		if (order[0] == OBJ_STATION) nearest = &_objects[order[1]];
+		game_text_set(title, nearest->model->name, 2);
+
 		// How hard the renderer worked on the last frame it drew
-		game_text_set(title, _style_names[style], 2);
 		char s[GAME_TEXT_MAX];
 		const HstxDviSpriteTiming_t timing = hstx_dvi_sprite_timing;
+		char ahead[16];
+		rows_text(ahead, sizeof(ahead), timing.ahead_min);
 		if (timing.frame) {
-			snprintf(s, sizeof(s), "PARTS %3u LOAD %3u%% AVG %2u%%",
-				(unsigned)_prim_count,
-				(unsigned)percent(timing.window_max, HSTX_DVI_ROW_FIFO_SIZE),
+			snprintf(s, sizeof(s), "%s AHEAD %s AVG %u%%", _style_names[style], ahead,
 				(unsigned)percent(timing.frame, FRAME_LINES));
 		}
 		else {
-			snprintf(s, sizeof(s), "PARTS %3u SPRITES %3u", (unsigned)_prim_count, (unsigned)_sprite_count);
+			snprintf(s, sizeof(s), "%s PARTS %u", _style_names[style], (unsigned)_prim_count);
 		}
 		game_text_set(status, s, 2);
 		if (timing.frame && frame % 60 == 0) {
-			printf("%s parts %u sprites %u calls %u line %u%% load %u%% avg %u%%\n", _style_names[style],
-				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)timing.calls_max,
+			printf("%s parts %u sprites %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", _style_names[style],
+				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)timing.calls_max, ahead,
 				(unsigned)percent(timing.line_max, 1),
 				(unsigned)percent(timing.window_max, HSTX_DVI_ROW_FIFO_SIZE),
 				(unsigned)percent(timing.frame, FRAME_LINES));
@@ -828,26 +904,21 @@ int main(void)
 	app_led_on();
 
 	game_pallet_init();
-	static const uint8_t ship_rgb[4][3] = {
-		{ 255, 255, 255 },
-		{ 0, 255, 0 },
-		{ 0, 219, 255 },
-		{ 255, 255, 0 },
-	};
-	_objects[OBJ_STATION] = (Object_t){ .model = &model_coriolis, .rgb = { 255, 255, 255 } };
-	for (uint32_t i = 0; i < 4; ++i) {
-		Object_t* o = &_objects[OBJ_SHIP + i];
-		o->model = &model_cobra;
-		for (uint32_t c = 0; c < 3; ++c) o->rgb[c] = ship_rgb[i][c];
-	}
-	for (uint32_t i = 0; i < 2; ++i) {
-		_objects[OBJ_MISSILE + i] = (Object_t){ .model = &model_missile, .rgb = { 255, 73, 73 } };
+	_objects[OBJ_STATION].model = &model_coriolis;
+	for (uint32_t i = 0; i < MODEL_SHIP_COUNT; ++i) _objects[OBJ_SHIP + i].model = model_ships[i];
+	for (uint32_t i = 0; i < 2; ++i) _objects[OBJ_MISSILE + i].model = &model_missile;
+	for (uint32_t i = 0; i < OBJECTS; ++i) {
+		for (uint32_t c = 0; c < 3; ++c) _objects[i].rgb[c] = _objects[i].model->rgb[c];
 	}
 	const float l = sqrtf(0.4f * 0.4f + 0.6f * 0.6f + 0.7f * 0.7f);
 	_light = (Vec3_t){ -0.4f / l, 0.6f / l, -0.7f / l };
 	_star_colours[0] = hstx_dvi_pixel_rgb(73, 73, 109);
 	_star_colours[1] = hstx_dvi_pixel_rgb(146, 146, 182);
 	_star_colours[2] = hstx_dvi_pixel_rgb(255, 255, 255);
+	for (uint32_t i = 0; i < 2; ++i) {
+		_suns[i].core = hstx_dvi_pixel_rgb(255, 255, 182);
+		_suns[i].rim = hstx_dvi_pixel_rgb(255, 146, 0);
+	}
 	for (uint32_t i = 0; i < STARS; ++i) new_star(&_stars[i], rand_range(NEAR_Z, 2000.0f));
 
 	for (uint32_t i = 0; i < 2; ++i) {

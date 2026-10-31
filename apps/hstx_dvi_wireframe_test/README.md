@@ -1,7 +1,7 @@
 # Wireframe ships
 
-A Coriolis space station, Cobra Mk IIIs and missiles in the style of Elite, to try out drawing 3D with the sprites.
-The station spins with its docking slot towards us while four ships fly round it, two of them chased by missiles.
+Every type of ship from Elite flies round a spinning Coriolis space station, past a sun, through a field of stars,
+with missiles chasing two of them. The name of the nearest ship is shown at the top.
 Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces.
 
 ## How it works
@@ -21,18 +21,21 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
 - The objects are added nearest first. Lower sprite ids take priority, so the nearer ones cover the ones behind without a depth buffer.
   This goes wrong only if objects pass through each other.
 - Far away an object is just a dot.
+- The sun is a sprite of its own, drawn after everything else so it is behind the ships, with a ragged edge that changes every frame.
 - The other core turns, moves, lights and projects everything each frame, with floats, and cuts the edges and shapes to the view.
   The renderer reads the sprites of the frame it is drawing while the next is worked out, so there are two sets.
 
 ## The meter
 
-The bottom line shows how many parts make up the scene, and how hard the renderer is working, as a share of the time it has.
+The bottom line shows the style, and how well the renderer is keeping up with the display.
 
-- `LOAD` is the slowest run of 8 rows in the last frame. The row FIFO holds 8 rows, so a slow row can borrow time from the rows around it,
-  but if a run of 8 goes over 100% the display misses a row and drops the frame.
+- `AHEAD` is how far ahead of the display the rows were at the worst moment of the last frame, in rows.
+  The row FIFO holds 8 rows, and is full at the top of each frame after the vertical blank,
+  so a run of slow rows uses up some of the lead and the faster rows after them win it back.
+  If it goes below 0 a row was late and the display drops the frame.
 - `AVG` is the time spent on the whole frame.
 
-It is also printed over USB serial each second, with the slowest single row and the most sprite calls in a run of 8 rows. The timing is turned on by `HSTX_DVI_SPRITE_TIMING`
+It is also printed over USB serial each second, with the slowest single row, the slowest run of 8 rows as `load`, and the most sprite calls in a run of 8 rows. The timing is turned on by `HSTX_DVI_SPRITE_TIMING`
 in `CMakeLists.txt`, and uses the SysTick of the core doing the rendering, so it only works on Arm.
 
 ## The benchmark
@@ -42,6 +45,7 @@ on their own, such as filling a pixel or drawing a run of a line, shows the resu
 
 ## Changing the models
 
+The ships follow the shapes of those in the original game, though not exactly.
 The faces and edges are worked out from the corners of each hull by `art/ship_model.py`,
 which adds details such as the engines as shapes on the faces they sit on, or as lines, like the gun and the missiles' fins.
 It writes `src/ship_model.c`.
