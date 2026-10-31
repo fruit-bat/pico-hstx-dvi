@@ -448,10 +448,64 @@ static void make_matrix(float m[3][3], float yaw, float pitch, float roll) {
 	m[2][2] = cy * cp;
 }
 
+// The outlines of the solid objects drawn so far this frame, nearest first,
+// for leaving out those behind them
+#define MAX_OCCLUDERS 8
+#define MAX_OCCLUDER_SIDES 24
+// Smaller than this, in pixels across, and an object hides too little to look at
+#define OCCLUDER_SIZE 24.0f
+
+typedef struct {
+	Vec2_t p[MAX_OCCLUDER_SIDES];
+	uint32_t n;
+	float turn; // 1 or -1, for the side of each edge that is inside
+} Occluder_t;
+
+static Occluder_t _occluders[MAX_OCCLUDERS];
+static uint32_t _occluder_count = 0;
+static uint32_t _hidden_count = 0;
+
+static void add_occluder(const Vec2_t* p, uint32_t n) {
+	if (_occluder_count >= MAX_OCCLUDERS || n < 3 || n > MAX_OCCLUDER_SIDES) return;
+	Occluder_t* o = &_occluders[_occluder_count++];
+	float area = 0.0f;
+	for (uint32_t i = 0; i < n; ++i) {
+		o->p[i] = p[i];
+		const Vec2_t* b = &p[(i + 1) % n];
+		area += p[i].x * b->y - b->x * p[i].y;
+	}
+	o->n = n;
+	o->turn = area < 0.0f ? -1.0f : 1.0f;
+}
+
+// Whether a circle on the screen is wholly inside the outline of something nearer
+static bool hidden(Vec2_t c, float r) {
+	for (uint32_t k = 0; k < _occluder_count; ++k) {
+		const Occluder_t* o = &_occluders[k];
+		uint32_t i = 0;
+		for (; i < o->n; ++i) {
+			const Vec2_t* a = &o->p[i];
+			const Vec2_t* b = &o->p[(i + 1) % o->n];
+			const float ex = b->x - a->x, ey = b->y - a->y;
+			// How far inside this edge the middle is, times the edge's length
+			const float d = o->turn * (ex * (c.y - a->y) - ey * (c.x - a->x));
+			if (d < r * sqrtf(ex * ex + ey * ey)) break;
+		}
+		if (i == o->n) return true;
+	}
+	return false;
+}
+
 static void draw_model(const Object_t* o, Style_e style) {
 	const WireModel_t* model = o->model;
 	if (o->pos.z < -model->radius) return;
 	const Vec2_t centre = project(&o->pos);
+	// Wholly behind something solid and nearer, it is left out
+	if (style != STYLE_WIRE && o->pos.z - model->radius > NEAR_Z &&
+		hidden(centre, FOCAL * model->radius / (o->pos.z - model->radius) + 1.0f)) {
+		++_hidden_count;
+		return;
+	}
 	// Far away it is just a dot
 	const float size = o->pos.z > model->radius ? FOCAL * model->radius * 2.0f / o->pos.z : (float)GAME_SCREEN_W;
 	if (size < DOT_SIZE) {
@@ -472,16 +526,23 @@ static void draw_model(const Object_t* o, Style_e style) {
 		if (i < model->nh && cam[i].z < NEAR_Z) behind = true;
 	}
 
+	// The outline on the screen, which a solid object hides everything behind
+	Vec2_t hull[2 * MAX_VERTS];
+	uint32_t hull_n = 0;
+	if (!behind) {
+		Vec2_t p[MAX_VERTS];
+		for (uint32_t i = 0; i < model->nh; ++i) p[i] = project(&cam[i]);
+		hull_n = outline(p, model->nh, hull);
+		if (style != STYLE_WIRE && size >= OCCLUDER_SIZE) add_occluder(hull, hull_n);
+	}
+
 	// Small and far away, a wireframe is just its outline. A convex outline
 	// crosses each row twice, where all the edges can cross it many times,
 	// and each costs about as much on a row however short it is.
 	if (!behind && size < DETAIL_SIZE && (style == STYLE_SOLID || style == STYLE_WIRE)) {
-		Vec2_t p[MAX_VERTS], q[2 * MAX_VERTS];
-		for (uint32_t i = 0; i < model->nh; ++i) p[i] = project(&cam[i]);
-		const uint32_t n = outline(p, model->nh, q);
 		const hstx_dvi_pixel_t c = shade(o->rgb, 1.0f);
-		for (uint32_t i = 0; i < n; ++i) add_line(q[i], q[(i + 1) % n], c);
-		if (style == STYLE_SOLID) add_fill(q, n, hstx_dvi_pixel_rgb(0, 0, 0));
+		for (uint32_t i = 0; i < hull_n; ++i) add_line(hull[i], hull[(i + 1) % hull_n], c);
+		if (style == STYLE_SOLID) add_fill(hull, hull_n, hstx_dvi_pixel_rgb(0, 0, 0));
 		return;
 	}
 
@@ -522,9 +583,7 @@ static void draw_model(const Object_t* o, Style_e style) {
 		const hstx_dvi_pixel_t black = hstx_dvi_pixel_rgb(0, 0, 0);
 		if (!behind) {
 			// The outline of the hull, as one shape
-			Vec2_t p[MAX_VERTS], q[2 * MAX_VERTS];
-			for (uint32_t i = 0; i < model->nh; ++i) p[i] = project(&cam[i]);
-			add_fill(q, outline(p, model->nh, q), black);
+			add_fill(hull, hull_n, black);
 		}
 		else {
 			// Close up the outline is hard to find, so each face
@@ -654,6 +713,7 @@ static void draw_sun(Style_e style, uint32_t frame) {
 	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
 	const Vec2_t m = project(&c);
 	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
+	if (style != STYLE_WIRE && hidden(m, rp * (SUN_RAY_LONG + 0.15f) + 1.0f)) return;
 	const hstx_dvi_pixel_t edge = hstx_dvi_pixel_rgb(255, 255, 0);
 	const hstx_dvi_pixel_t ray = hstx_dvi_pixel_rgb(255, 146, 0);
 	Vec2_t outline[SUN_SIDES];
@@ -680,7 +740,9 @@ static void draw_sun(Style_e style, uint32_t frame) {
 	for (uint32_t i = 0; i < SUN_RAYS; ++i) {
 		if (!object_begin()) return;
 		const float a = turn + 2.0f * 3.1416f * (float)i / SUN_RAYS;
-		const float len = (i & 1 ? SUN_RAY_SHORT : SUN_RAY_LONG) + 0.06f * (float)(rand() % 3);
+		// Its own flicker, so the stars do not change when the sun is hidden
+		const uint32_t h = (frame * 2654435761u + i * 40503u) >> 16;
+		const float len = (i & 1 ? SUN_RAY_SHORT : SUN_RAY_LONG) + 0.06f * (float)(h % 3);
 		const float ca = cosf(a), sa = sinf(a);
 		add_line(
 			(Vec2_t){ m.x + rp * SUN_RAY_GAP * ca, m.y + rp * SUN_RAY_GAP * sa },
@@ -1088,6 +1150,8 @@ void main_loop(void) {
 		_prim_count = 0;
 		_band_count = 0;
 		_sprite_count = 2;
+		_occluder_count = 0;
+		_hidden_count = 0;
 
 		game_spr_begin();
 		GameText_t* title = &_title[frame & 1];
@@ -1127,8 +1191,8 @@ void main_loop(void) {
 		}
 		game_text_set(status, s, 1);
 		if (timing.frame && frame % 60 == 0) {
-			printf("%s parts %u sprites %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", _style_names[style],
-				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)timing.calls_max, ahead,
+			printf("%s parts %u sprites %u hidden %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", _style_names[style],
+				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)_hidden_count, (unsigned)timing.calls_max, ahead,
 				(unsigned)percent(timing.line_max, 1),
 				(unsigned)percent(timing.window_max, HSTX_DVI_ROW_FIFO_SIZE),
 				(unsigned)percent(timing.frame, FRAME_LINES));

@@ -18,6 +18,7 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
   The models are convex, so the faces left never cover each other.
 - For the solid wireframes each object's outline is filled in black after its edges. A convex object always has a convex outline,
   so this takes one shape. Close up, when part of an object is behind us, each face is filled instead.
+- An object wholly behind the outline of something solid and nearer is left out, from its circle on the screen.
 - The objects are added nearest first. Lower sprite ids take priority, so the nearer ones cover the ones behind without a depth buffer.
   This goes wrong only if objects pass through each other.
 - Far away an object is just a dot, and in the wireframe styles a small one is just its outline. A convex outline crosses each row twice,
