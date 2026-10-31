@@ -211,7 +211,7 @@ static const char* const _window_top[] = {
 	".dNNNNNNdNyyNNd.",
 	".dNNNNNNdNyyNNd.",
 	".dNNNNNNdNNyyNd.",
-	".ddddddddddddddd",
+	".dddddddddddddd.",
 	".dNNNNNNdNNNNNd.",
 	".dNNNNNNdNNNNNd.",
 };

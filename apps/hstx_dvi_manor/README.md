@@ -3,6 +3,15 @@
 A scrolling platform game in a haunted house, using sprites.
 Hazel the witch has followed five lost kittens into the old manor, and gets past its spooks by cheering them up with spells rather than fighting them.
 
+<p>
+  <img src="images/title.png" width="49%" alt="The title, over the house">
+  <img src="images/who_lives.png" width="49%" alt="Who lives in the manor">
+</p>
+<p>
+  <img src="images/hall.png" width="49%" alt="Hazel in the hall, with a ghost to cheer">
+  <img src="images/kittens_safe.png" width="49%" alt="All the kittens are safe">
+</p>
+
 ## Controls
 
 Buttons connect the GPIO to ground (internal pull ups are used).

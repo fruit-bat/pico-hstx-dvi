@@ -3,6 +3,15 @@
 A flip screen maze adventure in the style of the 1984 jungle classic, using sprites.
 Hazel the witch wanders a wood full of animals, and gets on by helping them rather than fighting them.
 
+<p>
+  <img src="images/title.png" width="49%" alt="The title, with who Hazel meets in the wood">
+  <img src="images/night.png" width="49%" alt="The start of a night">
+</p>
+<p>
+  <img src="images/moon_piece.png" width="49%" alt="A piece of the moon charm, found beside the sleeping bear">
+  <img src="images/wolf_calm.png" width="49%" alt="The old wolf calmed at the end of the night">
+</p>
+
 ## Controls
 
 Buttons connect the GPIO to ground (internal pull ups are used).

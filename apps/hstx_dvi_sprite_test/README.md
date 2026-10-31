@@ -1,7 +1,17 @@
+# Invaders
 
 Example application using lots of sprites
 
 An invaders game. The library's pixel perfect sprite collisions decide what hits what.
+
+<p>
+  <img src="images/title.png" width="49%" alt="The title, spelt out in invaders">
+  <img src="images/score_table.png" width="49%" alt="The score advance table">
+</p>
+<p>
+  <img src="images/wave.png" width="49%" alt="A wave, with the mystery ship overhead">
+  <img src="images/title_burst.png" width="49%" alt="The title bursting apart into invaders">
+</p>
 
 ## Controls
 

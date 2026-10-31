@@ -1,5 +1,12 @@
+# Guardian
 
 A side scrolling shoot 'em up in the style of the 1981 arcade classic, using sprites.
+
+<p>
+  <img src="images/title.png" width="32%" alt="The title, with the enemies materialising">
+  <img src="images/battle.png" width="32%" alt="Fighting off a wave, with the mountains and humanoids below">
+  <img src="images/hall_of_fame.png" width="32%" alt="The hall of fame">
+</p>
 
 ## Controls
 
