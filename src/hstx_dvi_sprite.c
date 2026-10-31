@@ -46,8 +46,6 @@ static __force_inline uint32_t timing_now(void) { return 0; }
 #define TIMING_LINE_CYCLES ((MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS) * 10)
 volatile HstxDviSpriteTiming_t hstx_dvi_sprite_timing;
 #if defined(HSTX_DVI_SPRITE_TIMING)
-// The pixels filled by sprite_render_span on this row
-static uint32_t _timing_pixels;
 #define TIMING_COUNT(v) (v)
 #else
 #define TIMING_COUNT(v) 0u
@@ -590,6 +588,16 @@ static __force_inline void render_span_word(
 }
 #endif
 
+#if MODE_BYTES_PER_PIXEL == 1
+// The pixels of a row word from the first to the last, each 0 to 3, as bytes, lowest leftmost
+static const uint32_t __attribute__((section(".data._word_span_mask"))) _word_span_mask[4][4] = {
+	{ 0x000000ff, 0x0000ffff, 0x00ffffff, 0xffffffff },
+	{ 0x00000000, 0x0000ff00, 0x00ffff00, 0xffffff00 },
+	{ 0x00000000, 0x00000000, 0x00ff0000, 0xffff0000 },
+	{ 0x00000000, 0x00000000, 0x00000000, 0xff000000 },
+};
+#endif
+
 static __force_inline void render_span(
 	hstx_dvi_row_t* r,
 	int32_t x0,
@@ -602,9 +610,6 @@ static __force_inline void render_span(
 	if (x0 < 0) x0 = 0;
 	if (x1 > MODE_H_ACTIVE_PIXELS) x1 = MODE_H_ACTIVE_PIXELS;
 	if (x0 >= x1) return;
-#if defined(HSTX_DVI_SPRITE_TIMING)
-	_timing_pixels += (uint32_t)(x1 - x0);
-#endif
 #if MODE_BYTES_PER_PIXEL == 1
 	// 4 pixels at a time; the lowest byte of a word is the leftmost pixel
 	const uint32_t pq = p * 0x01010101u;
@@ -664,6 +669,9 @@ void __not_in_flash_func(sprite_renderer_parts)(
 	const int32_t y = o->top + row;
 	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
 	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t idq = (spriteId + 1) * 0x01010101u;
+#endif
 	SpritePart_t* const end = o->part + o->count;
 	for (SpritePart_t* p = o->part; p < end; ++p) {
 		const int32_t pr = y - p->top;
@@ -680,6 +688,15 @@ void __not_in_flash_func(sprite_renderer_parts)(
 			}
 			i0 = (xa + (1 << (SPRITE_PARTS_FX - 1))) >> SPRITE_PARTS_FX;
 			i1 = ((xb + (1 << (SPRITE_PARTS_FX - 1))) >> SPRITE_PARTS_FX) + 1;
+#if MODE_BYTES_PER_PIXEL == 1
+			// Most lines are steep, so the run is in one row word: draw it straight
+			const uint32_t last = (uint32_t)(i1 - 1);
+			if ((uint32_t)i0 < MODE_H_ACTIVE_PIXELS && last < MODE_H_ACTIVE_PIXELS && ((uint32_t)i0 >> 2) == (last >> 2)) {
+				render_span_word(r, last >> 2, _word_span_mask[i0 & 3][last & 3], p->colour * 0x01010101u, idq,
+					spriteCollisionMask, spriteCollisionsPtr);
+				continue;
+			}
+#endif
 		}
 		else {
 			uint32_t b = p->shape.cur;
@@ -735,8 +752,8 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 	uint32_t active[ACTIVE_SPRITE_WORDS] = {0};
 	uint32_t window[TIMING_WINDOW] = {0};
 	uint32_t window_sum = 0, line_max = 0, window_max = 0, frame = 0;
-	uint32_t calls_window[TIMING_WINDOW] = {0}, pixels_window[TIMING_WINDOW] = {0};
-	uint32_t calls_sum = 0, calls_max = 0, pixels_sum = 0, pixels_max = 0;
+	uint32_t calls_window[TIMING_WINDOW] = {0};
+	uint32_t calls_sum = 0, calls_max = 0;
 	// How far ahead of the display the rows are, starting with the FIFO full
 	// after the vertical blank
 	const int32_t ahead_full = TIMING_WINDOW * TIMING_LINE_CYCLES;
@@ -746,9 +763,6 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
 		const uint32_t start = timing_now();
 		uint32_t calls = 0;
-#if defined(HSTX_DVI_SPRITE_TIMING)
-		_timing_pixels = 0;
-#endif
 		clear_sprite_id_row();
 
 		// Render a blank row
@@ -795,9 +809,6 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 		calls_sum += TIMING_COUNT(calls) - calls_window[w];
 		calls_window[w] = TIMING_COUNT(calls);
 		if (calls_sum > calls_max) calls_max = calls_sum;
-		pixels_sum += TIMING_COUNT(_timing_pixels) - pixels_window[w];
-		pixels_window[w] = TIMING_COUNT(_timing_pixels);
-		if (pixels_sum > pixels_max) pixels_max = pixels_sum;
 
 		hstx_dvi_row_fifo_put_blocking(r);
 	}
@@ -806,6 +817,5 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 	hstx_dvi_sprite_timing.frame = frame;
 	hstx_dvi_sprite_timing.ahead_min = ahead_min;
 	hstx_dvi_sprite_timing.calls_max = calls_max;
-	hstx_dvi_sprite_timing.pixels_max = pixels_max;
 }
 

@@ -294,7 +294,6 @@ typedef struct {
 	// frame was dropped.
 	int32_t ahead_min;
 	uint32_t calls_max;  // the most sprite renderer calls in a run of rows that fits in the row FIFO
-	uint32_t pixels_max; // the most pixels filled by sprite_render_span in such a run
 } HstxDviSpriteTiming_t;
 
 extern volatile HstxDviSpriteTiming_t hstx_dvi_sprite_timing;
