@@ -19,6 +19,7 @@ typedef enum {
 	OPTION_DOCK,
 	// For trying things out, until the game is finished
 	OPTION_MAX_EQUIP,
+	OPTION_WITCH,
 	OPTION_END,
 	OPTIONS
 } Option_e;
@@ -30,6 +31,8 @@ static uint32_t _option = 0;
 static bool _fitted = false;
 // Whether the docking computer was asked for
 static bool _dock = false;
+// Whether the next jump is to go wrong, into witchspace
+static bool _witch = false;
 static GameText_t _text[2][OPTIONS + 1];
 
 // How many there are: the docking computer, the equipment and ending the
@@ -54,6 +57,12 @@ bool options_dock(void) {
 	const bool d = _dock;
 	_dock = false;
 	return d;
+}
+
+bool options_witch(void) {
+	const bool w = _witch;
+	_witch = false;
+	return w;
 }
 
 bool options_shown(void) {
@@ -94,6 +103,9 @@ bool options_input(uint16_t pressed) {
 				save_settings();
 			}
 			break;
+		case OPTION_WITCH:
+			if (pressed & EL_INP_A) _witch = !_witch;
+			break;
 		case OPTION_MAX_EQUIP:
 			if (pressed & EL_INP_A) {
 				trade_max_equipment();
@@ -115,7 +127,8 @@ void options_draw(void) {
 	GameText_t* t = _text[draw_set()];
 	char s[GAME_TEXT_MAX + 1];
 	const uint32_t n = count();
-	const int32_t top = CENTRE_Y - 50;
+	// Centred in the view, with the line at the end
+	const int32_t top = CENTRE_Y - (24 * (int32_t)n + 16) / 2;
 	for (uint32_t i = 0; i < n; ++i) {
 		switch (i) {
 			case OPTION_STYLE:
@@ -132,6 +145,9 @@ void options_draw(void) {
 				break;
 			case OPTION_DOCK:
 				snprintf(s, sizeof(s), "DOCKING    (FIRE)");
+				break;
+			case OPTION_WITCH:
+				snprintf(s, sizeof(s), _witch ? "WITCHSPACE NEXT JUMP" : "WITCHSPACE (FIRE)");
 				break;
 			case OPTION_MAX_EQUIP:
 				snprintf(s, sizeof(s), _fitted ? "MAX EQUIP  FITTED" : "MAX EQUIP  (FIRE)");

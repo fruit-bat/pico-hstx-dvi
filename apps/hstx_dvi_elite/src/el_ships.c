@@ -63,6 +63,18 @@ Canister_t canisters[CANISTERS];
 #define CANISTER_DAMAGE 0.1f
 // The scoops take a canister hitting us lower than this, from -1 below to 1 above
 #define SCOOP_ABOVE 0.5f
+// The chance a new ship is a Thargoid, out of 1000, how many come for us in
+// witchspace, and how far off; the chance each frame a Thargoid launches a
+// Thargon, when it can, out of 10000, and from how far; and the chance a
+// Thargon destroyed leaves alien items, in percent, and when it is dead
+#define THARGOID_CHANCE 15
+#define WITCH_THARGOIDS 2
+#define WITCH_NEAR 6000.0f
+#define WITCH_FAR 10000.0f
+#define THARGON_CHANCE 60
+#define THARGON_RANGE 8000.0f
+#define THARGON_ALIEN 40
+#define THARGON_DEAD_ALIEN 100
 
 // The pieces of a destroyed ship flying apart
 #define EXPLOSIONS 4
@@ -95,6 +107,10 @@ static const ShipClass_t _classes[] = {
 	// Unarmed, and run
 	{ "TRANSPORTER",    8.0f, 0.020f,  2.0f, 0.00f, 60,  0,    0.0f, 1000.0f, false, 0,   0 },
 	{ "ORBIT SHUTTLE",  8.0f, 0.020f,  2.0f, 0.00f, 60,  0,    0.0f, 1000.0f, false, 0,   0 },
+	// Aliens: the Thargoid is big and tough, and launches Thargons, which are
+	// fast and weak, and weave
+	{ "THARGOID",      14.0f, 0.030f, 12.0f, 0.18f, 40, 60, 7000.0f, 1500.0f, false, 4, 500 },
+	{ "THARGON",       22.0f, 0.060f,  1.0f, 0.05f, 50, 40, 3000.0f,  300.0f, true,  0,  50 },
 };
 #define CLASSES (sizeof(_classes) / sizeof(_classes[0]))
 
@@ -112,6 +128,8 @@ static const ShipClass_t _classes[] = {
 #define BIG_TRADER_COUNT 3
 #define UNARMED_FIRST 15
 #define UNARMED_COUNT 2
+#define THARGOID 17
+#define THARGON 18
 
 typedef struct {
 	Vec3_t pos;
@@ -133,6 +151,8 @@ static Missile_t _missiles[MISSILES];
 // How many ships the system has room for, from how busy it is
 static uint32_t _traffic = SHIPS;
 static uint32_t _frame = 0;
+// Whether we are in witchspace, where nothing new comes
+static bool _witch = false;
 
 static float rand_range(float lo, float hi) {
 	return lo + (hi - lo) * (float)(rand() & 0xffff) / 65535.0f;
@@ -176,6 +196,7 @@ static void set_class(Ship_t* s, const ShipClass_t* c) {
 // freighters where there is industry
 static void new_ship(Ship_t* s, const ShipsWorld_t* w) {
 	const uint32_t r = percent();
+	s->mother = -1;
 	const uint32_t pirates = (8 - w->government) * 7;
 	const uint32_t police = 5 + w->government * 3;
 	if (r < pirates) {
@@ -198,13 +219,18 @@ static void new_ship(Ship_t* s, const ShipsWorld_t* w) {
 		else if (k < big + 15) set_class(s, pick(UNARMED_FIRST, UNARMED_COUNT));
 		else set_class(s, pick(SMALL_TRADER_FIRST, SMALL_TRADER_COUNT));
 	}
+	// Rarely, a Thargoid
+	if ((uint32_t)(rand() % 1000) < THARGOID_CHANCE) {
+		s->role = ROLE_THARGOID;
+		set_class(s, &_classes[THARGOID]);
+	}
 	const Vec3_t pos = vec_add(w->station, vec_scale(rand_unit(), rand_range(SPAWN_NEAR, SPAWN_FAR)));
 	frame_set(&s->fr, pos, rand_unit(), rand_unit());
 	s->speed = rand_range(0.2f, 0.5f) * s->cls->speed;
 	s->roll = rand_range(-0.01f, 0.01f);
 	s->pitch = rand_range(-0.004f, 0.004f);
 	s->alive = true;
-	s->hostile = s->role == ROLE_PIRATE || (s->role == ROLE_POLICE && w->offender);
+	s->hostile = s->role == ROLE_PIRATE || s->role == ROLE_THARGOID || (s->role == ROLE_POLICE && w->offender);
 	s->cooldown = s->cls->rate;
 	s->beam = 0;
 	s->retreat = 0;
@@ -224,8 +250,20 @@ void ships_enter(const ShipsWorld_t* w) {
 	// Busier the more people there are
 	_traffic = 3 + w->population / 16;
 	if (_traffic > SHIPS) _traffic = SHIPS;
+	_witch = w->witch;
+	// In witchspace, Thargoids round us, and room for their Thargons
+	if (_witch) _traffic = WITCH_THARGOIDS + (uint32_t)rand() % 2;
 	for (uint32_t i = 0; i < SHIPS; ++i) {
-		if (i < _traffic) {
+		if (i < _traffic && _witch) {
+			Ship_t* s = &ships[i];
+			new_ship(s, w);
+			s->role = ROLE_THARGOID;
+			set_class(s, &_classes[THARGOID]);
+			s->hostile = true;
+			const Vec3_t pos = vec_add(w->me->pos, vec_scale(rand_unit(), rand_range(WITCH_NEAR, WITCH_FAR)));
+			frame_set(&s->fr, pos, vec_unit(vec_sub(w->me->pos, pos)), rand_unit());
+		}
+		else if (i < _traffic) {
 			new_ship(&ships[i], w);
 		}
 		else {
@@ -239,13 +277,14 @@ void ships_enter(const ShipsWorld_t* w) {
 }
 
 // A canister at pos, drifting along drift, if there is room for another
-static void new_canister(Vec3_t pos, Vec3_t drift) {
+static void new_canister(Vec3_t pos, Vec3_t drift, bool alien) {
 	for (uint32_t i = 0; i < CANISTERS; ++i) {
 		Canister_t* c = &canisters[i];
 		if (c->on) continue;
 		c->on = true;
 		frame_set(&c->fr, pos, rand_unit(), rand_unit());
 		c->drift = drift;
+		c->alien = alien;
 		c->roll = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
 		c->pitch = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
 		return;
@@ -253,7 +292,7 @@ static void new_canister(Vec3_t pos, Vec3_t drift) {
 }
 
 void ships_debug_canister(Vec3_t pos) {
-	new_canister(pos, (Vec3_t){ 0.0f, 0.0f, 0.0f });
+	new_canister(pos, (Vec3_t){ 0.0f, 0.0f, 0.0f }, false);
 }
 
 static void explode(Vec3_t pos, float size) {
@@ -277,15 +316,32 @@ void ships_explode(Vec3_t pos, float size) {
 
 static void destroy(Ship_t* s, ShipsEvents_t* ev, bool by_us) {
 	explode(s->fr.pos, s->model->radius);
-	const uint32_t cargo = s->role == ROLE_TRADER ? TRADER_CARGO : s->role == ROLE_PIRATE ? PIRATE_CARGO : 0;
-	if (percent() < cargo) new_canister(s->fr.pos, vec_scale(s->fr.f, s->speed * CANISTER_DRIFT));
+	const bool thargon = s->role == ROLE_THARGON;
+	const uint32_t cargo = s->role == ROLE_TRADER ? TRADER_CARGO : s->role == ROLE_PIRATE ? PIRATE_CARGO :
+		thargon ? (s->hostile ? THARGON_ALIEN : THARGON_DEAD_ALIEN) : 0;
+	if (percent() < cargo) new_canister(s->fr.pos, vec_scale(s->fr.f, s->speed * CANISTER_DRIFT), thargon);
 	s->alive = false;
 	s->beam = 0;
-	s->respawn = RESPAWN_FRAMES;
+	// Nothing new comes in witchspace, or past the traffic, where only Thargons go
+	s->respawn = _witch || (uint32_t)(s - ships) >= _traffic ? 0 : RESPAWN_FRAMES;
 	if (by_us) {
 		++ev->kills;
-		if (s->role == ROLE_PIRATE) ev->bounty += s->cls->bounty;
+		if (s->role == ROLE_PIRATE || s->role == ROLE_THARGOID || thargon) ev->bounty += s->cls->bounty;
 		else ev->innocent = true;
+	}
+	// A Thargoid's Thargons go dead, and drift, tumbling
+	if (s->role == ROLE_THARGOID) {
+		const int32_t me = (int32_t)(s - ships);
+		for (uint32_t i = 0; i < SHIPS; ++i) {
+			Ship_t* t = &ships[i];
+			if (!t->alive || t->role != ROLE_THARGON || t->mother != me) continue;
+			t->mother = -1;
+			t->hostile = false;
+			t->beam = 0;
+			t->speed *= 0.2f;
+			t->roll = rand_range(-0.04f, 0.04f);
+			t->pitch = rand_range(-0.03f, 0.03f);
+		}
 	}
 }
 
@@ -318,6 +374,27 @@ static bool launch_missile(Frame_t from, int32_t target) {
 		return true;
 	}
 	return false;
+}
+
+static void launch_thargon(Ship_t* mother, uint32_t i) {
+	for (uint32_t k = 0; k < SHIPS; ++k) {
+		Ship_t* t = &ships[k];
+		if (t->alive) continue;
+		set_class(t, &_classes[THARGON]);
+		t->role = ROLE_THARGON;
+		t->mother = (int32_t)i;
+		t->fr = mother->fr;
+		t->fr.pos = vec_add(mother->fr.pos, vec_scale(mother->fr.f, mother->model->radius + t->model->radius));
+		t->speed = t->cls->speed;
+		t->alive = true;
+		t->hostile = true;
+		t->cooldown = t->cls->rate;
+		t->beam = 0;
+		t->retreat = 0;
+		t->respawn = 0;
+		--mother->missiles;
+		return;
+	}
 }
 
 static void attack(Ship_t* s, uint32_t i, const ShipsWorld_t* w, ShipsEvents_t* ev) {
@@ -361,6 +438,11 @@ static void attack(Ship_t* s, uint32_t i, const ShipsWorld_t* w, ShipsEvents_t* 
 			if (vec_dot(vec_scale(to, -1.0f), w->me->f) >= 0.0f) ev->fore += c->damage;
 			else ev->aft += c->damage;
 		}
+	}
+	// A Thargoid launches its Thargons into any room there is
+	if (s->role == ROLE_THARGOID) {
+		if (s->missiles && d < THARGON_RANGE && (uint32_t)(rand() % 10000) < THARGON_CHANCE) launch_thargon(s, i);
+		return;
 	}
 	// And now and then a missile
 	if (s->missiles && pointing && d < MISSILE_RANGE && (uint32_t)(rand() % 10000) < MISSILE_CHANCE) {
@@ -421,6 +503,7 @@ static void move_canisters(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 			// Not well above us, it goes into the scoops
 			if (w->scoops && vec_dot(to, w->me->u) < SCOOP_ABOVE * d) {
 				++ev->scooped;
+				if (c->alien) ++ev->aliens;
 			}
 			else {
 				++ev->smashed;
@@ -437,7 +520,8 @@ static void move_canisters(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 
 void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 	++_frame;
-	for (uint32_t i = 0; i < _traffic; ++i) {
+	// All of them, as Thargons can be past the traffic
+	for (uint32_t i = 0; i < SHIPS; ++i) {
 		Ship_t* s = &ships[i];
 		if (!s->alive) {
 			if (s->respawn && --s->respawn == 0) new_ship(s, w);
@@ -460,7 +544,7 @@ void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 			ev->fore += RAM_DAMAGE;
 			destroy(s, ev, true);
 		}
-		else if (d > LEAVE_RANGE && vec_length(vec_sub(s->fr.pos, w->station)) > LEAVE_RANGE) {
+		else if (!_witch && d > LEAVE_RANGE && vec_length(vec_sub(s->fr.pos, w->station)) > LEAVE_RANGE) {
 			new_ship(s, w);
 		}
 	}

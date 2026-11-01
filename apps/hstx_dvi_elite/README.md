@@ -37,6 +37,17 @@ It cannot start, or end, too close to anything, the planet, the sun, the station
 Each system's planet is as big as its data says and coloured as it is on the charts,
 and where its sun and station are comes from its numbers, so it is the same each time.
 
+## Witchspace and the Thargoids
+
+About one jump in 40 goes wrong, as in the original, and leaves you in witchspace, halfway to where you were going,
+with the fuel for the whole jump spent. There is no planet, sun or station, so no docking, scooping or compass,
+and the specks of dust go past in every colour, so you can tell where you are. Two or three Thargoids come for you.
+Each launches up to four Thargons, small fast drones that weave, which go dead and drift when their Thargoid is destroyed.
+A destroyed Thargon may leave a canister of alien items, always if it was dead. Thargoids and Thargons bring a bounty.
+The charts are centred on where you are, and the only way out is a jump from there, so the Thargoids must be beaten,
+or left behind, as they mass lock you. An escape pod brings you in to the system you were going to.
+Now and then a Thargoid turns up in an ordinary system too.
+
 ## Trading
 
 Docked, select also shows the market and the equipment for sale. In the market, up and down pick a good,
@@ -84,7 +95,7 @@ Each type of ship has a character, loosely after the original:
 Each system has a character from its data. Where the government is weak there are more pirates, and more of them heavy fighters;
 where it is strong, more police. The more people, the busier it is, and industrial systems see the big freighters.
 Hits take your shields down, fore or aft, then your energy, and they build up again slowly. With no energy left the game is over.
-Pirates bring a bounty, and the ships destroyed raise your rating, as in the original.
+Pirates and Thargoids bring a bounty, and the ships destroyed raise your rating, as in the original.
 
 ## The controls
 
@@ -100,7 +111,7 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
   and three quick presses of A set off the energy bomb; fire is B alone.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
-  the shape of the screen, and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything (for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
+  the shape of the screen, and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything, WITCHSPACE, which makes the next jump go wrong (both for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -150,6 +161,7 @@ host/build/elite_host dock 420 20 frames
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
 `fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
 `autodock` is put behind the station, facing away, and the docking computer, turned on in the options, flies it in.
+`witch` has a jump go wrong into witchspace, among Thargoids, fires at them, and looks at the charts, centred halfway.
 `bomb` has an energy bomb fitted and three pirates put round it, arms the bomb, then sets it off.
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.

@@ -64,8 +64,8 @@ const char* trade_equipment_input(uint8_t pressed, const GalaxySystem_t* sys);
 void trade_draw_market(void);
 void trade_draw_equipment(const GalaxySystem_t* sys);
 // A canister picked up: a good at random into the hold, returning its name,
-// or that the hold is full
-const char* trade_scoop(void);
+// or that the hold is full; from a Thargon, alien items
+const char* trade_scoop(bool alien);
 // What is in the hold, with the fuel and cash
 void trade_draw_inventory(void);
 // Escaping in the pod: the cargo goes with the ship, and so does the pod

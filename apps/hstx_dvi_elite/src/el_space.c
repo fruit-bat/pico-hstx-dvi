@@ -90,6 +90,9 @@ static Vec3_t _dust[DUST];
 static Vec3_t _dust_was[DUST];
 // How we moved last, for where new specks come from
 static Vec3_t _dust_move;
+// For the colours of the specks in witchspace, which shift as time goes
+static uint32_t _dust_frame;
+bool dust_strange = false;
 
 static float rand_range(float lo, float hi) {
 	return lo + (hi - lo) * (float)(rand() & 0xffff) / 65535.0f;
@@ -125,6 +128,7 @@ static void turn_pair(float* a, float* b, float t) {
 
 void dust_move(Vec3_t turn, Vec3_t move) {
 	_dust_move = move;
+	++_dust_frame;
 	for (uint32_t i = 0; i < DUST; ++i) {
 		Vec3_t* s = &_dust[i];
 		_dust_was[i] = *s;
@@ -134,6 +138,18 @@ void dust_move(Vec3_t turn, Vec3_t move) {
 		turn_pair(&s->z, &s->x, turn.y);
 		*s = vec_sub(*s, move);
 		if (s->z < DUST_NEAR || s->z > DUST_FAR) new_speck(i);
+	}
+}
+
+// A colour round the colour wheel, h from 0 to 6
+static void hue_rgb(float h, uint8_t rgb[3]) {
+	const uint32_t k = (uint32_t)h % 6;
+	const float f = h - floorf(h);
+	const uint8_t up = (uint8_t)(255.0f * f), down = (uint8_t)(255.0f * (1.0f - f));
+	static const uint8_t parts[6][3] = { { 0, 1, 3 }, { 2, 0, 3 }, { 3, 0, 1 }, { 3, 2, 0 }, { 1, 3, 0 }, { 0, 3, 2 } };
+	for (uint32_t j = 0; j < 3; ++j) {
+		const uint8_t p = parts[k][j];
+		rgb[j] = p == 0 ? 255 : p == 1 ? up : p == 2 ? down : 0;
 	}
 }
 
@@ -157,7 +173,10 @@ void dust_draw(void) {
 			if (!seen[i] || a[i].y < top || a[i].y >= top + band) continue;
 			// Brighter the nearer
 			const float near = 1.0f - (_dust[i].z - DUST_NEAR) / (DUST_FAR - DUST_NEAR);
-			const hstx_dvi_pixel_t c = shade(grey, 0.35f + 0.65f * near);
+			// In witchspace each its own colour, going round the wheel
+			uint8_t rgb[3];
+			if (dust_strange) hue_rgb(fmodf((float)i * 0.83f + (float)_dust_frame * 0.01f, 6.0f), rgb);
+			const hstx_dvi_pixel_t c = shade(dust_strange ? rgb : grey, 0.35f + 0.65f * near);
 			Vec2_t end = b[i];
 			// At least a dot, and two pixels across close by
 			if (fabsf(end.x - a[i].x) + fabsf(end.y - a[i].y) < 1.0f) end = (Vec2_t){ a[i].x + (near > 0.6f ? 1.0f : 0.0f), a[i].y };

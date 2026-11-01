@@ -222,6 +222,8 @@ static void show_options(uint32_t frame) {
 }
 
 void attract_run(void) {
+	// A game may have ended in witchspace
+	dust_strange = false;
 	// Start with the first galaxy
 	for (uint32_t round = 0; ; ++round) {
 		const uint32_t g = round % GALAXIES;

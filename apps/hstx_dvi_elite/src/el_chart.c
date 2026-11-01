@@ -34,6 +34,9 @@ static GameText_t _chart_info[2];
 static GalaxySystem_t _galaxy[GALAXY_SYSTEMS];
 static uint32_t _galaxy_shown = GALAXIES;
 static uint32_t _home = 0;
+// Where we are when in witchspace, between two systems, and whether we are
+static GalaxySystem_t _away;
+static bool _is_away = false;
 // The systems from the top of the chart down
 static uint8_t _by_y[GALAXY_SYSTEMS];
 // The systems on the short range chart, nearest first
@@ -54,9 +57,14 @@ const uint8_t* chart_economy_rgb(uint32_t economy) {
 	return _economy_rgb[economy & 7];
 }
 
+// Where we are: at the system, or between two in witchspace
+static const GalaxySystem_t* here(void) {
+	return _is_away ? &_away : &_galaxy[_home];
+}
+
 // The systems near us, for the short range chart, nearest first
 static void find_near(void) {
-	const GalaxySystem_t* h = &_galaxy[_home];
+	const GalaxySystem_t* h = here();
 	_near_count = 0;
 	for (uint32_t i = 0; i < GALAXY_SYSTEMS; ++i) {
 		if (abs((int32_t)_galaxy[i].x - h->x) > LOCAL_DX || abs((int32_t)_galaxy[i].y - h->y) > LOCAL_DY) continue;
@@ -85,8 +93,28 @@ uint32_t chart_galaxy(void) {
 
 void chart_set_home(uint32_t i) {
 	_home = i % GALAXY_SYSTEMS;
+	_is_away = false;
 	find_near();
 	chart_cursor_set((float)_galaxy[_home].x, (float)_galaxy[_home].y);
+}
+
+void chart_set_away(uint32_t from, uint32_t to) {
+	const GalaxySystem_t* a = &_galaxy[from % GALAXY_SYSTEMS];
+	const GalaxySystem_t* b = &_galaxy[to % GALAXY_SYSTEMS];
+	_away = *a;
+	_away.x = (uint8_t)(((uint32_t)a->x + b->x) / 2);
+	_away.y = (uint8_t)(((uint32_t)a->y + b->y) / 2);
+	_is_away = true;
+	find_near();
+	chart_cursor_set((float)_away.x, (float)_away.y);
+}
+
+bool chart_away(void) {
+	return _is_away;
+}
+
+uint32_t chart_distance(uint32_t to) {
+	return galaxy_distance(here(), &_galaxy[to % GALAXY_SYSTEMS]);
 }
 
 void chart_set_fuel(uint32_t tenths) {
@@ -118,7 +146,7 @@ void chart_cursor_move(float dx, float dy, bool local) {
 	float x = _cursor_x + dx, y = _cursor_y + dy;
 	if (local) {
 		// Kept on the short range chart
-		const GalaxySystem_t* h = &_galaxy[_home];
+		const GalaxySystem_t* h = here();
 		x = fminf(fmaxf(x, (float)h->x - LOCAL_DX), (float)h->x + LOCAL_DX);
 		y = fminf(fmaxf(y, (float)h->y - LOCAL_DY), (float)h->y + LOCAL_DY);
 	}
@@ -162,7 +190,7 @@ static Vec2_t galaxy_point(float x, float y) {
 }
 
 static Vec2_t local_point(float x, float y) {
-	const GalaxySystem_t* h = &_galaxy[_home];
+	const GalaxySystem_t* h = here();
 	return (Vec2_t){ CENTRE_X + (x - (float)h->x) * LOCAL_SCALE * draw_aspect, CENTRE_Y + (y - (float)h->y) * LOCAL_SCALE * 0.5f };
 }
 
@@ -182,7 +210,7 @@ static void chart_ring(Vec2_t c, float r, uint32_t sides, hstx_dvi_pixel_t colou
 
 // The name of the system the cursor is on, and how far it is from us
 static void chart_info(GameText_t* info, uint32_t to) {
-	const uint32_t d = galaxy_distance(&_galaxy[_home], &_galaxy[to]);
+	const uint32_t d = galaxy_distance(here(), &_galaxy[to]);
 	char s[GAME_TEXT_MAX];
 	snprintf(s, sizeof(s), "%s %u.%u LIGHT YEARS", _galaxy[to].name, (unsigned)(d / 10), (unsigned)(d % 10));
 	game_text_set(info, s, 1);
@@ -196,7 +224,7 @@ void chart_draw_galaxy(void) {
 	const uint32_t to = chart_selected();
 
 	// The cursor, and how far we can jump from where we are
-	const GalaxySystem_t* h = &_galaxy[_home];
+	const GalaxySystem_t* h = here();
 	if (object_begin()) {
 		chart_cross(galaxy_point(cx, cy), 3.0f, 10.0f, hstx_dvi_pixel_rgb(255, 255, 0));
 		object_end();
@@ -250,7 +278,7 @@ void chart_draw_local(Style_e style) {
 	GameText_t* labels = _chart_labels[draw_set()];
 	const float cx = _cursor_x, cy = _cursor_y;
 	const uint32_t to = chart_selected();
-	const GalaxySystem_t* h = &_galaxy[_home];
+	const GalaxySystem_t* h = here();
 	const Vec2_t home = local_point((float)h->x, (float)h->y);
 
 	if (object_begin()) {
@@ -410,7 +438,7 @@ static uint32_t data_line(GameText_t* texts, uint32_t t, int32_t y, const char* 
 
 const char* chart_draw_data(uint32_t i, Style_e style, uint32_t frame) {
 	GameText_t* texts = _data_text[draw_set()];
-	const GalaxySystem_t* h = &_galaxy[_home];
+	const GalaxySystem_t* h = here();
 	const GalaxySystem_t* sys = &_galaxy[i % GALAXY_SYSTEMS];
 	char v[160];
 	uint32_t t = 0;

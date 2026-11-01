@@ -117,6 +117,10 @@
 #define HULK_TUMBLE 0.02f
 #define HULK_BLOWS 120
 #define POD_FRAMES 210
+// One jump in this many goes wrong, leaving us in witchspace, halfway, with
+// the bodies of the system we left this far away, out of sight
+#define WITCH_CHANCE 40
+#define WITCH_FAR 5.0e7f
 // The energy bomb goes off with three presses of its button within this
 // many frames, destroying every ship within this range, with a flash that
 // fades over this many frames
@@ -240,6 +244,9 @@ static bool _docking, _dock_final;
 static Frame_t _hulk;
 static Vec3_t _hulk_drift;
 static bool _hulk_on;
+// Whether we are in witchspace, and the system we were going to
+static bool _witch;
+static uint32_t _witch_to;
 // The presses of the bomb's button so far, how long is left for the rest, and the flash
 static uint32_t _bomb_presses, _bomb_frames, _bomb_flash;
 static Frame_t _planet, _station;
@@ -277,7 +284,7 @@ static float towards(float v, float target, float step) {
 // What the other ships need to know
 static ShipsWorld_t world(void) {
 	const GalaxySystem_t* sys = chart_system(chart_home());
-	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops };
+	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops, _witch };
 }
 
 // Repaired, as when docked
@@ -308,6 +315,8 @@ static Vec3_t direction(float round, float up) {
 // of the planet
 static void enter_system(uint32_t i) {
 	chart_set_home(i);
+	_witch = false;
+	dust_strange = false;
 	const GalaxySystem_t* sys = chart_system(i);
 	_planet_radius = PLANET_SCALE * (float)sys->radius;
 	frame_set(&_planet, (Vec3_t){ 0.0f, 0.0f, 0.0f }, (Vec3_t){ 0.0f, 0.0f, 1.0f },
@@ -393,11 +402,11 @@ static void start_hyperspace(void) {
 		return;
 	}
 	const uint32_t to = chart_selected();
-	if (to == chart_home()) {
+	if (to == chart_home() && !_witch) {
 		message("WE ARE HERE");
 		return;
 	}
-	if (galaxy_distance(chart_system(chart_home()), chart_system(to)) > cmdr.fuel) {
+	if (chart_distance(to) > cmdr.fuel) {
 		message("OUT OF RANGE");
 		return;
 	}
@@ -406,9 +415,35 @@ static void start_hyperspace(void) {
 }
 
 // Out of hyperspace in the new system, facing its planet
+// Witchspace: halfway, with the fuel spent, and Thargoids waiting
+static void enter_witchspace(void) {
+	_witch_to = _hyper_to;
+	chart_set_away(chart_home(), _hyper_to);
+	_witch = true;
+	dust_strange = true;
+	// The bodies of the system we left, far out of sight; the sun still lights us
+	_planet.pos = (Vec3_t){ 0.0f, 0.0f, WITCH_FAR };
+	_station.pos = (Vec3_t){ 0.0f, WITCH_FAR, 0.0f };
+	_sun_pos = (Vec3_t){ WITCH_FAR, WITCH_FAR, -WITCH_FAR };
+	frame_set(&_me, (Vec3_t){ 0.0f, 0.0f, 0.0f }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.0f, 1.0f, 0.0f });
+	const ShipsWorld_t w = world();
+	ships_enter(&w);
+	_speed = MAX_SPEED * 0.25f;
+	_roll = 0.0f;
+	_pitch = 0.0f;
+	_view = VIEW_FRONT;
+	dust_init();
+	set_state(STATE_FLYING);
+	message("WITCHSPACE");
+}
+
 static void arrive(void) {
-	cmdr.fuel -= galaxy_distance(chart_system(chart_home()), chart_system(_hyper_to));
+	cmdr.fuel -= chart_distance(_hyper_to);
 	chart_set_fuel(cmdr.fuel);
+	if (!_witch && (options_witch() || rand() % WITCH_CHANCE == 0)) {
+		enter_witchspace();
+		return;
+	}
 	// The police of the new system do not know us, for now
 	_offender = false;
 	enter_system(_hyper_to);
@@ -630,6 +665,10 @@ static void docking_computer(bool on) {
 		message("NO DOCKING COMPUTER");
 		return;
 	}
+	if (on && _witch) {
+		message("NO STATION");
+		return;
+	}
 	if (on == _docking || _state != STATE_FLYING) return;
 	_docking = on;
 	_dock_final = false;
@@ -837,7 +876,7 @@ static void take(const ShipsEvents_t* ev) {
 		_aft = 0.0f;
 	}
 	if (ev->missile) message("INCOMING MISSILE");
-	for (uint32_t i = 0; i < ev->scooped; ++i) message(trade_scoop());
+	for (uint32_t i = 0; i < ev->scooped; ++i) message(trade_scoop(i < ev->aliens));
 	if (ev->smashed) message(cmdr.scoops ? "CARGO LOST" : "NO FUEL SCOOPS");
 	_kills += ev->kills;
 	cmdr.cash += ev->bounty;
@@ -922,6 +961,16 @@ void game_debug_bomb(void) {
 	ships_debug_place(2, "KRAIT", vec_sub(_me.pos, vec_scale(_me.r, 3000.0f)), _me.f, _me.u, &w);
 }
 
+// For trying witchspace on the PC: a jump to the nearest system goes wrong,
+// with the first Thargoid ahead of us, coming at us
+void game_debug_witch(void) {
+	_hyper_to = chart_nearest(1);
+	cmdr.fuel -= chart_distance(_hyper_to);
+	chart_set_fuel(cmdr.fuel);
+	enter_witchspace();
+	frame_set(&ships[0].fr, vec_add(_me.pos, vec_scale(_me.f, 3000.0f)), vec_scale(_me.f, -1.0f), _me.u);
+}
+
 // Buttons pressed from the PC, which has only the GPIO ones
 static uint16_t _debug_pressed;
 
@@ -970,7 +1019,7 @@ static void draw_dashboard(void) {
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
 		.missiles = cmdr.missiles,
-		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
+		.compass = _witch ? (Vec3_t){ 0.0f, 0.0f, 0.0f } : vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
 		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
 	};
@@ -1043,9 +1092,12 @@ static void draw_view(void) {
 	// Nearest first, so they cover the ones behind
 	Thing_t things[SHIPS + CANISTERS + 4];
 	uint32_t n = 0;
-	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
-	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
-	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_eye, _station.pos)) - model_coriolis.radius };
+	// None of them in witchspace
+	if (!_witch) {
+		things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
+		things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
+		things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_eye, _station.pos)) - model_coriolis.radius };
+	}
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (!ships[i].alive) continue;
 		const float d = vec_length(frame_view(&_eye, ships[i].fr.pos));
@@ -1222,6 +1274,11 @@ static bool next_state(void) {
 				_roll = 0.0f;
 				_pitch = 0.0f;
 				_view = VIEW_FRONT;
+				// Out of witchspace in the pod, to the system we were going to
+				if (_witch) {
+					enter_system(_witch_to);
+					trade_arrive(chart_system(_witch_to));
+				}
 				refit();
 				set_state(STATE_DOCKED);
 				save();

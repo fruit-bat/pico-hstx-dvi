@@ -18,6 +18,12 @@ void chart_set_galaxy(uint32_t g);
 uint32_t chart_galaxy(void);
 void chart_set_home(uint32_t i);
 uint32_t chart_home(void);
+// In witchspace, halfway from one system to another, where the charts are
+// centred and jumps go from, until chart_set_home
+void chart_set_away(uint32_t from, uint32_t to);
+bool chart_away(void);
+// How far a system is from where we are, in tenths of a light year
+uint32_t chart_distance(uint32_t to);
 // How far we can jump, in tenths of a light year, for the circles round us
 void chart_set_fuel(uint32_t tenths);
 // Finds the systems on the short range chart again, after draw_aspect changes

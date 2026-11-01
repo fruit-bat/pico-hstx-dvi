@@ -41,6 +41,8 @@ void frame_matrix(const Frame_t* eye, const Frame_t* body, float m[3][3]);
 // angles about x, y and z (as a roll is about z, and a pitch about x), and
 // move as far as we go along each.
 void dust_init(void);
+// Whether they are in witchspace colours, each its own
+extern bool dust_strange;
 void dust_move(Vec3_t turn, Vec3_t move);
 // Adds them, after everything else so they are behind it all
 void dust_draw(void);

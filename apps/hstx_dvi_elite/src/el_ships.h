@@ -3,7 +3,9 @@
 // The other ships in a system: traders going about their business, pirates
 // that come for us, and the police, who come for us if we are an offender.
 // With the explosions of those destroyed, the cargo canisters some leave
-// behind, and the missiles.
+// behind, and the missiles. Now and then a Thargoid, and in witchspace,
+// between systems, nothing but Thargoids, each launching Thargons, little
+// drones that go dead when it is destroyed.
 //
 // Each type of ship has a character of its own: light fighters are fast and
 // hard to hit but weak, the big ships slow but deadly head on. Each system
@@ -20,7 +22,9 @@ extern "C" {
 typedef enum {
 	ROLE_TRADER = 0,
 	ROLE_PIRATE,
-	ROLE_POLICE
+	ROLE_POLICE,
+	ROLE_THARGOID,
+	ROLE_THARGON
 } Role_e;
 
 // How a type of ship flies and fights
@@ -35,7 +39,7 @@ typedef struct {
 	float range;     // how far its laser reaches
 	float close;     // how close it comes before breaking off
 	bool jinks;      // weaves about as it comes in
-	uint32_t missiles;
+	uint32_t missiles; // or for a Thargoid, Thargons
 	uint32_t bounty; // in tenths of a credit
 } ShipClass_t;
 
@@ -54,6 +58,7 @@ typedef struct {
 	uint32_t beam;     // frames its laser is shown for
 	uint32_t retreat;  // frames it turns away for, having come too close
 	uint32_t respawn;  // frames until another takes its place, once destroyed
+	int32_t mother;    // for a Thargon, the Thargoid that launched it, or -1
 } Ship_t;
 
 #define SHIPS 6
@@ -64,6 +69,7 @@ typedef struct {
 	Frame_t fr;
 	Vec3_t drift;
 	float roll, pitch;
+	bool alien;       // alien items, from a Thargon
 	bool on;
 } Canister_t;
 
@@ -79,6 +85,7 @@ typedef struct {
 	uint32_t population; // in hundreds of millions
 	bool offender;       // whether the police are after us
 	bool scoops;         // whether we have fuel scoops, to pick up canisters
+	bool witch;          // whether we are in witchspace
 } ShipsWorld_t;
 
 // What happened to us and the ships this frame
@@ -86,13 +93,14 @@ typedef struct {
 	float fore, aft;  // damage to our shields, from in front and behind
 	uint32_t kills;   // ships we destroyed
 	uint32_t bounty;  // for the pirates among them, in tenths of a credit
-	bool innocent;    // whether any was not a pirate
+	bool innocent;    // whether any was not a pirate or a Thargoid
 	bool missile;     // whether a missile was fired at us
 	uint32_t scooped; // canisters we picked up
+	uint32_t aliens;  // of those, alien items
 	uint32_t smashed; // canisters that broke against us
 } ShipsEvents_t;
 
-// New ships for a new system
+// New ships for a new system, or Thargoids round us in witchspace
 void ships_enter(const ShipsWorld_t* w);
 void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev);
 // The ship in our sights within range, or -1

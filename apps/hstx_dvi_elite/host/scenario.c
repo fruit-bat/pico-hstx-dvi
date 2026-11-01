@@ -18,6 +18,9 @@
 // bomb    - starts a game, launches, climbs away, then has an energy bomb
 //           fitted and three pirates put round us, presses its button once,
 //           which only arms it, then three times quickly, which sets it off
+// witch   - starts a game, launches, climbs away, then a jump to the nearest
+//           system goes wrong, into witchspace, among Thargoids, firing at
+//           them, then looks at the short range and galactic charts
 // crash   - as dock, but rolled so the slot is not level, and hits the station
 // hyper   - starts a game, launches, climbs away, tries to jump while still
 //           too close to the station, then picks Diso on the short range
@@ -56,6 +59,7 @@ void game_debug_face_sun(void);
 void game_debug_behind(void);
 void game_debug_pod(void);
 void game_debug_bomb(void);
+void game_debug_witch(void);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -89,6 +93,13 @@ uint32_t host_input(uint32_t f) {
 	}
 	if (!strcmp(host_mode, "pod") && f >= 100 && f < 175) return D;
 	if (!strcmp(host_mode, "bomb") && f >= 100 && f < 175) return D;
+	if (!strcmp(host_mode, "witch")) {
+		if (f >= 100 && f < 175) return D;
+		if (f >= 400 && f < 800) return A;
+		// Round to the short range chart, then the galactic one
+		if (f >= 900 && f < 950 && (f - 900) % 10 < 3) return SELECT;
+		if (f >= 1000 && f < 1003) return SELECT;
+	}
 	if (!strcmp(host_mode, "save")) {
 		// The options and out again, then slot 2, named NAMESON, then food in
 		// the market, and launch from the status
@@ -179,8 +190,9 @@ uint32_t host_input(uint32_t f) {
 		// Everything fitted
 		if (f >= 1184 && f < 1187) return D;
 		if (f >= 1188 && f < 1191) return D;
-		if (f >= 1192 && f < 1195) return A;
-		if (f >= 1200 && f < 1203) return START;
+		if (f >= 1192 && f < 1195) return D;
+		if (f >= 1196 && f < 1199) return A;
+		if (f >= 1204 && f < 1207) return START;
 		// Dive
 		if (f >= 1300 && f < 1360) return U;
 	}
@@ -242,6 +254,7 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 		if (frame == 500) game_debug_bomb();
 		if (frame == 505 || frame == 540 || frame == 546 || frame == 552) game_debug_press(2048);
 	}
+	if (frame == 300 && !strcmp(host_mode, "witch")) game_debug_witch();
 	if (frame == 600 && !strcmp(host_mode, "pod")) game_debug_pod();
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");

@@ -182,8 +182,8 @@ static const char* buy(uint32_t i) {
 	return NULL;
 }
 
-const char* trade_scoop(void) {
-	const uint32_t i = (uint32_t)rand() % GOODS;
+const char* trade_scoop(bool alien) {
+	const uint32_t i = alien ? ALIEN_ITEMS : (uint32_t)rand() % GOODS;
 	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= cmdr.hold) return "HOLD FULL";
 	++cmdr.cargo[i];
 	// The name, in capitals, as messages are, with how much
