@@ -54,13 +54,14 @@ Before the ships come the galactic chart, the short range chart and the data on 
 - The galactic chart is twice as wide as it is tall, as in the original. The systems are dots, added in bands of 8 rows
   so each sprite has only a few to look at on a row. The cross is where we are, Lave in the first galaxy, inside the circle we can jump to.
 - The short range chart shows the systems round us as circles as big as their planets, coloured from red for rich industrial
-  to blue for poor agricultural, with their names where there is room. They are drawn in outline, solid, or filled to suit the style.
+  to blue for poor agricultural, with their names where there is room.
 - The data on a system shows us first, then the nearest systems in turn: its economy, government, tech level,
   population and who lives there, and what it is known for, made up from its numbers as in Ian Bell's Text Elite,
   so Lave is most famous for its vast rain forests and the Lavian tree grub.
 - Under the data is a picture of the system: its sun, its planet turning, as big as it is in km and coloured like it is on the chart,
   and the station going round it. As in the original game, the planet has a meridian and an equator or a crater on the side facing us.
-  It is drawn in the style of the rest, and comes round a second time filled.
+- The charts and data are always drawn as wireframes, to look like data: see-through when that is the style,
+  and solid otherwise. The dashboard under them still follows the style.
 - The big text, such as the titles, is the font at twice the size smoothed with Scale2x, made when the app starts:
   each pixel becomes 4, and a corner of the 4 is filled where the pixels beside it would make a step. It draws as quickly as the plain font doubled.
 - A yellow cursor moves from system to system, and the name of the one it is on and how far it is are shown at the bottom.

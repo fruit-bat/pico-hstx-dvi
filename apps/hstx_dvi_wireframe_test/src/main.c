@@ -105,8 +105,9 @@ typedef struct {
 static const Mode_t _modes[] = {
 	{ "GALACTIC CHART", SCREEN_GALAXY, STYLE_SOLID, false },
 	{ "SHORT RANGE CHART", SCREEN_LOCAL, STYLE_SOLID, false },
-	{ "SHORT RANGE FILLED", SCREEN_LOCAL, STYLE_FILLED, false },
+	{ "SHORT RANGE WIRE", SCREEN_LOCAL, STYLE_WIRE, false },
 	{ "DATA ON SYSTEM", SCREEN_DATA, STYLE_SOLID, false },
+	{ "DATA ON SYSTEM WIRE", SCREEN_DATA, STYLE_WIRE, false },
 	{ "DATA ON SYSTEM FILLED", SCREEN_DATA, STYLE_FILLED, true },
 	{ "SOLID WIREFRAME", SCREEN_SPACE, STYLE_SOLID, false },
 	{ "WIREFRAME", SCREEN_SPACE, STYLE_WIRE, false },
@@ -1186,8 +1187,8 @@ static bool label_free(const ChartBox_t* taken, uint32_t n, int32_t x, int32_t y
 	return true;
 }
 
+// Drawn as a wireframe, solid unless style is STYLE_WIRE
 static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, GameText_t* info) {
-	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
 	float cx, cy;
 	const uint32_t to = chart_cursor(true, frame, &cx, &cy);
 	const GalaxySystem_t* h = &_galaxy[HOME];
@@ -1217,15 +1218,9 @@ static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, 
 		Vec2_t p[16];
 		hud_ellipse(p, 16, c.x, c.y, r, r);
 		const hstx_dvi_pixel_t colour = shade(_economy_rgb[s->economy], 1.0f);
-		if (filled) {
-			add_fill(p, 16, _dither ? sprite_colour_dither(_economy_rgb[s->economy][0], _economy_rgb[s->economy][1],
-				_economy_rgb[s->economy][2]) : sprite_colour(colour));
-		}
-		else {
-			for (uint32_t j = 0; j < 16; ++j) add_line(p[j], p[(j + 1) % 16], colour);
-			// Solid, so the ring behind does not show through
-			if (style == STYLE_SOLID) add_fill(p, 16, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0)));
-		}
+		for (uint32_t j = 0; j < 16; ++j) add_line(p[j], p[(j + 1) % 16], colour);
+		// Solid, so the ring behind does not show through
+		if (style != STYLE_WIRE) add_fill(p, 16, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0)));
 		object_end();
 	}
 
@@ -1313,8 +1308,8 @@ static void planet_loop(const Vec3_t* p, uint32_t n, uint32_t first, uint32_t co
 	object_end();
 }
 
+// Drawn as a wireframe, solid unless style is STYLE_WIRE
 static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame) {
-	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
 	const uint8_t* rgb = _economy_rgb[sys->economy];
 	const float t = (float)frame / 60.0f;
 
@@ -1338,7 +1333,7 @@ static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame
 	if (in_front) draw_object(&station, style);
 
 	// Its lines, a meridian and the equator or a crater, turning
-	const hstx_dvi_pixel_t line = shade(rgb, filled ? 0.35f : 1.0f);
+	const hstx_dvi_pixel_t line = shade(rgb, 1.0f);
 	const float spin = t * 0.4f;
 	Vec3_t loop[PLANET_SIDES];
 	if (sys->seed[1] & 2) {
@@ -1372,7 +1367,7 @@ static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame
 	}
 
 	// Its outline, in two halves so each sprite looks at fewer lines on a row,
-	// then filled in black to hide what is behind, or in its colour
+	// then filled in black to hide what is behind
 	const Vec2_t m = project(&centre);
 	Vec2_t outline[PLANET_SIDES];
 	hud_ellipse(outline, PLANET_SIDES, m.x, m.y, r_px, r_px);
@@ -1386,9 +1381,7 @@ static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame
 		object_end();
 	}
 	if (style != STYLE_WIRE && object_begin()) {
-		SpriteColour_t fill = sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0));
-		if (filled) fill = face_colour(rgb, 1.0f);
-		add_fill(outline, PLANET_SIDES, fill);
+		add_fill(outline, PLANET_SIDES, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0)));
 		add_occluder(outline, PLANET_SIDES);
 		object_end();
 	}
@@ -1714,6 +1707,9 @@ void main_loop(void) {
 			game_text_set_smooth(title, nearest->model->name);
 		}
 		else {
+			// The charts and data are always wireframes, to look like data,
+			// see-through if that is the setting and solid otherwise
+			const Style_e data_style = style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
 			// The next galaxy each time round
 			const uint32_t g = (frame / (STYLE_FRAMES * MODE_COUNT)) % GALAXIES;
 			set_galaxy(g);
@@ -1724,10 +1720,10 @@ void main_loop(void) {
 			}
 			else if (mode->screen == SCREEN_LOCAL) {
 				snprintf(s, sizeof(s), "SHORT RANGE CHART");
-				draw_local_chart(style, frame, _chart_labels[frame & 1], &_chart_info[frame & 1]);
+				draw_local_chart(data_style, frame, _chart_labels[frame & 1], &_chart_info[frame & 1]);
 			}
 			else {
-				snprintf(s, sizeof(s), "DATA ON %s", draw_data(style, frame, _data_text[frame & 1]));
+				snprintf(s, sizeof(s), "DATA ON %s", draw_data(data_style, frame, _data_text[frame & 1]));
 			}
 			game_text_set_smooth(title, s);
 		}
