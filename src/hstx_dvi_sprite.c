@@ -598,11 +598,12 @@ static const uint32_t __attribute__((section(".data._word_span_mask"))) _word_sp
 };
 #endif
 
+// Fills from x0 up to but not including x1 with a word of pixels repeated along the row
 static __force_inline void render_span(
 	hstx_dvi_row_t* r,
 	int32_t x0,
 	int32_t x1,
-	const hstx_dvi_pixel_t p,
+	const uint32_t pq,
 	const SpriteId spriteId,
 	const SpriteCollisionMask spriteCollisionMask,
 	SpriteCollisionMask* const spriteCollisionsPtr
@@ -612,7 +613,6 @@ static __force_inline void render_span(
 	if (x0 >= x1) return;
 #if MODE_BYTES_PER_PIXEL == 1
 	// 4 pixels at a time; the lowest byte of a word is the leftmost pixel
-	const uint32_t pq = p * 0x01010101u;
 	const uint32_t idq = (spriteId + 1) * 0x01010101u;
 	const uint32_t w0 = (uint32_t)x0 >> 2;
 	const uint32_t w1 = (uint32_t)(x1 - 1) >> 2;
@@ -629,9 +629,48 @@ static __force_inline void render_span(
 	render_span_word(r, w1, last, pq, idq, spriteCollisionMask, spriteCollisionsPtr);
 #else
 	for (int32_t i = x0; i < x1; ++i) {
-		render_sprite_pixel(r, p, spriteId, spriteCollisionMask, spriteCollisionsPtr, (uint32_t)i);
+		render_sprite_pixel(r, (hstx_dvi_pixel_t)(pq >> ((i & 1) << 4)), spriteId, spriteCollisionMask, spriteCollisionsPtr, (uint32_t)i);
 	}
 #endif
+}
+
+// The order the pixels of a pattern 2 by 2 take the brighter colour in,
+// for the pixels of a word on the even rows and on the odd
+#if MODE_BYTES_PER_PIXEL == 1
+#define DITHER_PIXELS 4
+static const uint8_t _dither_order[2][DITHER_PIXELS] = { { 0, 2, 0, 2 }, { 3, 1, 3, 1 } };
+#define DITHER_R 7
+#define DITHER_G 7
+#define DITHER_B 3
+#else
+#define DITHER_PIXELS 2
+static const uint8_t _dither_order[2][DITHER_PIXELS] = { { 0, 2 }, { 3, 1 } };
+#define DITHER_R 31
+#define DITHER_G 63
+#define DITHER_B 31
+#endif
+
+SpriteColour_t sprite_colour_dither(const uint8_t r, const uint8_t g, const uint8_t b) {
+	// In quarters of a step between the shades the screen can show
+	const uint32_t rq = (r * (DITHER_R * 4) + 127) / 255;
+	const uint32_t gq = (g * (DITHER_G * 4) + 127) / 255;
+	const uint32_t bq = (b * (DITHER_B * 4) + 127) / 255;
+	SpriteColour_t c;
+	for (uint32_t y = 0; y < 2; ++y) {
+		uint32_t w = 0;
+		for (uint32_t i = 0; i < DITHER_PIXELS; ++i) {
+			// The step above if the shade is more than this many quarters past the one below
+			const uint32_t k = 3 - _dither_order[y][i];
+			const uint32_t rv = (rq + k) >> 2, gv = (gq + k) >> 2, bv = (bq + k) >> 2;
+#if MODE_BYTES_PER_PIXEL == 1
+			w |= ((rv << 5) | (gv << 2) | bv) << (i << 3);
+#else
+			w |= ((rv << 11) | (gv << 5) | bv) << (i << 4);
+#endif
+		}
+		c.w[y] = w;
+	}
+	return c;
 }
 
 void __not_in_flash_func(sprite_render_span)(
@@ -641,7 +680,7 @@ void __not_in_flash_func(sprite_render_span)(
 	const hstx_dvi_pixel_t p,
 	const SpriteId spriteId
 ) {
-	render_span(r, x0, x1, p, spriteId, _spriteCollisionMasksRdy[spriteId], &_spriteCollisionsFrame.m[spriteId]);
+	render_span(r, x0, x1, sprite_colour(p).w[0], spriteId, _spriteCollisionMasksRdy[spriteId], &_spriteCollisionsFrame.m[spriteId]);
 }
 
 void __not_in_flash_func(sprite_render_spans)(
@@ -653,7 +692,7 @@ void __not_in_flash_func(sprite_render_spans)(
 	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
 	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
 	for (uint32_t i = 0; i < n; ++i) {
-		render_span(r, spans[i].x0, spans[i].x1, spans[i].p, spriteId, spriteCollisionMask, spriteCollisionsPtr);
+		render_span(r, spans[i].x0, spans[i].x1, sprite_colour(spans[i].p).w[0], spriteId, spriteCollisionMask, spriteCollisionsPtr);
 	}
 }
 
@@ -673,9 +712,11 @@ void __not_in_flash_func(sprite_renderer_parts)(
 	const uint32_t idq = (spriteId + 1) * 0x01010101u;
 #endif
 	SpritePart_t* const end = o->part + o->count;
+	const uint32_t odd = (uint32_t)y & 1;
 	for (SpritePart_t* p = o->part; p < end; ++p) {
 		const int32_t pr = y - p->top;
 		if ((uint32_t)pr >= (uint32_t)p->rows) continue;
+		const uint32_t pq = p->colour.w[odd];
 		int32_t i0, i1;
 		if (!p->is_shape) {
 			const int32_t xm = p->line.x0 + p->line.dxdy * pr;
@@ -692,7 +733,7 @@ void __not_in_flash_func(sprite_renderer_parts)(
 			// Most lines are steep, so the run is in one row word: draw it straight
 			const uint32_t last = (uint32_t)(i1 - 1);
 			if ((uint32_t)i0 < MODE_H_ACTIVE_PIXELS && last < MODE_H_ACTIVE_PIXELS && ((uint32_t)i0 >> 2) == (last >> 2)) {
-				render_span_word(r, last >> 2, _word_span_mask[i0 & 3][last & 3], p->colour * 0x01010101u, idq,
+				render_span_word(r, last >> 2, _word_span_mask[i0 & 3][last & 3], pq, idq,
 					spriteCollisionMask, spriteCollisionsPtr);
 				continue;
 			}
@@ -710,7 +751,7 @@ void __not_in_flash_func(sprite_renderer_parts)(
 			i0 = (k->xl + k->dxl * j + (1 << SPRITE_PARTS_FX) - 1) >> SPRITE_PARTS_FX;
 			i1 = (k->xr + k->dxr * j + (1 << SPRITE_PARTS_FX) - 1) >> SPRITE_PARTS_FX;
 		}
-		render_span(r, i0, i1, p->colour, spriteId, spriteCollisionMask, spriteCollisionsPtr);
+		render_span(r, i0, i1, pq, spriteId, spriteCollisionMask, spriteCollisionsPtr);
 	}
 }
 

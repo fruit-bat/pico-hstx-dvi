@@ -213,10 +213,31 @@ typedef struct {
 	int32_t start; // the band's first row, from the top of the shape
 } SpriteBand_t;
 
+// The colour of a part, as a word of pixels for the even rows of the screen
+// and one for the odd rows, repeated along the row from the left of the
+// screen. A plain colour has the same pixel all through, and a dithered one
+// mixes the two nearest colours in a pattern 2 pixels by 2.
+typedef struct {
+	uint32_t w[2];
+} SpriteColour_t;
+
+static inline SpriteColour_t sprite_colour(const hstx_dvi_pixel_t p) {
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t q = p * 0x01010101u;
+#else
+	const uint32_t q = p * 0x00010001u;
+#endif
+	return (SpriteColour_t){ { q, q } };
+}
+
+// The colour nearest r, g, b in 8 bits each, dithered for the shades
+// between those the screen can show
+SpriteColour_t sprite_colour_dither(const uint8_t r, const uint8_t g, const uint8_t b);
+
 typedef struct {
 	int16_t top, rows; // the rows of the screen it is on
-	hstx_dvi_pixel_t colour;
 	uint8_t is_shape;  // a shape rather than a line
+	SpriteColour_t colour;
 	union {
 		// A line's run on a row covers it from half a row above the middle of
 		// the row to half a row below, so shallow lines join up, and stops at its ends
