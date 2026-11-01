@@ -107,6 +107,7 @@ static const Mode_t _modes[] = {
 	{ "SHORT RANGE CHART", SCREEN_LOCAL, STYLE_SOLID, false },
 	{ "SHORT RANGE FILLED", SCREEN_LOCAL, STYLE_FILLED, false },
 	{ "DATA ON SYSTEM", SCREEN_DATA, STYLE_SOLID, false },
+	{ "DATA ON SYSTEM FILLED", SCREEN_DATA, STYLE_FILLED, true },
 	{ "SOLID WIREFRAME", SCREEN_SPACE, STYLE_SOLID, false },
 	{ "WIREFRAME", SCREEN_SPACE, STYLE_WIRE, false },
 	{ "OUTLINED", SCREEN_SPACE, STYLE_OUTLINED, false },
@@ -556,8 +557,9 @@ static void draw_model(const Object_t* o, Style_e style) {
 	float m[3][3];
 	make_matrix(m, o->yaw, o->pitch, o->roll);
 
-	// Each corner relative to us
-	Vec3_t cam[MAX_VERTS];
+	// Each corner relative to us. The big arrays here are static, as core 0's
+	// stack is only 4KB, and draw_model is never called from within itself.
+	static Vec3_t cam[MAX_VERTS];
 	bool behind = false;
 	for (uint32_t i = 0; i < model->nv; ++i) {
 		const Vec3_t v = { model->v[i].x, model->v[i].y, model->v[i].z };
@@ -567,10 +569,10 @@ static void draw_model(const Object_t* o, Style_e style) {
 	}
 
 	// The outline on the screen, which a solid object hides everything behind
-	Vec2_t hull[2 * MAX_VERTS];
+	static Vec2_t hull[2 * MAX_VERTS];
 	uint32_t hull_n = 0;
 	if (!behind) {
-		Vec2_t p[MAX_VERTS];
+		static Vec2_t p[MAX_VERTS];
 		for (uint32_t i = 0; i < model->nh; ++i) p[i] = project(&cam[i]);
 		hull_n = outline(p, model->nh, hull);
 		if (style != STYLE_WIRE && size >= OCCLUDER_SIZE) add_occluder(hull, hull_n);
@@ -749,11 +751,8 @@ static void move_objects(uint32_t frame) {
 // Adds the sun, after everything else so it is behind them all bar the stars.
 // It is an outline with rays that turn slowly and flicker, made of parts like
 // the ships, filled in black for the solid wireframes and yellow when filled.
-static void draw_sun(Style_e style, uint32_t frame) {
-	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
-	const Vec2_t m = project(&c);
-	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
-	if (style != STYLE_WIRE && hidden(m, rp * (SUN_RAY_LONG + 0.15f) + 1.0f)) return;
+// A sun at m on the screen, rp across
+static void draw_sun_at(Vec2_t m, float rp, Style_e style, uint32_t frame) {
 	const hstx_dvi_pixel_t edge = hstx_dvi_pixel_rgb(255, 255, 0);
 	const hstx_dvi_pixel_t ray = hstx_dvi_pixel_rgb(255, 146, 0);
 	Vec2_t outline[SUN_SIDES];
@@ -789,6 +788,14 @@ static void draw_sun(Style_e style, uint32_t frame) {
 			(Vec2_t){ m.x + rp * len * ca, m.y + rp * len * sa }, ray);
 		object_end();
 	}
+}
+
+static void draw_sun(Style_e style, uint32_t frame) {
+	const Vec3_t c = { SUN_X, SUN_Y, SUN_Z };
+	const Vec2_t m = project(&c);
+	const float rp = FOCAL * SUN_RADIUS / SUN_Z;
+	if (style != STYLE_WIRE && hidden(m, rp * (SUN_RAY_LONG + 0.15f) + 1.0f)) return;
+	draw_sun_at(m, rp, style, frame);
 }
 
 
@@ -1197,8 +1204,9 @@ static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, 
 
 	// The systems, as circles as big as their planets, coloured by what they make.
 	// The labels must keep clear of them.
-	float radius[GALAXY_SYSTEMS];
-	ChartBox_t taken[GALAXY_SYSTEMS + CHART_LABELS];
+	// Static, as they are too big for the stack
+	static float radius[GALAXY_SYSTEMS];
+	static ChartBox_t taken[GALAXY_SYSTEMS + CHART_LABELS];
 	for (uint32_t i = 0; i < _near_count; ++i) {
 		const GalaxySystem_t* s = &_galaxy[_near[i]];
 		const Vec2_t c = local_point((float)s->x, (float)s->y);
@@ -1255,10 +1263,143 @@ static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, 
 	chart_info(info, to);
 }
 
-// The data on a system: us first, then the nearest systems in turn
-#define DATA_FRAMES (STYLE_FRAMES / 4)
+// ----------------------------------------------------------------------------
+// A picture of the system under its data: the sun, the planet turning, and
+// the station going round it. The planet is drawn as in the original game,
+// a circle with a meridian and an equator, or a crater, on the side facing us.
+
+// Where the data starts, which sets the border round it
 #define DATA_X 24
 #define DATA_TOP (VIEW_TOP + 10)
+// The picture goes under the data, inside the same border
+#define PICTURE_LEFT ((float)DATA_X)
+#define PICTURE_RIGHT ((float)(GAME_SCREEN_W - DATA_X))
+#define PICTURE_TOP ((float)(DATA_TOP + 160))
+#define PICTURE_BOTTOM ((float)(VIEW_BOTTOM - 10))
+// The sun at the left, rays and all
+#define PICTURE_SUN 32.0f
+// Where the planet is on the screen, and how far away, in station radii,
+// which sets how big the station looks
+#define SYSTEM_X ((PICTURE_LEFT + PICTURE_RIGHT) * 0.5f + 60.0f)
+#define SYSTEM_Y ((PICTURE_TOP + PICTURE_BOTTOM) * 0.5f)
+#define SYSTEM_DEPTH 40.0f
+#define PLANET_SIDES 24
+// How far the station is from the middle of the planet, in planet radii
+#define ORBIT 1.9f
+// The planet's axis leans towards us by this much, so we see the north pole
+#define PLANET_TILT -0.4f
+
+// Turns a point on the planet about its axis, then leans it
+static Vec3_t planet_turn(Vec3_t v, float spin) {
+	const float cs = cosf(spin), ss = sinf(spin);
+	const float ct = cosf(PLANET_TILT), st = sinf(PLANET_TILT);
+	const float x = v.x * cs + v.z * ss;
+	const float z = -v.x * ss + v.z * cs;
+	return (Vec3_t){ x, v.y * ct - z * st, v.y * st + z * ct };
+}
+
+// Adds the parts of a loop on the planet's surface on the side facing us,
+// from point first for count points, as an object of its own
+static void planet_loop(const Vec3_t* p, uint32_t n, uint32_t first, uint32_t count, const Vec3_t* centre, hstx_dvi_pixel_t colour) {
+	if (!object_begin()) return;
+	for (uint32_t i = first; i < first + count; ++i) {
+		const Vec3_t* a = &p[i % n];
+		const Vec3_t* b = &p[(i + 1) % n];
+		if (a->z > 0.0f || b->z > 0.0f) continue;
+		const Vec3_t wa = { centre->x + a->x, centre->y + a->y, centre->z + a->z };
+		const Vec3_t wb = { centre->x + b->x, centre->y + b->y, centre->z + b->z };
+		add_line(project(&wa), project(&wb), colour);
+	}
+	object_end();
+}
+
+static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame) {
+	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
+	const uint8_t* rgb = _economy_rgb[sys->economy];
+	const float t = (float)frame / 60.0f;
+
+	// The planet, as big on the screen as it is in km
+	const float z = model_coriolis.radius * SYSTEM_DEPTH;
+	const float r_px = 18.0f + 26.0f * (float)(sys->radius - 2816) / 4096.0f;
+	const float r = r_px * z / FOCAL;
+	const Vec3_t centre = { (SYSTEM_X - CENTRE_X) * z / FOCAL, (CENTRE_Y - SYSTEM_Y) * z / FOCAL, z };
+
+	// The station, going round in a ring leaning towards us
+	const float a = t * 0.5f;
+	Object_t station = {
+		.model = &model_coriolis,
+		.pos = { centre.x + ORBIT * r * cosf(a), centre.y + 0.3f * ORBIT * r * sinf(a), centre.z + ORBIT * r * sinf(a) },
+		.yaw = 0.3f * sinf(t * 0.2f),
+		.pitch = 0.2f,
+		.roll = t * 0.6f,
+	};
+	for (uint32_t c = 0; c < 3; ++c) station.rgb[c] = model_coriolis.rgb[c];
+	const bool in_front = station.pos.z < centre.z;
+	if (in_front) draw_object(&station, style);
+
+	// Its lines, a meridian and the equator or a crater, turning
+	const hstx_dvi_pixel_t line = shade(rgb, filled ? 0.35f : 1.0f);
+	const float spin = t * 0.4f;
+	Vec3_t loop[PLANET_SIDES];
+	if (sys->seed[1] & 2) {
+		for (uint32_t i = 0; i < PLANET_SIDES; ++i) {
+			const float u = 2.0f * 3.1416f * (float)i / PLANET_SIDES;
+			loop[i] = planet_turn((Vec3_t){ r * cosf(u), r * sinf(u), 0.0f }, spin);
+		}
+		planet_loop(loop, PLANET_SIDES, 0, PLANET_SIDES / 2, &centre, line);
+		planet_loop(loop, PLANET_SIDES, PLANET_SIDES / 2, PLANET_SIDES / 2, &centre, line);
+		for (uint32_t i = 0; i < PLANET_SIDES; ++i) {
+			const float u = 2.0f * 3.1416f * (float)i / PLANET_SIDES;
+			loop[i] = planet_turn((Vec3_t){ r * cosf(u), 0.0f, r * sinf(u) }, spin);
+		}
+		planet_loop(loop, PLANET_SIDES, 0, PLANET_SIDES, &centre, line);
+	}
+	else {
+		// A crater a little north of the equator: a ring round a point on the surface
+		const float lat = 0.5f, size = 0.45f;
+		const Vec3_t d = { cosf(lat), sinf(lat), 0.0f };
+		const Vec3_t e1 = { 0.0f, 0.0f, 1.0f };
+		const Vec3_t e2 = { d.y, -d.x, 0.0f };
+		for (uint32_t i = 0; i < PLANET_SIDES; ++i) {
+			const float u = 2.0f * 3.1416f * (float)i / PLANET_SIDES;
+			const float cu = cosf(u) * sinf(size), su = sinf(u) * sinf(size), k = cosf(size);
+			loop[i] = planet_turn((Vec3_t){
+				r * (k * d.x + cu * e1.x + su * e2.x),
+				r * (k * d.y + cu * e1.y + su * e2.y),
+				r * (k * d.z + cu * e1.z + su * e2.z) }, spin);
+		}
+		planet_loop(loop, PLANET_SIDES, 0, PLANET_SIDES, &centre, line);
+	}
+
+	// Its outline, in two halves so each sprite looks at fewer lines on a row,
+	// then filled in black to hide what is behind, or in its colour
+	const Vec2_t m = project(&centre);
+	Vec2_t outline[PLANET_SIDES];
+	hud_ellipse(outline, PLANET_SIDES, m.x, m.y, r_px, r_px);
+	const hstx_dvi_pixel_t edge = shade(rgb, 1.0f);
+	for (uint32_t h = 0; h < 2; ++h) {
+		if (!object_begin()) break;
+		for (uint32_t i = 0; i < PLANET_SIDES / 2; ++i) {
+			const uint32_t k = i + h * PLANET_SIDES / 2;
+			add_line(outline[k], outline[(k + 1) % PLANET_SIDES], edge);
+		}
+		object_end();
+	}
+	if (style != STYLE_WIRE && object_begin()) {
+		SpriteColour_t fill = sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0));
+		if (filled) fill = face_colour(rgb, 1.0f);
+		add_fill(outline, PLANET_SIDES, fill);
+		add_occluder(outline, PLANET_SIDES);
+		object_end();
+	}
+	if (!in_front) draw_object(&station, style);
+
+	// The sun, off to one side
+	draw_sun_at((Vec2_t){ PICTURE_LEFT + PICTURE_SUN * (SUN_RAY_LONG + 0.15f), SYSTEM_Y }, PICTURE_SUN, style, frame);
+}
+
+// The data on a system: us first, then the nearest systems in turn
+#define DATA_FRAMES (STYLE_FRAMES / 4)
 #define DATA_TEXTS 32
 
 #define DATA_LINE 14
@@ -1269,7 +1410,7 @@ static GameText_t _data_text[2][DATA_TEXTS];
 
 // The k-th nearest system to us, us being the 0th
 static uint32_t nearest_system(uint32_t k) {
-	uint8_t order[GALAXY_SYSTEMS];
+	static uint8_t order[GALAXY_SYSTEMS];
 	uint32_t n = 0;
 	const GalaxySystem_t* h = &_galaxy[HOME];
 	for (uint32_t i = 0; i < _near_count; ++i) {
@@ -1308,7 +1449,7 @@ static uint32_t data_line(GameText_t* texts, uint32_t t, int32_t y, const char* 
 }
 
 // Returns the name of the system
-static const char* draw_data(uint32_t frame, GameText_t* texts) {
+static const char* draw_data(Style_e style, uint32_t frame, GameText_t* texts) {
 	const GalaxySystem_t* h = &_galaxy[HOME];
 	const GalaxySystem_t* sys = &_galaxy[nearest_system((frame % STYLE_FRAMES) / DATA_FRAMES)];
 	char v[160];
@@ -1359,6 +1500,7 @@ static const char* draw_data(uint32_t frame, GameText_t* texts) {
 		p += cut;
 		while (*p == ' ') ++p;
 	}
+	draw_system(sys, style, frame);
 	return sys->name;
 }
 
@@ -1585,7 +1727,7 @@ void main_loop(void) {
 				draw_local_chart(style, frame, _chart_labels[frame & 1], &_chart_info[frame & 1]);
 			}
 			else {
-				snprintf(s, sizeof(s), "DATA ON %s", draw_data(frame, _data_text[frame & 1]));
+				snprintf(s, sizeof(s), "DATA ON %s", draw_data(style, frame, _data_text[frame & 1]));
 			}
 			game_text_set_smooth(title, s);
 		}

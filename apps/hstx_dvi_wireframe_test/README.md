@@ -58,6 +58,9 @@ Before the ships come the galactic chart, the short range chart and the data on 
 - The data on a system shows us first, then the nearest systems in turn: its economy, government, tech level,
   population and who lives there, and what it is known for, made up from its numbers as in Ian Bell's Text Elite,
   so Lave is most famous for its vast rain forests and the Lavian tree grub.
+- Under the data is a picture of the system: its sun, its planet turning, as big as it is in km and coloured like it is on the chart,
+  and the station going round it. As in the original game, the planet has a meridian and an equator or a crater on the side facing us.
+  It is drawn in the style of the rest, and comes round a second time filled.
 - The big text, such as the titles, is the font at twice the size smoothed with Scale2x, made when the app starts:
   each pixel becomes 4, and a corner of the 4 is filled where the pixels beside it would make a step. It draws as quickly as the plain font doubled.
 - A yellow cursor moves from system to system, and the name of the one it is on and how far it is are shown at the bottom.
