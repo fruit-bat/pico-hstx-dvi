@@ -39,6 +39,7 @@
 #include "game_render.h"
 #include "game_util.h"
 #include "ship_model.h"
+#include "galaxy.h"
 #if defined(__ARM_ARCH)
 #include "hardware/structs/systick.h"
 #endif
@@ -84,20 +85,31 @@ typedef enum {
 	STYLE_COUNT
 } Style_e;
 
-// The ways of drawing shown in turn, the faces shaded with or without dithering
+typedef enum {
+	SCREEN_SPACE = 0,
+	SCREEN_GALAXY,
+	SCREEN_LOCAL
+} Screen_e;
+
+// What is shown in turn: the view of space or a chart, and the way of
+// drawing it, the faces shaded with or without dithering
 typedef struct {
 	const char* name;
+	Screen_e screen;
 	Style_e style;
 	bool dither;
 } Mode_t;
 
 static const Mode_t _modes[] = {
-	{ "SOLID WIREFRAME", STYLE_SOLID, false },
-	{ "WIREFRAME", STYLE_WIRE, false },
-	{ "OUTLINED", STYLE_OUTLINED, false },
-	{ "OUTLINED DITHERED", STYLE_OUTLINED, true },
-	{ "FILLED", STYLE_FILLED, false },
-	{ "FILLED DITHERED", STYLE_FILLED, true },
+	{ "GALACTIC CHART", SCREEN_GALAXY, STYLE_SOLID, false },
+	{ "SHORT RANGE CHART", SCREEN_LOCAL, STYLE_SOLID, false },
+	{ "SHORT RANGE FILLED", SCREEN_LOCAL, STYLE_FILLED, false },
+	{ "SOLID WIREFRAME", SCREEN_SPACE, STYLE_SOLID, false },
+	{ "WIREFRAME", SCREEN_SPACE, STYLE_WIRE, false },
+	{ "OUTLINED", SCREEN_SPACE, STYLE_OUTLINED, false },
+	{ "OUTLINED DITHERED", SCREEN_SPACE, STYLE_OUTLINED, true },
+	{ "FILLED", SCREEN_SPACE, STYLE_FILLED, false },
+	{ "FILLED DITHERED", SCREEN_SPACE, STYLE_FILLED, true },
 };
 #define MODE_COUNT (sizeof(_modes) / sizeof(_modes[0]))
 
@@ -894,7 +906,8 @@ static void hud_blip(const Object_t* o, uint32_t i) {
 	object_end();
 }
 
-static void draw_hud(Style_e style, uint32_t frame) {
+// The dashboard, with the sights in the middle of the view if asked
+static void draw_hud(Style_e style, uint32_t frame, bool sights) {
 	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
 	const float t = (float)frame / 60.0f;
 	const hstx_dvi_pixel_t frame_c = hud_rgb(36, 109, 219);
@@ -904,7 +917,7 @@ static void draw_hud(Style_e style, uint32_t frame) {
 	_clip_bottom = GAME_SCREEN_H;
 
 	// The sights in the middle of the view
-	if (object_begin()) {
+	if (sights && object_begin()) {
 		const hstx_dvi_pixel_t c = hud_rgb(255, 255, 255);
 		add_line((Vec2_t){ CENTRE_X - 26, CENTRE_Y }, (Vec2_t){ CENTRE_X - 8, CENTRE_Y }, c);
 		add_line((Vec2_t){ CENTRE_X + 8, CENTRE_Y }, (Vec2_t){ CENTRE_X + 26, CENTRE_Y }, c);
@@ -994,6 +1007,249 @@ static void draw_hud(Style_e style, uint32_t frame) {
 
 	_clip_top = VIEW_TOP;
 	_clip_bottom = VIEW_BOTTOM;
+}
+
+// ----------------------------------------------------------------------------
+// The charts of the galaxy, as in the original game
+
+// The galaxy shown, and the system we are at in it, Lave in the first
+#define HOME 7
+static GalaxySystem_t _galaxy[GALAXY_SYSTEMS];
+static uint32_t _galaxy_shown = GALAXIES;
+// The systems from the top of the chart down
+static uint8_t _by_y[GALAXY_SYSTEMS];
+// The systems on the short range chart
+static uint8_t _near[GALAXY_SYSTEMS];
+static uint32_t _near_count;
+
+// The galactic chart, twice as wide as it is tall as in the original
+#define GALAXY_LEFT 64.0f
+#define GALAXY_TOP ((float)VIEW_TOP + 22.0f)
+// The stars are added in bands of this many rows, so each sprite looks at a few
+#define GALAXY_BAND_ROWS 8
+// The short range chart: pixels for each step of x across the galaxy, and
+// how far from us it shows each way
+#define LOCAL_SCALE 7.2f
+#define LOCAL_DX 40
+#define LOCAL_DY 38
+// How far we can jump, in tenths of a light year
+#define FUEL_RANGE 70
+#define CHART_LABELS 32
+#define CHART_INFO_Y (VIEW_BOTTOM - 10)
+// The cursor moves to another system this often, taking this long to get there
+#define CHART_STEP_FRAMES 90
+#define CHART_MOVE_FRAMES 30
+
+static GameText_t _chart_labels[2][CHART_LABELS];
+static GameText_t _chart_info[2];
+
+// The colour of a system on the short range chart, from rich industrial to poor agricultural
+static const uint8_t _economy_rgb[8][3] = {
+	{ 255, 73, 0 }, { 255, 146, 0 }, { 255, 219, 0 }, { 219, 255, 0 },
+	{ 146, 255, 0 }, { 0, 255, 0 }, { 0, 219, 146 }, { 0, 182, 219 },
+};
+
+static void set_galaxy(uint32_t g) {
+	if (g == _galaxy_shown) return;
+	_galaxy_shown = g;
+	galaxy_make(g, _galaxy);
+	for (uint32_t i = 0; i < GALAXY_SYSTEMS; ++i) {
+		uint32_t j = i;
+		for (; j > 0 && _galaxy[_by_y[j - 1]].y > _galaxy[i].y; --j) _by_y[j] = _by_y[j - 1];
+		_by_y[j] = (uint8_t)i;
+	}
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	_near_count = 0;
+	for (uint32_t i = 0; i < GALAXY_SYSTEMS; ++i) {
+		if (abs((int32_t)_galaxy[i].x - h->x) <= LOCAL_DX && abs((int32_t)_galaxy[i].y - h->y) <= LOCAL_DY) {
+			_near[_near_count++] = (uint8_t)i;
+		}
+	}
+}
+
+// The system the cursor goes to at a step
+static uint32_t chart_pick(bool local, uint32_t step) {
+	const uint32_t h = (step * 2654435761u) >> 16;
+	return local ? _near[h % _near_count] : h % GALAXY_SYSTEMS;
+}
+
+// Where the cursor is in the galaxy, moving from one system to the next.
+// Returns the system it is going to.
+static uint32_t chart_cursor(bool local, uint32_t frame, float* x, float* y) {
+	const uint32_t step = frame / CHART_STEP_FRAMES;
+	const GalaxySystem_t* a = &_galaxy[chart_pick(local, step - 1)];
+	const uint32_t to = chart_pick(local, step);
+	const GalaxySystem_t* b = &_galaxy[to];
+	float t = (float)(frame % CHART_STEP_FRAMES) / (float)CHART_MOVE_FRAMES;
+	if (t > 1.0f) t = 1.0f;
+	t = t * t * (3.0f - 2.0f * t);
+	*x = (float)a->x + ((float)b->x - (float)a->x) * t;
+	*y = (float)a->y + ((float)b->y - (float)a->y) * t;
+	return to;
+}
+
+static Vec2_t galaxy_point(float x, float y) {
+	return (Vec2_t){ GALAXY_LEFT + 2.0f * x, GALAXY_TOP + y };
+}
+
+static Vec2_t local_point(float x, float y) {
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	return (Vec2_t){ CENTRE_X + (x - (float)h->x) * LOCAL_SCALE, CENTRE_Y + (y - (float)h->y) * LOCAL_SCALE * 0.5f };
+}
+
+// A cross with a gap in the middle
+static void chart_cross(Vec2_t c, float gap, float size, hstx_dvi_pixel_t colour) {
+	add_line((Vec2_t){ c.x - size, c.y }, (Vec2_t){ c.x - gap, c.y }, colour);
+	add_line((Vec2_t){ c.x + gap, c.y }, (Vec2_t){ c.x + size, c.y }, colour);
+	add_line((Vec2_t){ c.x, c.y - size }, (Vec2_t){ c.x, c.y - gap }, colour);
+	add_line((Vec2_t){ c.x, c.y + gap }, (Vec2_t){ c.x, c.y + size }, colour);
+}
+
+static void chart_ring(Vec2_t c, float r, uint32_t sides, hstx_dvi_pixel_t colour) {
+	Vec2_t p[32];
+	hud_ellipse(p, sides, c.x, c.y, r, r);
+	for (uint32_t i = 0; i < sides; ++i) add_line(p[i], p[(i + 1) % sides], colour);
+}
+
+// The name of the system the cursor is on, and how far it is from us
+static void chart_info(GameText_t* info, uint32_t to) {
+	const uint32_t d = galaxy_distance(&_galaxy[HOME], &_galaxy[to]);
+	char s[GAME_TEXT_MAX];
+	snprintf(s, sizeof(s), "%s %u.%u LIGHT YEARS", _galaxy[to].name, (unsigned)(d / 10), (unsigned)(d % 10));
+	game_text_set(info, s, 1);
+	game_spr_text_centre(info, CHART_INFO_Y, game_pallet(GAME_WHITE));
+	++_sprite_count;
+}
+
+static void draw_galaxy_chart(uint32_t frame, GameText_t* info) {
+	const hstx_dvi_pixel_t white = hstx_dvi_pixel_rgb(255, 255, 255);
+	float cx, cy;
+	const uint32_t to = chart_cursor(false, frame, &cx, &cy);
+
+	// The cursor, and how far we can jump from where we are
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	if (object_begin()) {
+		chart_cross(galaxy_point(cx, cy), 3.0f, 10.0f, hstx_dvi_pixel_rgb(255, 255, 0));
+		object_end();
+	}
+	if (object_begin()) {
+		const Vec2_t c = galaxy_point((float)h->x, (float)h->y);
+		chart_cross(c, 0.0f, 6.0f, white);
+		// A jump is 4 tenths of a light year for each step across
+		chart_ring(c, 2.0f * (float)FUEL_RANGE / 4.0f, 24, hstx_dvi_pixel_rgb(0, 255, 0));
+		object_end();
+	}
+
+	// The systems, in bands of rows
+	int32_t band = -1;
+	for (uint32_t i = 0; i < GALAXY_SYSTEMS; ++i) {
+		const GalaxySystem_t* s = &_galaxy[_by_y[i]];
+		if (s->y / GALAXY_BAND_ROWS != band) {
+			object_end();
+			if (!object_begin()) break;
+			band = s->y / GALAXY_BAND_ROWS;
+		}
+		const Vec2_t p = galaxy_point((float)s->x, (float)s->y);
+		hud_rect(p.x, p.y, p.x + 2.0f, p.y + 2.0f, white);
+	}
+	object_end();
+
+	if (object_begin()) {
+		hud_box(GALAXY_LEFT - 6.0f, GALAXY_TOP - 6.0f, GALAXY_LEFT + 2.0f * 255.0f + 8.0f, GALAXY_TOP + 255.0f + 6.0f,
+			hstx_dvi_pixel_rgb(36, 109, 219));
+		object_end();
+	}
+	chart_info(info, to);
+}
+
+// A box taken on the chart, by a system or a label
+typedef struct {
+	int32_t x0, y0, x1, y1;
+} ChartBox_t;
+
+// Whether a label at x, y, w wide is on the chart and clear of the boxes taken
+static bool label_free(const ChartBox_t* taken, uint32_t n, int32_t x, int32_t y, int32_t w) {
+	if (x < 0 || x + w > GAME_SCREEN_W || y < VIEW_TOP || y + 8 > CHART_INFO_Y - 2) return false;
+	for (uint32_t i = 0; i < n; ++i) {
+		if (x < taken[i].x1 + 3 && taken[i].x0 < x + w + 3 && y < taken[i].y1 + 2 && taken[i].y0 < y + 10) return false;
+	}
+	return true;
+}
+
+static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, GameText_t* info) {
+	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
+	float cx, cy;
+	const uint32_t to = chart_cursor(true, frame, &cx, &cy);
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	const Vec2_t home = local_point((float)h->x, (float)h->y);
+
+	if (object_begin()) {
+		chart_cross(local_point(cx, cy), 6.0f, 18.0f, hstx_dvi_pixel_rgb(255, 255, 0));
+		object_end();
+	}
+	if (object_begin()) {
+		chart_cross(home, 0.0f, 8.0f, hstx_dvi_pixel_rgb(255, 255, 255));
+		object_end();
+	}
+
+	// The systems, as circles as big as their planets, coloured by what they make.
+	// The labels must keep clear of them.
+	float radius[GALAXY_SYSTEMS];
+	ChartBox_t taken[GALAXY_SYSTEMS + CHART_LABELS];
+	for (uint32_t i = 0; i < _near_count; ++i) {
+		const GalaxySystem_t* s = &_galaxy[_near[i]];
+		const Vec2_t c = local_point((float)s->x, (float)s->y);
+		const float r = 3.0f + (float)(s->radius - 2816) / 512.0f;
+		radius[i] = r;
+		taken[i] = (ChartBox_t){ (int32_t)(c.x - r), (int32_t)(c.y - r), (int32_t)(c.x + r), (int32_t)(c.y + r) };
+		if (!object_begin()) break;
+		Vec2_t p[16];
+		hud_ellipse(p, 16, c.x, c.y, r, r);
+		const hstx_dvi_pixel_t colour = shade(_economy_rgb[s->economy], 1.0f);
+		if (filled) {
+			add_fill(p, 16, _dither ? sprite_colour_dither(_economy_rgb[s->economy][0], _economy_rgb[s->economy][1],
+				_economy_rgb[s->economy][2]) : sprite_colour(colour));
+		}
+		else {
+			for (uint32_t j = 0; j < 16; ++j) add_line(p[j], p[(j + 1) % 16], colour);
+			// Solid, so the ring behind does not show through
+			if (style == STYLE_SOLID) add_fill(p, 16, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0)));
+		}
+		object_end();
+	}
+
+	// How far we can jump, in two halves so each sprite looks at fewer lines on a row
+	const float range = (float)FUEL_RANGE / 4.0f * LOCAL_SCALE;
+	Vec2_t ring[32];
+	hud_ellipse(ring, 32, home.x, home.y, range, range);
+	for (uint32_t half = 0; half < 2; ++half) {
+		if (!object_begin()) break;
+		for (uint32_t j = half * 16; j < half * 16 + 16; ++j) add_line(ring[j], ring[(j + 1) % 32], hstx_dvi_pixel_rgb(0, 255, 0));
+		object_end();
+	}
+
+	// The names, beside the systems where there is room. Text draws straight
+	// into the row, so these go last.
+	uint32_t n = 0;
+	for (uint32_t i = 0; i < _near_count && n < CHART_LABELS; ++i) {
+		const GalaxySystem_t* s = &_galaxy[_near[i]];
+		const Vec2_t c = local_point((float)s->x, (float)s->y);
+		GameText_t* t = &labels[n];
+		game_text_set(t, s->name, 1);
+		const int32_t w = game_text_width(t);
+		const int32_t r = (int32_t)radius[i] + 4;
+		const int32_t x = (int32_t)c.x, y = (int32_t)c.y - 4;
+		const int32_t try[4][2] = { { x + r, y }, { x - r - w, y }, { x - w / 2, y - r - 8 }, { x - w / 2, y + r } };
+		for (uint32_t k = 0; k < 4; ++k) {
+			if (!label_free(taken, _near_count + n, try[k][0], try[k][1], w)) continue;
+			game_spr_text(t, try[k][0], try[k][1], game_pallet(_near[i] == to ? GAME_YELLOW : GAME_WHITE));
+			++_sprite_count;
+			taken[_near_count + n] = (ChartBox_t){ try[k][0], try[k][1], try[k][0] + w, try[k][1] + 8 };
+			++n;
+			break;
+		}
+	}
+	chart_info(info, to);
 }
 
 static float distance2(const Vec3_t* v) {
@@ -1185,24 +1441,42 @@ void main_loop(void) {
 		GameText_t* status = &_status[frame & 1];
 		game_spr_text_centre(status, 4, game_pallet(GAME_CYAN));
 		game_spr_text_centre(title, 16, game_pallet(GAME_YELLOW));
-		draw_hud(style, frame);
-		draw_stars();
+		draw_hud(style, frame, mode->screen == SCREEN_SPACE);
 
-		// Nearest first, so they cover the ones behind
-		uint32_t order[OBJECTS];
-		for (uint32_t i = 0; i < OBJECTS; ++i) {
-			uint32_t j = i;
-			for (; j > 0 && distance2(&_objects[order[j - 1]].pos) > distance2(&_objects[i].pos); --j) order[j] = order[j - 1];
-			order[j] = i;
+		if (mode->screen == SCREEN_SPACE) {
+			draw_stars();
+
+			// Nearest first, so they cover the ones behind
+			uint32_t order[OBJECTS];
+			for (uint32_t i = 0; i < OBJECTS; ++i) {
+				uint32_t j = i;
+				for (; j > 0 && distance2(&_objects[order[j - 1]].pos) > distance2(&_objects[i].pos); --j) order[j] = order[j - 1];
+				order[j] = i;
+			}
+			for (uint32_t i = 0; i < OBJECTS; ++i) draw_object(&_objects[order[i]], style);
+			draw_sun(style, frame);
+
+			// The name of the nearest ship, which comes first bar the station
+			const Object_t* nearest = &_objects[order[0]];
+			if (order[0] == OBJ_STATION) nearest = &_objects[order[1]];
+			game_text_set(title, nearest->model->name, 2);
 		}
-		for (uint32_t i = 0; i < OBJECTS; ++i) draw_object(&_objects[order[i]], style);
-		draw_sun(style, frame);
+		else {
+			// The next galaxy each time round
+			const uint32_t g = (frame / (STYLE_FRAMES * MODE_COUNT)) % GALAXIES;
+			set_galaxy(g);
+			char s[GAME_TEXT_MAX];
+			if (mode->screen == SCREEN_GALAXY) {
+				snprintf(s, sizeof(s), "GALACTIC CHART %u", (unsigned)(g + 1));
+				draw_galaxy_chart(frame, &_chart_info[frame & 1]);
+			}
+			else {
+				snprintf(s, sizeof(s), "SHORT RANGE CHART");
+				draw_local_chart(style, frame, _chart_labels[frame & 1], &_chart_info[frame & 1]);
+			}
+			game_text_set(title, s, 2);
+		}
 		game_spr_end();
-
-		// The name of the nearest ship, which comes first bar the station
-		const Object_t* nearest = &_objects[order[0]];
-		if (order[0] == OBJ_STATION) nearest = &_objects[order[1]];
-		game_text_set(title, nearest->model->name, 2);
 
 		// How hard the renderer worked on the last frame it drew
 		char s[GAME_TEXT_MAX];

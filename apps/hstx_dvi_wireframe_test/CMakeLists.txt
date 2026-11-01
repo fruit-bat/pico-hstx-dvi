@@ -1,6 +1,7 @@
 add_executable(hstx_dvi_wireframe_test
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
   ${CMAKE_CURRENT_LIST_DIR}/src/ship_model.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/galaxy.c
 )
 
 target_compile_definitions(hstx_dvi_wireframe_test PRIVATE

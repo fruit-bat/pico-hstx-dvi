@@ -1,6 +1,6 @@
 # Wireframe ships
 
-Every type of ship from Elite flies round a spinning Coriolis space station, past a sun, through a field of stars,
+The galactic and short range charts from Elite, then every type of ship from Elite flying round a spinning Coriolis space station, past a sun, through a field of stars,
 with missiles chasing two of them. The name of the nearest ship is shown at the top, and a dashboard after the original game's at the bottom.
 Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces,
 the filled ones shown both with and without dithering.
@@ -43,6 +43,19 @@ the filled ones shown both with and without dithering.
   a compass with a dot towards the station, red when it is behind us, and the missiles, two of them away.
 - It is drawn in outlines for the wireframe styles, and with solid bars for the filled ones, with the same lines and shapes as the ships.
   Each gauge, blip and panel is an object of its own, as an object's sprite looks at all its parts on every row it covers.
+
+## The charts
+
+Before the ships come the galactic chart and the short range chart, with the next of the eight galaxies each time round.
+
+- The galaxies are made as the original game made them, by `src/galaxy.c`: three numbers, turned over for each system in turn,
+  give where it is, its name, what it makes and the rest, and twisted give the next galaxy. So Lave is where it should be,
+  with Diso 3.6 light years away.
+- The galactic chart is twice as wide as it is tall, as in the original. The systems are dots, added in bands of 8 rows
+  so each sprite has only a few to look at on a row. The cross is where we are, Lave in the first galaxy, inside the circle we can jump to.
+- The short range chart shows the systems round us as circles as big as their planets, coloured from red for rich industrial
+  to blue for poor agricultural, with their names where there is room. They are drawn in outline, solid, or filled to suit the style.
+- A yellow cursor moves from system to system, and the name of the one it is on and how far it is are shown at the bottom.
 
 ## The meter
 
