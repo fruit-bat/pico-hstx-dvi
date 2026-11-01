@@ -1,17 +1,26 @@
 # Elite
 
-A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can fly about Lave,
-from launching off its space station, and look at the charts of the galaxy and the data on its systems.
+A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
+fly about, look at the charts of the galaxy and the data on its systems, and dock again.
 
 ## Between games
 
 The title, with a Cobra Mk III turning, then the galactic chart, the short range chart, the data on the systems nearest us,
 and every type of ship flying round a space station, the next galaxy each time round. Start or fire begins a game.
 
+## Docking
+
+A game starts docked, with your status shown, as in the original. Fire launches you through the station's tunnel.
+To dock again, fly into the slot from in front of it, pointing at the station, with the slot level:
+the station spins, so roll to match it. Touching the station any other way, or the planet, is the end of the game.
+Close in front of the slot, squares hang in space to guide you in, turning with the station, green when you are lined up
+and amber when not. They are always drawn as wireframes.
+
 ## The controls
 
 - Left and right roll, and up and down dive and climb, as with a joystick.
 - B held with up or down speeds up or slows down.
+- A launches you when docked.
 - Select shows the next screen: the front view, the short range chart, the galactic chart, and the data on the system
   the cursor is on. On the charts the pad moves the cursor, faster with B held.
 - Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
@@ -44,7 +53,9 @@ It is turned on by `HSTX_DVI_SPRITE_TIMING` in `CMakeLists.txt`.
 host/build.sh
 host/build/elite_host attract 3600 300 frames
 host/build/elite_host fly 1500 100 frames
+host/build/elite_host dock 420 20 frames
 ```
 
-`fly` starts a game, flies about, looks at the charts and changes the options.
+`fly` starts a game, launches, flies about, looks at the charts and changes the options.
+`dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 See `../common/host` for more on how this works.

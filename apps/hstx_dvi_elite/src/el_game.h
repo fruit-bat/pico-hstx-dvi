@@ -7,8 +7,12 @@
 extern "C" {
 #endif
 
-// Returns when the player ends the game
+// Returns when the game is over
 void game_play(void);
+
+// For trying docking on the PC: puts us on a run at the station's slot,
+// rolled from level by roll
+void game_debug_approach(float roll);
 
 #ifdef __cplusplus
 }

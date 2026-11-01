@@ -16,6 +16,13 @@ void screen_begin(void);
 // for the display to take the frame
 void screen_end(const char* title, const char* label);
 
+// A line of text in a colour from game_pallet, in the font as it is or
+// smoothed at twice the size, from a pool kept until the renderer has drawn
+// it. Text draws straight into the row, so add it after what it goes over.
+// Returns how wide it is.
+int32_t screen_text(int32_t x, int32_t y, const char* s, uint32_t colour, bool big);
+int32_t screen_text_centre(int32_t y, const char* s, uint32_t colour, bool big);
+
 #ifdef __cplusplus
 }
 #endif

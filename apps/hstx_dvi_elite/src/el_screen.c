@@ -12,7 +12,11 @@
 #define LINE_CYCLES ((MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS) * 10)
 #define FRAME_LINES (MODE_V_FRONT_PORCH + MODE_V_SYNC_WIDTH + MODE_V_BACK_PORCH + MODE_V_ACTIVE_LINES)
 
+#define TEXTS 40
+
 static GameText_t _title[2];
+static GameText_t _texts[2][TEXTS];
+static uint32_t _text_count = 0;
 static GameText_t _status[2];
 static uint32_t _frame = 0;
 
@@ -36,6 +40,30 @@ void screen_init(void) {
 
 void screen_begin(void) {
 	draw_frame_begin();
+	_text_count = 0;
+}
+
+static GameText_t* next_text(const char* s, bool big) {
+	if (_text_count >= TEXTS) return NULL;
+	GameText_t* t = &_texts[draw_set()][_text_count++];
+	if (big) game_text_set_smooth(t, s);
+	else game_text_set(t, s, 1);
+	draw_count_sprite();
+	return t;
+}
+
+int32_t screen_text(int32_t x, int32_t y, const char* s, uint32_t colour, bool big) {
+	GameText_t* t = next_text(s, big);
+	if (!t) return 0;
+	game_spr_text(t, x, y, game_pallet(colour));
+	return game_text_width(t);
+}
+
+int32_t screen_text_centre(int32_t y, const char* s, uint32_t colour, bool big) {
+	GameText_t* t = next_text(s, big);
+	if (!t) return 0;
+	game_spr_text_centre(t, y, game_pallet(colour));
+	return game_text_width(t);
 }
 
 void screen_end(const char* title, const char* label) {
