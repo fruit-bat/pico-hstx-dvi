@@ -30,6 +30,7 @@
 #include "el_hud.h"
 #include "el_input.h"
 #include "el_screen.h"
+#include "el_save.h"
 #include "el_ships.h"
 #include "el_space.h"
 #include "el_trade.h"
@@ -183,6 +184,8 @@ static float _laser_temp;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
 static uint32_t _kills;
+// The slot we save to, or -1 if there is nowhere to save
+static int32_t _slot = -1;
 static bool _offender;
 static View_e _view;
 static State_e _state;
@@ -333,8 +336,22 @@ static void arrive(void) {
 	set_state(STATE_FLYING);
 }
 
-// Out through the slot, facing the way it does, which is towards the planet
+// Saves us, if there is somewhere to, as when docked
+static void save(void) {
+	if (_slot < 0) return;
+	static Save_t s;
+	s.cmdr = cmdr;
+	s.galaxy = chart_galaxy();
+	s.home = chart_home();
+	s.kills = _kills;
+	s.offender = _offender;
+	if (!save_write((uint32_t)_slot, &s)) message("SAVE FAILED");
+}
+
+// Out through the slot, facing the way it does, which is towards the planet,
+// saving first what we bought
 static void launch(void) {
+	save();
 	frame_set(&_me, vec_add(_station.pos, vec_scale(_station.f, model_coriolis.radius * LAUNCH_DISTANCE)), _station.f, _station.u);
 	_speed = MAX_SPEED * 0.25f;
 	_roll = 0.0f;
@@ -727,13 +744,13 @@ static bool ships_near(void) {
 }
 
 // Our rating from how many ships we have destroyed, as in the original
-static const char* rating(void) {
+static const char* rating(uint32_t kills_made) {
 	static const uint32_t kills[] = { 8, 16, 32, 64, 128, 512, 2560, 6400 };
 	static const char* const names[] = {
 		"Harmless", "Mostly Harmless", "Poor", "Average", "Above Average", "Competent", "Dangerous", "Deadly", "---- E L I T E ----"
 	};
 	uint32_t i = 0;
-	while (i < sizeof(kills) / sizeof(kills[0]) && _kills >= kills[i]) ++i;
+	while (i < sizeof(kills) / sizeof(kills[0]) && kills_made >= kills[i]) ++i;
 	return names[i];
 }
 
@@ -749,7 +766,7 @@ static void draw_status(void) {
 	const char* values[] = {
 		chart_system(chart_home())->name, chart_system(chart_selected())->name,
 		_state == STATE_DOCKED ? "Docked" : ships_hostile_near(&_me, SCANNER_RANGE) ? "Red" : ships_near() ? "Yellow" : "Green",
-		fuel, cash, _offender ? "Offender" : "Clean", rating()
+		fuel, cash, _offender ? "Offender" : "Clean", rating(_kills)
 	};
 	int32_t y = STATUS_TOP;
 	for (uint32_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
@@ -811,6 +828,7 @@ static bool next_state(void) {
 				_view = VIEW_FRONT;
 				refit();
 				set_state(STATE_DOCKED);
+				save();
 			}
 			break;
 		case STATE_HYPERSPACE:
@@ -826,8 +844,70 @@ static bool next_state(void) {
 
 // ----------------------------------------------------------------------------
 
+// Docked where a commander was saved
+static void load(const Save_t* s) {
+	cmdr = s->cmdr;
+	_kills = s->kills;
+	_offender = s->offender != 0;
+	chart_set_galaxy(s->galaxy);
+	enter_system(s->home);
+	trade_arrive(chart_system(s->home));
+	chart_set_fuel(cmdr.fuel);
+	frame_set(&_me, _station.pos, _station.f, _station.u);
+}
+
+// The list of commanders, centred: the slot, where, cash and rating
+#define SLOTS_X ((GAME_SCREEN_W - 49 * 8) / 2)
+
+// When there is somewhere to save, picks which commander to play: fire plays
+// the one in a slot, or a new one if it is empty, and select starts a new one
+static void choose_commander(void) {
+	_slot = -1;
+	if (!save_ready()) return;
+	static Save_t saves[SAVE_SLOTS];
+	bool used[SAVE_SLOTS];
+	for (uint32_t i = 0; i < SAVE_SLOTS; ++i) used[i] = save_read(i, &saves[i]);
+	uint32_t pick = 0;
+	for (;;) {
+		const uint8_t pressed = game_input_pressed();
+		if (pressed & EL_INP_DOWN) pick = (pick + 1) % SAVE_SLOTS;
+		if (pressed & EL_INP_UP) pick = (pick + SAVE_SLOTS - 1) % SAVE_SLOTS;
+		if (pressed & (EL_INP_A | EL_INP_SELECT)) {
+			_slot = (int32_t)pick;
+			if ((pressed & EL_INP_A) && used[pick]) load(&saves[pick]);
+			return;
+		}
+		screen_begin();
+		draw_dashboard();
+		char line[GAME_TEXT_MAX + 1];
+		const int32_t top = VIEW_TOP + 40;
+		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
+			const uint32_t c = i == pick ? GAME_YELLOW : GAME_WHITE;
+			const int32_t y = top + 24 * (int32_t)i;
+			if (used[i]) {
+				const Save_t* sv = &saves[i];
+				// Where it was saved, if in this galaxy
+				const char* at = sv->galaxy == chart_galaxy() ? chart_system(sv->home)->name : "";
+				snprintf(line, sizeof(line), "%u  %-9s %6u.%u Cr", (unsigned)(i + 1), at,
+					(unsigned)(sv->cmdr.cash / 10), (unsigned)(sv->cmdr.cash % 10));
+				screen_text(SLOTS_X, y, line, c, false);
+				screen_text(SLOTS_X + 30 * 8, y, rating(sv->kills), c, false);
+			}
+			else {
+				snprintf(line, sizeof(line), "%u  EMPTY", (unsigned)(i + 1));
+				screen_text(SLOTS_X, y, line, c, false);
+			}
+		}
+		screen_text_centre(VIEW_BOTTOM - 40, "FIRE PLAYS", GAME_CYAN, false);
+		screen_text_centre(VIEW_BOTTOM - 24, "SELECT FOR A NEW COMMANDER", GAME_CYAN, false);
+		screen_end("COMMANDERS", "COMMANDERS");
+		++_frame;
+	}
+}
+
 void game_play(void) {
 	start();
+	choose_commander();
 	for (;;) {
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t held = game_input_get();

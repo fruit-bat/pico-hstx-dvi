@@ -14,6 +14,8 @@
 //           we shoot down, and then a Python, at which we fire a missile
 // trade   - starts a game, and docked, buys food, holding to buy more, and
 //           computers, then a missile, and sells some food
+// save    - built with EL_HOST_SAVE, picks commander slot 2, buys food and
+//           launches, which saves; run again, the slot holds it
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -35,6 +37,25 @@ uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "attract")) return 0;
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return START;
+	if (!strcmp(host_mode, "save")) {
+		// Slot 2, then food in the market, and launch from the status
+		if (f >= 50 && f < 53) return D;
+		if (f >= 60 && f < 63) return A;
+		if (f >= 80 && f < 83) return SELECT;
+		if (f >= 100 && f < 103) return R;
+		if (f >= 110 && f < 113) return R;
+		if (f >= 130 && f < 133) return SELECT;
+		if (f >= 133 && f < 136) return 0;
+		if (f >= 140 && f < 143) return SELECT;
+		if (f >= 143 && f < 146) return 0;
+		if (f >= 150 && f < 153) return SELECT;
+		if (f >= 153 && f < 156) return 0;
+		if (f >= 160 && f < 163) return SELECT;
+		if (f >= 163 && f < 166) return 0;
+		if (f >= 170 && f < 173) return SELECT;
+		if (f >= 200 && f < 203) return A;
+		return 0;
+	}
 	if (!strcmp(host_mode, "trade")) {
 		// The market: food, held to buy more, then computers
 		if (f >= 60 && f < 63) return SELECT;

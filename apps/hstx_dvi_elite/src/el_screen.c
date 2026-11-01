@@ -5,6 +5,7 @@
 
 #include "el_screen.h"
 #include "hstx_dvi_row_fifo.h"
+#include "el_save.h"
 #include "game_pallet.h"
 #include <stdio.h>
 
@@ -79,7 +80,8 @@ void screen_end(const char* title, const char* label) {
 		char ahead[16];
 		rows_text(ahead, sizeof(ahead), timing.ahead_min);
 		char s[GAME_TEXT_MAX + 1];
-		snprintf(s, sizeof(s), "%s AHEAD %s AVG %u%%", label, ahead, (unsigned)percent(timing.frame, FRAME_LINES));
+		snprintf(s, sizeof(s), "%s AHEAD %s AVG %u%%%s", label, ahead, (unsigned)percent(timing.frame, FRAME_LINES),
+			save_card() ? " SD" : "");
 		game_text_set(&_status[set], s, 1);
 		game_spr_text_centre(&_status[set], 4, game_pallet(GAME_CYAN));
 		draw_count_sprite();

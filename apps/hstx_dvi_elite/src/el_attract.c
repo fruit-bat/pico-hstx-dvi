@@ -8,6 +8,7 @@
 #include "el_draw.h"
 #include "el_hud.h"
 #include "el_input.h"
+#include "el_save.h"
 #include "el_screen.h"
 #include "el_space.h"
 #include "game_pallet.h"
@@ -195,6 +196,13 @@ static void draw_title(uint32_t frame) {
 	if ((frame / 30) & 1) {
 		game_spr_text_centre(p, VIEW_BOTTOM - 30, game_pallet(GAME_CYAN));
 		draw_count_sprite();
+	}
+	// Whether commanders can be saved
+	if (save_built()) {
+		char s[GAME_TEXT_MAX + 1];
+		if (save_card()) snprintf(s, sizeof(s), "SD CARD READY");
+		else snprintf(s, sizeof(s), "NO SD CARD (ERROR %d)", save_error());
+		screen_text_centre(VIEW_BOTTOM - 10, s, save_card() ? GAME_GREEN : GAME_RED, false);
 	}
 }
 

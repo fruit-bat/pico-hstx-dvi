@@ -18,6 +18,7 @@
 #include "el_game.h"
 #include "el_hud.h"
 #include "el_input.h"
+#include "el_save.h"
 #include "el_screen.h"
 #include "el_space.h"
 
@@ -26,8 +27,8 @@ int main(void)
 	stdio_init_all();
 	app_led_on();
 
-	static const uint16_t pad_map[EL_INP_GPIO_COUNT] = EL_INP_PAD_MAP;
-	game_input_init(EL_INP_GPIO_START, EL_INP_GPIO_COUNT, pad_map);
+	static const uint16_t pad_map[EL_INP_PAD_COUNT] = EL_INP_PAD_MAP;
+	game_input_init_pad(EL_INP_GPIO_START, EL_INP_GPIO_COUNT, pad_map, EL_INP_PAD_COUNT);
 	game_pallet_init();
 	hud_init();
 	screen_init();
@@ -39,6 +40,8 @@ int main(void)
 	sleep_ms(2000); // Allow time for initialization
 
 	printf("HSTX DVI Elite\n");
+	// Whether there is a card to save on, shown on the title
+	save_ready();
 
 	for (;;) {
 		attract_run();

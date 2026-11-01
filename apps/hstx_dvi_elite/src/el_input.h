@@ -20,10 +20,21 @@ extern "C" {
 #define EL_INP_START  128 // Options
 
 // The buttons on consecutive GPIOs from here. 12 to 19 are the display's.
+// With an SD card on 2 to 5 there is only room for six, from 6 to 11, and
+// select and start come from a pad.
+#if defined(EL_SDCARD)
+#ifndef EL_INP_GPIO_START
+#define EL_INP_GPIO_START 6
+#endif
+#define EL_INP_GPIO_COUNT 6
+#else
 #ifndef EL_INP_GPIO_START
 #define EL_INP_GPIO_START 4
 #endif
 #define EL_INP_GPIO_COUNT 8
+#endif
+// A pad presses all eight
+#define EL_INP_PAD_COUNT 8
 
 // The gamepad buttons for each input bit
 #define EL_INP_PAD_MAP { \
