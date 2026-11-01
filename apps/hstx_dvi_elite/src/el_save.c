@@ -4,9 +4,26 @@
 // on, holding a Save_t as it is.
 
 #include "el_save.h"
+#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #define SAVE_MAGIC 0x45544c45u // "ELTE"
+
+#if defined(EL_SDCARD) || defined(EL_HOST_SAVE)
+
+// Saves made before there were names are as long as this, and are Jameson
+#define SAVE_UNNAMED offsetof(Save_t, name)
+
+// Whether what was read is a save, of this build or one before names
+static bool save_good(Save_t* s, size_t n) {
+	if (n < SAVE_UNNAMED || s->magic != SAVE_MAGIC || s->size != n) return false;
+	if (n == SAVE_UNNAMED) strcpy(s->name, "JAMESON");
+	s->name[SAVE_NAME_MAX - 1] = 0;
+	return n == SAVE_UNNAMED || n == sizeof(*s);
+}
+
+#endif
 
 static bool _card = false;
 static int _error = 0;
@@ -66,7 +83,7 @@ bool save_read(uint32_t slot, Save_t* s) {
 	UINT n = 0;
 	const FRESULT r = f_read(&f, s, sizeof(*s), &n);
 	f_close(&f);
-	return r == FR_OK && n == sizeof(*s) && s->magic == SAVE_MAGIC && s->size == sizeof(*s);
+	return r == FR_OK && save_good(s, n);
 }
 
 bool save_write(uint32_t slot, Save_t* s) {
@@ -114,7 +131,7 @@ bool save_read(uint32_t slot, Save_t* s) {
 	if (!f) return false;
 	const size_t n = fread(s, 1, sizeof(*s), f);
 	fclose(f);
-	return n == sizeof(*s) && s->magic == SAVE_MAGIC && s->size == sizeof(*s);
+	return save_good(s, n);
 }
 
 bool save_write(uint32_t slot, Save_t* s) {

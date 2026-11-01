@@ -13,6 +13,8 @@ extern "C" {
 #endif
 
 #define SAVE_SLOTS 4
+// The longest name, 8 letters, and the end
+#define SAVE_NAME_MAX 9
 
 // A commander, as saved when docked
 typedef struct {
@@ -23,6 +25,7 @@ typedef struct {
 	uint32_t home;
 	uint32_t kills;
 	uint32_t offender;
+	char name[SAVE_NAME_MAX]; // last, so saves made before there were names still read
 } Save_t;
 
 // Whether saving is built in, and whether the card was there when last tried,

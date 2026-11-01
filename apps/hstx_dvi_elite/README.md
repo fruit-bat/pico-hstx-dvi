@@ -77,7 +77,8 @@ in the order left, right, up, down, A, B, select and start, unless built with `G
 Built with `-DELITE_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIOs 2 to 5 as for `hstx_dvi_cpm`,
 in the directory `pico_dvi_elite`, as `commander1.dat` to `commander4.dat`.
 Starting a game then shows the four slots: fire plays the commander in one, or a new one if it is empty,
-and select starts a new one in it. The game is saved whenever you dock or launch, so always as docked, as in the original,
+and select starts a new one in it. A new commander is named first: up and down change the letter, held to go on, left and right
+move along, and fire takes the name. The game is saved whenever you dock or launch, so always as docked, as in the original,
 and a commander loaded starts docked where it was saved.
 The SD card takes GPIOs 4 and 5, so the buttons move to GPIOs 6 to 11, without select and start, which come from a pad.
 
@@ -116,5 +117,5 @@ host/build/elite_host dock 420 20 frames
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
 `trade` buys and sells in the market at Lave, and buys a missile.
 Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
-buys food and launches, saving it, to show in the slot when run again.
+names it NAMESON, buys food and launches, saving it, to show in the slot when run again.
 See `../common/host` for more on how this works.

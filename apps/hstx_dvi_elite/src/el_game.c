@@ -38,6 +38,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // The system: a planet as big as its data says, in units for each km, the
 // station going round it with its slot facing it, this many planet radii
@@ -186,6 +187,7 @@ static uint32_t _laser_wait, _laser_beam;
 static uint32_t _kills;
 // The slot we save to, or -1 if there is nowhere to save
 static int32_t _slot = -1;
+static char _name[SAVE_NAME_MAX] = "JAMESON";
 static bool _offender;
 static View_e _view;
 static State_e _state;
@@ -250,6 +252,7 @@ static void enter_system(uint32_t i) {
 }
 
 static void start(void) {
+	strcpy(_name, "JAMESON");
 	_offender = false;
 	chart_set_galaxy(0);
 	enter_system(HOME);
@@ -345,6 +348,7 @@ static void save(void) {
 	s.home = chart_home();
 	s.kills = _kills;
 	s.offender = _offender;
+	memcpy(s.name, _name, sizeof(_name));
 	if (!save_write((uint32_t)_slot, &s)) message("SAVE FAILED");
 }
 
@@ -847,6 +851,7 @@ static bool next_state(void) {
 // Docked where a commander was saved
 static void load(const Save_t* s) {
 	cmdr = s->cmdr;
+	memcpy(_name, s->name, sizeof(_name));
 	_kills = s->kills;
 	_offender = s->offender != 0;
 	chart_set_galaxy(s->galaxy);
@@ -856,8 +861,59 @@ static void load(const Save_t* s) {
 	frame_set(&_me, _station.pos, _station.f, _station.u);
 }
 
-// The list of commanders, centred: the slot, where, cash and rating
-#define SLOTS_X ((GAME_SCREEN_W - 49 * 8) / 2)
+// The list of commanders, centred: the slot, name, where, cash and rating
+#define SLOTS_X ((GAME_SCREEN_W - 54 * 8) / 2)
+
+// The letters a name is made of; a space ends it
+static const char _letters[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+#define LETTERS (sizeof(_letters) - 1)
+// The name, in big letters, centred
+#define NAME_X ((GAME_SCREEN_W - (SAVE_NAME_MAX - 1) * 16) / 2)
+// Held, up or down goes on changing the letter, after a wait, every few frames
+#define NAME_REPEAT_WAIT 20
+#define NAME_REPEAT_EVERY 4
+
+// A name for a new commander: up and down change the letter, held to go on,
+// left and right move along, and fire takes it. Spaces are left out, and none is Jameson.
+static void enter_name(void) {
+	char name[SAVE_NAME_MAX];
+	memset(name, ' ', SAVE_NAME_MAX - 1);
+	memcpy(name, _name, strlen(_name));
+	name[SAVE_NAME_MAX - 1] = 0;
+	uint32_t at = 0;
+	uint32_t held_frames = 0;
+	for (;;) {
+		uint8_t pressed = game_input_pressed();
+		const uint8_t held = game_input_get() & (EL_INP_UP | EL_INP_DOWN);
+		held_frames = held ? held_frames + 1 : 0;
+		if (held_frames >= NAME_REPEAT_WAIT && (held_frames - NAME_REPEAT_WAIT) % NAME_REPEAT_EVERY == 0) pressed |= held;
+		const uint32_t l = (uint32_t)(strchr(_letters, name[at]) - _letters);
+		if (pressed & EL_INP_UP) name[at] = _letters[(l + 1) % LETTERS];
+		if (pressed & EL_INP_DOWN) name[at] = _letters[(l + LETTERS - 1) % LETTERS];
+		if ((pressed & EL_INP_RIGHT) && at < SAVE_NAME_MAX - 2) ++at;
+		if ((pressed & EL_INP_LEFT) && at > 0) --at;
+		if (pressed & EL_INP_A) break;
+		screen_begin();
+		draw_dashboard();
+		// The name with the letter we are on in yellow, and spaces as dots
+		char shown[SAVE_NAME_MAX];
+		for (uint32_t i = 0; i < SAVE_NAME_MAX; ++i) shown[i] = name[i] == ' ' ? '.' : name[i];
+		const char letter[2] = { shown[at], 0 };
+		shown[at] = ' ';
+		screen_text(NAME_X, CENTRE_Y - 16, shown, GAME_WHITE, true);
+		screen_text(NAME_X + 16 * (int32_t)at, CENTRE_Y - 16, letter, GAME_YELLOW, true);
+		screen_text_centre(VIEW_BOTTOM - 40, "UP AND DOWN CHANGE THE LETTER", GAME_CYAN, false);
+		screen_text_centre(VIEW_BOTTOM - 24, "FIRE TAKES THE NAME", GAME_CYAN, false);
+		screen_end("NEW COMMANDER", "NAME");
+		++_frame;
+	}
+	uint32_t n = 0;
+	for (uint32_t i = 0; name[i]; ++i) {
+		if (name[i] != ' ') _name[n++] = name[i];
+	}
+	_name[n] = 0;
+	if (!n) strcpy(_name, "JAMESON");
+}
 
 // When there is somewhere to save, picks which commander to play: fire plays
 // the one in a slot, or a new one if it is empty, and select starts a new one
@@ -875,6 +931,7 @@ static void choose_commander(void) {
 		if (pressed & (EL_INP_A | EL_INP_SELECT)) {
 			_slot = (int32_t)pick;
 			if ((pressed & EL_INP_A) && used[pick]) load(&saves[pick]);
+			else enter_name();
 			return;
 		}
 		screen_begin();
@@ -888,10 +945,10 @@ static void choose_commander(void) {
 				const Save_t* sv = &saves[i];
 				// Where it was saved, if in this galaxy
 				const char* at = sv->galaxy == chart_galaxy() ? chart_system(sv->home)->name : "";
-				snprintf(line, sizeof(line), "%u  %-9s %6u.%u Cr", (unsigned)(i + 1), at,
+				snprintf(line, sizeof(line), "%u  %-8s %-9s %6u.%u Cr", (unsigned)(i + 1), sv->name, at,
 					(unsigned)(sv->cmdr.cash / 10), (unsigned)(sv->cmdr.cash % 10));
 				screen_text(SLOTS_X, y, line, c, false);
-				screen_text(SLOTS_X + 30 * 8, y, rating(sv->kills), c, false);
+				screen_text(SLOTS_X + 35 * 8, y, rating(sv->kills), c, false);
 			}
 			else {
 				snprintf(line, sizeof(line), "%u  EMPTY", (unsigned)(i + 1));
@@ -982,7 +1039,7 @@ void game_play(void) {
 		switch (_view) {
 			case VIEW_FRONT:
 				if (_state == STATE_DOCKED) {
-					snprintf(title, sizeof(title), "COMMANDER JAMESON");
+					snprintf(title, sizeof(title), "COMMANDER %s", _name);
 					label = "STATUS";
 					draw_status();
 				}
