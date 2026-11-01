@@ -2,6 +2,10 @@
 
 // See el_ships.h.
 //
+// A destroyed ship may leave a canister, which drifts on as the ship was
+// going, more slowly. With fuel scoops we pick one up by flying into it,
+// unless it comes in well above the nose; otherwise it breaks against us.
+//
 // A hostile ship turns towards us, comes in, fires when it is pointing at
 // us, and breaks off when it gets too close, to come round again. The light
 // fighters weave as they come, and the big ships keep their distance. A
@@ -14,6 +18,7 @@
 #include <string.h>
 
 Ship_t ships[SHIPS];
+Canister_t canisters[CANISTERS];
 
 // How far from the station new ships turn up, and how far from both it and
 // us they are left behind and replaced, as we may be far from the station
@@ -47,6 +52,17 @@ Ship_t ships[SHIPS];
 #define MISSILE_DAMAGE 0.7f
 // Fired at us, a missile is a little slower, so we can get away
 #define MISSILE_SPEED_AT_US 32.0f
+
+// The chance a destroyed trader or pirate leaves a canister, in percent; the
+// police carry none. It keeps a little of the ship's speed, and tumbles.
+#define TRADER_CARGO 80
+#define PIRATE_CARGO 40
+#define CANISTER_DRIFT 0.25f
+#define CANISTER_SPIN 0.03f
+// Running into one we do not pick up does this much damage
+#define CANISTER_DAMAGE 0.1f
+// The scoops take a canister hitting us lower than this, from -1 below to 1 above
+#define SCOOP_ABOVE 0.5f
 
 // The pieces of a destroyed ship flying apart
 #define EXPLOSIONS 4
@@ -219,6 +235,25 @@ void ships_enter(const ShipsWorld_t* w) {
 	}
 	for (uint32_t i = 0; i < EXPLOSIONS; ++i) _explosions[i].on = false;
 	for (uint32_t i = 0; i < MISSILES; ++i) _missiles[i].on = false;
+	for (uint32_t i = 0; i < CANISTERS; ++i) canisters[i].on = false;
+}
+
+// A canister at pos, drifting along drift, if there is room for another
+static void new_canister(Vec3_t pos, Vec3_t drift) {
+	for (uint32_t i = 0; i < CANISTERS; ++i) {
+		Canister_t* c = &canisters[i];
+		if (c->on) continue;
+		c->on = true;
+		frame_set(&c->fr, pos, rand_unit(), rand_unit());
+		c->drift = drift;
+		c->roll = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
+		c->pitch = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
+		return;
+	}
+}
+
+void ships_debug_canister(Vec3_t pos) {
+	new_canister(pos, (Vec3_t){ 0.0f, 0.0f, 0.0f });
 }
 
 static void explode(Vec3_t pos, float size) {
@@ -238,6 +273,8 @@ static void explode(Vec3_t pos, float size) {
 
 static void destroy(Ship_t* s, ShipsEvents_t* ev, bool by_us) {
 	explode(s->fr.pos, s->model->radius);
+	const uint32_t cargo = s->role == ROLE_TRADER ? TRADER_CARGO : s->role == ROLE_PIRATE ? PIRATE_CARGO : 0;
+	if (percent() < cargo) new_canister(s->fr.pos, vec_scale(s->fr.f, s->speed * CANISTER_DRIFT));
 	s->alive = false;
 	s->beam = 0;
 	s->respawn = RESPAWN_FRAMES;
@@ -365,6 +402,35 @@ static void move_missiles(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 	}
 }
 
+static void move_canisters(const ShipsWorld_t* w, ShipsEvents_t* ev) {
+	for (uint32_t i = 0; i < CANISTERS; ++i) {
+		Canister_t* c = &canisters[i];
+		if (!c->on) continue;
+		frame_roll(&c->fr, c->roll);
+		frame_pitch(&c->fr, c->pitch);
+		frame_tidy(&c->fr);
+		c->fr.pos = vec_add(c->fr.pos, c->drift);
+		const Vec3_t to = vec_sub(c->fr.pos, w->me->pos);
+		const float d = vec_length(to);
+		if (d < model_canister.radius + RAM_MARGIN) {
+			c->on = false;
+			// Not well above us, it goes into the scoops
+			if (w->scoops && vec_dot(to, w->me->u) < SCOOP_ABOVE * d) {
+				++ev->scooped;
+			}
+			else {
+				++ev->smashed;
+				explode(c->fr.pos, model_canister.radius);
+				if (vec_dot(to, w->me->f) >= 0.0f) ev->fore += CANISTER_DAMAGE;
+				else ev->aft += CANISTER_DAMAGE;
+			}
+		}
+		else if (d > LEAVE_RANGE) {
+			c->on = false;
+		}
+	}
+}
+
 void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 	++_frame;
 	for (uint32_t i = 0; i < _traffic; ++i) {
@@ -395,6 +461,7 @@ void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 		}
 	}
 	move_missiles(w, ev);
+	move_canisters(w, ev);
 	for (uint32_t i = 0; i < EXPLOSIONS; ++i) {
 		if (_explosions[i].on && ++_explosions[i].frame > EXPLOSION_FRAMES) _explosions[i].on = false;
 	}

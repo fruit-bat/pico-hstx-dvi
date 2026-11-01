@@ -22,6 +22,13 @@
 // views   - starts a game, launches and climbs, then a Sidewinder is put
 //           behind and a rear laser fitted, and we look back and shoot at it,
 //           then look left and right
+// scoop   - starts a game, launches, then has fuel scoops fitted and an
+//           empty tank, and is put beside the sun, which fills it, with a
+//           canister ahead, a little above the nose, that it scoops up, looks
+//           at the inventory, then dives into the sun
+// overdrive - starts a game, launches, climbs away, is turned to face the
+//           sun, and holds B and up, into the overdrive once clear of the
+//           station, until mass locked by the sun
 // save    - built with EL_HOST_SAVE, looks at the options on the commanders,
 //           picks commander slot 2, names it NAMESON,
 //           holding up to go on changing the letter, buys food and launches,
@@ -35,6 +42,8 @@
 void game_debug_approach(float roll);
 void game_debug_pirate(const char* name);
 void game_debug_chaser(const char* name);
+void game_debug_scoop(void);
+void game_debug_face_sun(void);
 
 // The buttons, as in el_input.h
 #define L 1
@@ -170,6 +179,18 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 580 && f < 610) return B | U;
 		if (f >= 660 && f < 663) return SELECT;
 	}
+	if (!strcmp(host_mode, "overdrive")) {
+		// Climb away from the planet, then full speed and on
+		if (f >= 100 && f < 175) return D;
+		if (f >= 190 && f < 1600) return B | U;
+	}
+	if (!strcmp(host_mode, "scoop")) {
+		// Look at the inventory, then round the charts back to the front
+		if (f >= 450 && f < 508 && (f < 458 || f >= 500) && !(f & 1)) return SELECT;
+		// Dive into the sun, below us
+		if (f >= 600 && f < 700) return U;
+		if (f >= 700 && f < 900) return B | U;
+	}
 	if (!strcmp(host_mode, "hyper")) {
 		// Climb a quarter turn, away from both the planet and the station,
 		// and speed up, trying to jump too soon on the way, then go to Diso,
@@ -193,6 +214,8 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
+	if (frame == 120 && !strcmp(host_mode, "scoop")) game_debug_scoop();
+	if (frame == 180 && !strcmp(host_mode, "overdrive")) game_debug_face_sun();
 	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");
 	if (frame % 600 == 0) {
 		printf("%6u sprites %3u\n", frame, sprites);

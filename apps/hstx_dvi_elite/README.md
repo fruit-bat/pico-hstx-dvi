@@ -31,9 +31,26 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
+
+## The overdrive
+
+The sun is a long way off, so holding B and up on at full speed for half a second goes into the overdrive,
+about nine times faster: the speed gauge goes red, past a mark near its end, and the sun is about 15 seconds from the planet.
+It burns a tenth of a light year of fuel each second, so getting there costs about a light year and a half,
+which fuel scoops soon win back. It cannot be used close to the planet, the sun, the station or another ship,
+and drops out to full speed when near any of them, when out of fuel, or with B and down.
+
+## The sun, fuel scoops and canisters
+
+Close to the sun the cabin heats up, shown by CT on the dashboard; too hot, it drains your energy, and flying into the sun is the end.
+With fuel scoops fitted, flying close enough to the sun fills the tanks as you go.
+A destroyed trader or pirate may leave a cargo canister drifting. With fuel scoops, fly into it, aiming at or a little below the sights,
+to pick it up, which puts a tonne, kilo or gram of something at random in the hold, if there is room, and shows its name;
+otherwise it breaks against the ship, taking a little off the shields, with CARGO LOST, or NO FUEL SCOOPS if none are fitted.
+The inventory, one of the screens select shows, lists the cargo in the hold, with the fuel and cash.
 
 ## Combat
 
@@ -60,10 +77,10 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
 ## The controls
 
 - Left and right roll, and up and down dive and climb, as with a joystick.
-- B held with up or down speeds up or slows down.
+- B held with up or down speeds up or slows down. Held on at full speed for half a second, it goes into the overdrive.
 - A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
 - B held with A launches a missile, and with select sets off the ECM.
-- Select shows the next screen: the front, rear, left and right views, the short range chart, the galactic chart,
+- Select shows the next screen: the front, rear, left and right views, the inventory, the short range chart, the galactic chart,
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
 - On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
@@ -123,6 +140,8 @@ host/build/elite_host dock 420 20 frames
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
 `views` puts a Sidewinder behind with a rear laser fitted, looks back and fires at it, then looks left and right.
+`overdrive` launches, climbs away, faces the sun and holds B and up, going into the overdrive once clear of the station, until near the sun.
+`scoop` is put beside the sun with fuel scoops and an empty tank, fills it, scoops up a canister a little above the nose, shows the inventory, then dives into the sun.
 `trade` buys and sells in the market at Lave, buys a missile, and tries for a rear pulse laser.
 Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
 names it NAMESON, buys food and launches, saving it, to show in the slot when run again,

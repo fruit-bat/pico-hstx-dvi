@@ -2,7 +2,8 @@
 
 // The other ships in a system: traders going about their business, pirates
 // that come for us, and the police, who come for us if we are an offender.
-// With the explosions of those destroyed, and the missiles.
+// With the explosions of those destroyed, the cargo canisters some leave
+// behind, and the missiles.
 //
 // Each type of ship has a character of its own: light fighters are fast and
 // hard to hit but weak, the big ships slow but deadly head on. Each system
@@ -58,6 +59,17 @@ typedef struct {
 #define SHIPS 6
 extern Ship_t ships[SHIPS];
 
+// A cargo canister, drifting and tumbling where a ship was destroyed
+typedef struct {
+	Frame_t fr;
+	Vec3_t drift;
+	float roll, pitch;
+	bool on;
+} Canister_t;
+
+#define CANISTERS 4
+extern Canister_t canisters[CANISTERS];
+
 // What the ships need to know about the system and us
 typedef struct {
 	const Frame_t* me;
@@ -66,6 +78,7 @@ typedef struct {
 	uint32_t economy;    // 0 rich industrial up to 7 poor agricultural
 	uint32_t population; // in hundreds of millions
 	bool offender;       // whether the police are after us
+	bool scoops;         // whether we have fuel scoops, to pick up canisters
 } ShipsWorld_t;
 
 // What happened to us and the ships this frame
@@ -75,6 +88,8 @@ typedef struct {
 	uint32_t bounty;  // for the pirates among them, in tenths of a credit
 	bool innocent;    // whether any was not a pirate
 	bool missile;     // whether a missile was fired at us
+	uint32_t scooped; // canisters we picked up
+	uint32_t smashed; // canisters that broke against us
 } ShipsEvents_t;
 
 // New ships for a new system
@@ -93,8 +108,9 @@ void ships_ecm(void);
 // Whether a hostile ship is on the scanner, or a missile is coming for us
 bool ships_hostile_near(const Frame_t* me, float range);
 // For trying things on the PC: puts a ship of the named type at pos, facing
-// f, coming for us
+// f, coming for us, or a canister at pos
 void ships_debug_place(uint32_t i, const char* name, Vec3_t pos, Vec3_t f, Vec3_t u, const ShipsWorld_t* w);
+void ships_debug_canister(Vec3_t pos);
 // Explosions, lasers fired at us and missiles, before the ships so they are over them
 void ships_draw_effects(const Frame_t* me, Style_e style, uint32_t frame);
 

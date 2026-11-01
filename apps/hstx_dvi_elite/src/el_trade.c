@@ -12,6 +12,7 @@
 #include "game_pallet.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 
 Commander_t cmdr;
@@ -71,6 +72,7 @@ typedef enum {
 	EQUIP_ECM,
 	EQUIP_PULSE_LASER,
 	EQUIP_BEAM_LASER,
+	EQUIP_FUEL_SCOOPS,
 	EQUIP_MILITARY_LASER,
 	EQUIPMENT
 } Equip_e;
@@ -79,16 +81,18 @@ typedef struct {
 	const char* name;
 	uint32_t price; // in tenths of a credit; fuel is for each tenth of a light year
 	uint32_t tech;
+	Laser_e laser;  // which, if it is a laser
 } Equip_t;
 
 static const Equip_t _equipment[EQUIPMENT] = {
-	{ "Fuel", 2, 1 },
-	{ "Missile", 300, 1 },
-	{ "Large Cargo Bay", 4000, 2 },
-	{ "E.C.M. System", 6000, 3 },
-	{ "Pulse Laser", 4000, 4 },
-	{ "Beam Laser", 10000, 5 },
-	{ "Military Laser", 60000, 10 },
+	{ "Fuel", 2, 1, LASER_NONE },
+	{ "Missile", 300, 1, LASER_NONE },
+	{ "Large Cargo Bay", 4000, 2, LASER_NONE },
+	{ "E.C.M. System", 6000, 3, LASER_NONE },
+	{ "Pulse Laser", 4000, 4, LASER_PULSE },
+	{ "Beam Laser", 10000, 5, LASER_BEAM },
+	{ "Fuel Scoops", 5250, 6, LASER_NONE },
+	{ "Military Laser", 60000, 10, LASER_MILITARY },
 };
 
 #define CARGO_SMALL 20
@@ -154,6 +158,19 @@ static const char* buy(uint32_t i) {
 	return NULL;
 }
 
+const char* trade_scoop(void) {
+	const uint32_t i = (uint32_t)rand() % GOODS;
+	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= cmdr.hold) return "HOLD FULL";
+	++cmdr.cargo[i];
+	// The name, in capitals, as messages are, with how much
+	static char name[24];
+	uint32_t k = 0;
+	for (; _goods[i].name[k] && k < 15; ++k) name[k] = (char)toupper((unsigned char)_goods[i].name[k]);
+	snprintf(name + k, sizeof(name) - k, " 1%s", _unit_names[_goods[i].unit]);
+	for (; name[k]; ++k) name[k] = (char)toupper((unsigned char)name[k]);
+	return name;
+}
+
 static const char* sell(uint32_t i) {
 	if (!cmdr.cargo[i]) return "NONE IN THE HOLD";
 	cmdr.cash += _price[i];
@@ -209,6 +226,30 @@ void trade_draw_market(void) {
 	screen_text_centre(VIEW_BOTTOM - 12, "RIGHT BUYS  LEFT SELLS", GAME_GREY, false);
 }
 
+void trade_draw_inventory(void) {
+	int32_t y = LIST_TOP;
+	char s[GAME_TEXT_MAX + 1];
+	snprintf(s, sizeof(s), "Fuel: %u.%u Light Years", (unsigned)(cmdr.fuel / 10), (unsigned)(cmdr.fuel % 10));
+	screen_text(MARKET_X, y, s, GAME_CYAN, false);
+	y += LIST_LINE;
+	cash_line(MARKET_X, y);
+	y += LIST_LINE;
+	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)cmdr.hold);
+	screen_text(MARKET_X, y, s, GAME_CYAN, false);
+	y += LIST_LINE + 8;
+	screen_text(MARKET_X, y, "CARGO:", GAME_CYAN, false);
+	y += LIST_LINE + 4;
+	bool any = false;
+	for (uint32_t i = 0; i < GOODS; ++i) {
+		if (!cmdr.cargo[i]) continue;
+		snprintf(s, sizeof(s), "%-15s %4u %s", _goods[i].name, (unsigned)cmdr.cargo[i], _unit_names[_goods[i].unit]);
+		screen_text(MARKET_X + 16, y, s, GAME_WHITE, false);
+		y += LIST_LINE;
+		any = true;
+	}
+	if (!any) screen_text(MARKET_X + 16, y, "Empty", GAME_GREY, false);
+}
+
 // The equipment sold at a system, by its tech level
 static uint32_t equipment_sold(const GalaxySystem_t* sys) {
 	uint32_t n = 0;
@@ -232,10 +273,13 @@ static const char* fit(Equip_e e) {
 		case EQUIP_ECM:
 			if (cmdr.ecm) return "FITTED";
 			break;
+		case EQUIP_FUEL_SCOOPS:
+			if (cmdr.scoops) return "FITTED";
+			break;
 		default: {
 			// Only a better laser than the one there, if any
 			const Laser_e has = cmdr.laser[_mount];
-			if (has != LASER_NONE && has >= (Laser_e)(e - EQUIP_PULSE_LASER)) return "FITTED";
+			if (has != LASER_NONE && has >= _equipment[e].laser) return "FITTED";
 			break;
 		}
 	}
@@ -246,7 +290,8 @@ static const char* fit(Equip_e e) {
 		case EQUIP_MISSILE: ++cmdr.missiles; break;
 		case EQUIP_CARGO_BAY: cmdr.hold = CARGO_LARGE; break;
 		case EQUIP_ECM: cmdr.ecm = true; break;
-		default: cmdr.laser[_mount] = (Laser_e)(e - EQUIP_PULSE_LASER); break;
+		case EQUIP_FUEL_SCOOPS: cmdr.scoops = true; break;
+		default: cmdr.laser[_mount] = _equipment[e].laser; break;
 	}
 	return NULL;
 }
@@ -257,7 +302,7 @@ const char* trade_equipment_input(uint8_t pressed, const GalaxySystem_t* sys) {
 	if (pressed & EL_INP_DOWN) _item = (_item + 1) % n;
 	if (pressed & EL_INP_UP) _item = (_item + n - 1) % n;
 	// Left and right choose where a laser goes
-	if (_item >= EQUIP_PULSE_LASER) {
+	if (_equipment[_item].laser != LASER_NONE) {
 		if (pressed & EL_INP_RIGHT) _mount = (Mount_e)((_mount + 1) % MOUNTS);
 		if (pressed & EL_INP_LEFT) _mount = (Mount_e)((_mount + MOUNTS - 1) % MOUNTS);
 	}
@@ -275,7 +320,7 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	for (uint32_t i = 0; i < n; ++i) {
 		const uint32_t c = i == _item ? GAME_YELLOW : GAME_WHITE;
 		screen_text(EQUIP_X, y, _equipment[i].name, c, false);
-		if (i == _item && i >= EQUIP_PULSE_LASER) {
+		if (i == _item && _equipment[i].laser != LASER_NONE) {
 			snprintf(s, sizeof(s), "<%s>", _mount_names[_mount]);
 			screen_text(EQUIP_X + 16 * 8, y, s, c, false);
 		}
@@ -287,7 +332,7 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	}
 	y += 8;
 	cash_line(EQUIP_X, y);
-	screen_text_centre(VIEW_BOTTOM - 12, _item >= EQUIP_PULSE_LASER ? "FIRE BUYS  LEFT AND RIGHT CHOOSE WHERE" : "FIRE BUYS", GAME_GREY, false);
+	screen_text_centre(VIEW_BOTTOM - 12, _equipment[_item].laser != LASER_NONE ? "FIRE BUYS  LEFT AND RIGHT CHOOSE WHERE" : "FIRE BUYS", GAME_GREY, false);
 }
 
 uint32_t trade_equipment_names(const char** names, uint32_t max) {
@@ -303,5 +348,6 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	}
 	if (n < max && cmdr.hold >= CARGO_LARGE) names[n++] = "Large Cargo Bay";
 	if (n < max && cmdr.ecm) names[n++] = "E.C.M. System";
+	if (n < max && cmdr.scoops) names[n++] = "Fuel Scoops";
 	return n;
 }

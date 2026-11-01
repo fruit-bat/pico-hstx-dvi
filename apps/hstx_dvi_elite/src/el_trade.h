@@ -40,6 +40,7 @@ typedef struct {
 	uint32_t cargo[GOODS];
 	bool ecm;
 	Laser_e laser[MOUNTS]; // the front first, where it was when there was only one
+	bool scoops;
 } Commander_t;
 
 extern Commander_t cmdr;
@@ -59,6 +60,11 @@ const char* trade_market_input(uint8_t pressed, uint8_t held);
 const char* trade_equipment_input(uint8_t pressed, const GalaxySystem_t* sys);
 void trade_draw_market(void);
 void trade_draw_equipment(const GalaxySystem_t* sys);
+// A canister picked up: a good at random into the hold, returning its name,
+// or that the hold is full
+const char* trade_scoop(void);
+// What is in the hold, with the fuel and cash
+void trade_draw_inventory(void);
 // What our ship has fitted, for the status
 uint32_t trade_equipment_names(const char** names, uint32_t max);
 

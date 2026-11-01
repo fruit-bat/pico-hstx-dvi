@@ -67,6 +67,21 @@ static void hud_bar(bool filled, float x0, float x1, float y, float v, hstx_dvi_
 	object_end();
 }
 
+// The speed: up to full speed along most of the bar, with the rest kept for
+// the overdrive, past a mark, the whole bar red when in it
+#define SPEED_SPAN 0.85f
+
+static void hud_speed(bool filled, float x0, float x1, float y, float speed, float over,
+	hstx_dvi_pixel_t c, hstx_dvi_pixel_t hot, hstx_dvi_pixel_t track) {
+	if (!object_begin()) return;
+	const float top = x0 + (x1 - x0) * SPEED_SPAN;
+	const float x = over > 0.0f ? top + (x1 - top) * clamp01(over) : x0 + (top - x0) * clamp01(speed);
+	if (x > x0 + 1.0f) hud_block(filled, x0, y, x, y + GAUGE_H - 1, over > 0.0f ? hot : c);
+	add_line((Vec2_t){ top, y }, (Vec2_t){ top, y + GAUGE_H - 1 }, track);
+	add_box(x0, y, x1, y + GAUGE_H - 1, track);
+	object_end();
+}
+
 // A marker on a track, from -1 at the left to 1 at the right
 static void hud_marker(bool filled, float x0, float x1, float y, float v, hstx_dvi_pixel_t c, hstx_dvi_pixel_t track) {
 	if (!object_begin()) return;
@@ -124,7 +139,7 @@ void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, bool filled) {
 	for (uint32_t g = GAUGE_FS; g <= GAUGE_AL; ++g) {
 		hud_bar(filled, GAUGE_X0, GAUGE_X1, gauge_y(g), left[g], left_c[g], track);
 	}
-	hud_bar(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(0), hud->speed, yellow, track);
+	hud_speed(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(0), hud->speed, hud->overdrive, yellow, red, track);
 	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(1), hud->roll, green, track);
 	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(2), hud->pitch, green, track);
 	for (uint32_t b = 0; b < 4; ++b) {

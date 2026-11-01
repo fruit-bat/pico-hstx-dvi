@@ -50,6 +50,20 @@
 #define STATION_SPIN 0.005f
 #define SUN_RADIUS 30000.0f
 #define SUN_DISTANCE 330000.0f
+// The sun is drawn while its middle is at least this far ahead, for its
+// distance, as further round its middle does not project well
+#define SUN_NEAR_Z 0.2f
+// Near the sun the cabin heats up: from this many sun radii from its middle,
+// hotter the closer, from cool to as hot as it gets at the surface. It moves
+// towards that by this much a frame. Too hot, it drains our energy.
+#define HEAT_RANGE 4.0f
+#define CABIN_COOL 0.1f
+#define CABIN_CHANGE 0.004f
+#define CABIN_TOO_HOT 0.85f
+#define HEAT_DAMAGE 0.004f
+// Hot enough for the fuel scoops, which take a tenth of a light year this often
+#define SCOOP_HEAT 0.35f
+#define SCOOP_FRAMES 15
 // Close to the station the compass points to it, and otherwise to the
 // planet, in planet radii
 #define SAFE_ZONE 3.3f
@@ -104,6 +118,19 @@
 #define ROLL_STEP 0.003f
 #define MAX_PITCH 0.022f
 #define PITCH_STEP 0.002f
+// The overdrive: holding B and up at full speed for this many frames, we go
+// up to this fast, getting there by this much a frame, and burn a tenth of a
+// light year of fuel this often, until slowed, out of fuel, or mass locked
+#define OVERDRIVE_WAIT 30
+#define OVERDRIVE_SPEED 360.0f
+#define OVERDRIVE_RAMP (1.0f / 60.0f)
+#define OVERDRIVE_FUEL_FRAMES 60
+// It is mass locked as hyperspace is, but nearer the planet, in its radii
+// above the surface, as the station is not far beyond hyperspace's limit;
+// still some frames away at full overdrive
+#define OVERDRIVE_LOCK_PLANET 0.3f
+// The dust streams by no faster than this, or every speck would be gone in a frame
+#define DUST_SPEED_MAX (3.0f * MAX_SPEED)
 // How far the cursor moves on the charts each frame, in steps across the galaxy
 #define CURSOR_STEP_LOCAL 0.25f
 #define CURSOR_STEP_GALAXY 0.75f
@@ -147,6 +174,7 @@ typedef enum {
 	VIEW_RIGHT,
 	VIEW_MARKET,
 	VIEW_EQUIPMENT,
+	VIEW_INVENTORY,
 	VIEW_LOCAL,
 	VIEW_GALAXY,
 	VIEW_DATA,
@@ -154,7 +182,7 @@ typedef enum {
 } View_e;
 
 static const char* const _view_labels[VIEWS] = {
-	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
+	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "INVENTORY", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
 };
 
 typedef enum {
@@ -170,6 +198,11 @@ static Frame_t _me;
 // Where we look from, the way the view is
 static Frame_t _eye;
 static float _speed, _roll, _pitch;
+// Whether the overdrive is on, how far into it we are, from 0 to 1, how long
+// we have held on at full speed, and frames towards burning more fuel
+static bool _overdrive;
+static float _over;
+static uint32_t _over_hold, _over_fuel;
 static Frame_t _planet, _station;
 static float _planet_radius;
 static Vec3_t _sun_pos;
@@ -181,6 +214,8 @@ static uint32_t _message_frames;
 // Our ship and how we have done
 static float _fore, _aft, _energy;
 static float _laser_temp;
+static float _cabin_temp;
+static uint32_t _scoop_frames;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
 static uint32_t _kills;
@@ -203,7 +238,7 @@ static float towards(float v, float target, float step) {
 // What the other ships need to know
 static ShipsWorld_t world(void) {
 	const GalaxySystem_t* sys = chart_system(chart_home());
-	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender };
+	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops };
 }
 
 // Repaired, as when docked
@@ -211,6 +246,8 @@ static void refit(void) {
 	_fore = _aft = _energy = 1.0f;
 	_laser_temp = 0.0f;
 	_overheated = false;
+	_cabin_temp = CABIN_COOL;
+	_scoop_frames = 0;
 }
 
 // A number from -1 to 1 made from the system's numbers, the k-th of several
@@ -272,9 +309,17 @@ static void start(void) {
 	dust_init();
 }
 
+// Back to full speed at once
+static void overdrive_off(void) {
+	_overdrive = false;
+	_over = 0.0f;
+	_over_hold = 0;
+}
+
 static void set_state(State_e state) {
 	_state = state;
 	_state_frames = 0;
+	overdrive_off();
 	// Docking or dying stops a countdown to hyperspace
 	if (state == STATE_DOCKING || state == STATE_DEAD) _hyper_frames = 0;
 	// The tunnels are seen ahead
@@ -286,9 +331,11 @@ static void message(const char* m) {
 	_message_frames = MESSAGE_FRAMES;
 }
 
-// Whether we are too close to something to go into hyperspace
-static bool mass_locked(void) {
-	if (vec_length(vec_sub(_me.pos, _planet.pos)) < (1.0f + LOCK_PLANET) * _planet_radius) return true;
+// Whether we are too close to something to go into hyperspace, or the
+// overdrive: within planet of its radii above the planet's surface, or near
+// the sun, the station or another ship
+static bool mass_locked(float planet) {
+	if (vec_length(vec_sub(_me.pos, _planet.pos)) < (1.0f + planet) * _planet_radius) return true;
 	if (vec_length(vec_sub(_me.pos, _sun_pos)) < LOCK_SUN * SUN_RADIUS) return true;
 	if (vec_length(vec_sub(_me.pos, _station.pos)) < LOCK_STATION) return true;
 	for (uint32_t i = 0; i < SHIPS; ++i) {
@@ -300,7 +347,7 @@ static bool mass_locked(void) {
 // Starts the countdown to the system the cursor is on, if we can reach it
 static void start_hyperspace(void) {
 	if (_hyper_frames) return;
-	if (mass_locked()) {
+	if (mass_locked(LOCK_PLANET)) {
 		message("MASS LOCKED");
 		return;
 	}
@@ -483,6 +530,37 @@ static void move_cursor(uint8_t held) {
 	chart_cursor_move(dx, dy, local);
 }
 
+// Into the overdrive, having held on at full speed, if we can, and out of it
+// when near something or out of fuel, burning fuel while in it
+static void overdrive(void) {
+	if (!_overdrive && _over_hold >= OVERDRIVE_WAIT) {
+		_over_hold = 0;
+		if (mass_locked(OVERDRIVE_LOCK_PLANET)) message("MASS LOCKED");
+		else if (!cmdr.fuel) message("NO FUEL");
+		else {
+			_overdrive = true;
+			_over_fuel = 0;
+		}
+	}
+	if (!_overdrive) return;
+	if (mass_locked(OVERDRIVE_LOCK_PLANET)) {
+		overdrive_off();
+		message("MASS LOCKED");
+		return;
+	}
+	if (++_over_fuel >= OVERDRIVE_FUEL_FRAMES) {
+		_over_fuel = 0;
+		if (!cmdr.fuel) {
+			overdrive_off();
+			message("NO FUEL");
+			return;
+		}
+		--cmdr.fuel;
+		chart_set_fuel(cmdr.fuel);
+	}
+	_over = fminf(_over + OVERDRIVE_RAMP, 1.0f);
+}
+
 static void fly(uint8_t held) {
 	const bool b = held & EL_INP_B;
 	float roll_in = 0.0f, pitch_in = 0.0f;
@@ -498,18 +576,28 @@ static void fly(uint8_t held) {
 	else {
 		move_cursor(held);
 	}
-	if (b && looking_out()) {
-		if (held & EL_INP_UP) _speed = fminf(_speed + SPEED_STEP, MAX_SPEED);
-		if (held & EL_INP_DOWN) _speed = fmaxf(_speed - SPEED_STEP, 0.0f);
+	if (b && looking_out() && (held & EL_INP_UP)) {
+		_speed = fminf(_speed + SPEED_STEP, MAX_SPEED);
+		_over_hold = _speed >= MAX_SPEED ? _over_hold + 1 : 0;
 	}
+	else {
+		_over_hold = 0;
+	}
+	if (b && looking_out() && (held & EL_INP_DOWN)) {
+		// Slowing drops out of the overdrive first
+		if (_overdrive) overdrive_off();
+		else _speed = fmaxf(_speed - SPEED_STEP, 0.0f);
+	}
+	overdrive();
+	const float speed = _speed + (OVERDRIVE_SPEED - MAX_SPEED) * _over;
 	_roll = towards(_roll, roll_in * MAX_ROLL, ROLL_STEP);
 	_pitch = towards(_pitch, pitch_in * MAX_PITCH, PITCH_STEP);
 
 	frame_roll(&_me, _roll);
 	frame_pitch(&_me, _pitch);
 	frame_tidy(&_me);
-	_me.pos = vec_add(_me.pos, vec_scale(_me.f, _speed));
-	move_dust(_roll, _pitch, _speed);
+	_me.pos = vec_add(_me.pos, vec_scale(_me.f, speed));
+	move_dust(_roll, _pitch, fminf(speed, DUST_SPEED_MAX));
 
 	touch_station();
 	if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
@@ -560,6 +648,8 @@ static void take(const ShipsEvents_t* ev) {
 		_aft = 0.0f;
 	}
 	if (ev->missile) message("INCOMING MISSILE");
+	for (uint32_t i = 0; i < ev->scooped; ++i) message(trade_scoop());
+	if (ev->smashed) message(cmdr.scoops ? "CARGO LOST" : "NO FUEL SCOOPS");
 	_kills += ev->kills;
 	cmdr.cash += ev->bounty;
 	if (ev->innocent && !_offender) {
@@ -576,6 +666,30 @@ static void take(const ShipsEvents_t* ev) {
 	_aft = fminf(1.0f, _aft + RECHARGE);
 }
 
+// The sun's heat on the cabin, and the fuel scoops taking fuel from it as
+// we fly. Into the sun is the end of us.
+static void heat(void) {
+	const float d = vec_length(vec_sub(_me.pos, _sun_pos)) / SUN_RADIUS;
+	if (d < 1.0f) {
+		set_state(STATE_DEAD);
+		return;
+	}
+	const float h = fminf(fmaxf((HEAT_RANGE - d) / (HEAT_RANGE - 1.0f), 0.0f), 1.0f);
+	_cabin_temp = towards(_cabin_temp, CABIN_COOL + (1.0f - CABIN_COOL) * h, CABIN_CHANGE);
+	if (_cabin_temp > CABIN_TOO_HOT) {
+		_energy -= HEAT_DAMAGE;
+		if (!_message_frames) message("CABIN TEMPERATURE");
+	}
+	if (cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX) {
+		if (++_scoop_frames >= SCOOP_FRAMES) {
+			_scoop_frames = 0;
+			++cmdr.fuel;
+			chart_set_fuel(cmdr.fuel);
+			if (!_message_frames) message("FUEL SCOOPS ON");
+		}
+	}
+}
+
 static void move_world(ShipsEvents_t* ev) {
 	frame_roll(&_station, STATION_SPIN);
 	frame_tidy(&_station);
@@ -587,6 +701,23 @@ static void move_world(ShipsEvents_t* ev) {
 void game_debug_pirate(const char* name) {
 	const ShipsWorld_t w = world();
 	ships_debug_place(0, name, vec_add(_me.pos, vec_scale(_me.f, 2500.0f)), vec_scale(_me.f, -1.0f), _me.u, &w);
+}
+
+// For trying the fuel scoops on the PC: fits them, and puts us near the sun,
+// heading past it, with a canister ahead and a little above the nose
+void game_debug_scoop(void) {
+	cmdr.scoops = true;
+	cmdr.fuel = 0;
+	chart_set_fuel(cmdr.fuel);
+	const Vec3_t out = vec_unit(_sun_pos);
+	const Vec3_t side = vec_unit(vec_sub((Vec3_t){ 0.0f, 1.0f, 0.0f }, vec_scale(out, out.y)));
+	frame_set(&_me, vec_add(_sun_pos, vec_scale(side, SUN_RADIUS * 2.0f)), out, side);
+	ships_debug_canister(vec_add(_me.pos, vec_add(vec_scale(_me.f, 1500.0f), vec_scale(_me.u, 12.0f))));
+}
+
+// For trying the overdrive on the PC: turns us to face the sun
+void game_debug_face_sun(void) {
+	frame_set(&_me, _me.pos, vec_unit(vec_sub(_sun_pos, _me.pos)), _me.u);
 }
 
 // For trying the rear view on the PC: fits a rear laser, and puts a ship of
@@ -604,7 +735,8 @@ typedef enum {
 	THING_PLANET,
 	THING_SUN,
 	THING_STATION,
-	THING_SHIP
+	THING_SHIP,
+	THING_CANISTER
 } Thing_e;
 
 typedef struct {
@@ -621,10 +753,11 @@ static void draw_dashboard(void) {
 		.fore_shield = _fore,
 		.aft_shield = _aft,
 		.fuel = (float)cmdr.fuel / GALAXY_FUEL_MAX,
-		.cabin_temp = 0.1f,
+		.cabin_temp = _cabin_temp,
 		.laser_temp = _laser_temp,
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
 		.speed = _speed / MAX_SPEED,
+		.overdrive = _over,
 		.energy = _energy,
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
@@ -633,11 +766,14 @@ static void draw_dashboard(void) {
 		.scanner_range = SCANNER_RANGE,
 		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
 	};
-	Blip_t blips[SHIPS + 1];
+	Blip_t blips[SHIPS + CANISTERS + 1];
 	uint32_t n = 0;
 	blips[n++] = (Blip_t){ station, model_coriolis.rgb, true };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (ships[i].alive) blips[n++] = (Blip_t){ frame_view(&_me, ships[i].fr.pos), ships[i].model->rgb, false };
+	}
+	for (uint32_t i = 0; i < CANISTERS; ++i) {
+		if (canisters[i].on) blips[n++] = (Blip_t){ frame_view(&_me, canisters[i].fr.pos), model_canister.rgb, false };
 	}
 	hud_draw(&hud, blips, n, draw_hud_filled);
 }
@@ -697,7 +833,7 @@ static void draw_view(void) {
 	draw_guides();
 
 	// Nearest first, so they cover the ones behind
-	Thing_t things[SHIPS + 3];
+	Thing_t things[SHIPS + CANISTERS + 3];
 	uint32_t n = 0;
 	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
 	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
@@ -706,6 +842,11 @@ static void draw_view(void) {
 		if (!ships[i].alive) continue;
 		const float d = vec_length(frame_view(&_eye, ships[i].fr.pos));
 		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_SHIP, i, d - ships[i].model->radius };
+	}
+	for (uint32_t i = 0; i < CANISTERS; ++i) {
+		if (!canisters[i].on) continue;
+		const float d = vec_length(frame_view(&_eye, canisters[i].fr.pos));
+		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_CANISTER, i, d - model_canister.radius };
 	}
 	for (uint32_t i = 1; i < n; ++i) {
 		const Thing_t t = things[i];
@@ -725,18 +866,24 @@ static void draw_view(void) {
 					!(sys->seed[1] & 2), draw_style);
 				break;
 			}
-			case THING_SUN:
-				if (sun.z > SUN_RADIUS) {
+			case THING_SUN: {
+				// As big as it looks from here, which close up fills the view
+				const float d2 = vec_dot(sun, sun);
+				if (sun.z > SUN_NEAR_Z * sqrtf(d2) && d2 > SUN_RADIUS * SUN_RADIUS) {
 					const Vec2_t m = project(&sun);
-					const float rp = FOCAL * SUN_RADIUS / sun.z;
+					const float rp = FOCAL * SUN_RADIUS / sqrtf(d2 - SUN_RADIUS * SUN_RADIUS);
 					if (draw_style == STYLE_WIRE || !hidden(m, rp * SUN_RAY_REACH + 1.0f)) draw_sun(m, rp, draw_style, _frame);
 				}
 				break;
+			}
 			case THING_STATION:
 				draw_body(&model_coriolis, &_station);
 				break;
 			case THING_SHIP:
 				draw_body(ships[t->i].model, &ships[t->i].fr);
+				break;
+			case THING_CANISTER:
+				draw_body(&model_canister, &canisters[t->i].fr);
 				break;
 		}
 	}
@@ -751,6 +898,9 @@ static void draw_view(void) {
 #define STATUS_VALUE_X (STATUS_X + 20 * 8)
 #define STATUS_TOP (VIEW_TOP + 14)
 #define STATUS_LINE 16
+// The equipment fitted, in two columns
+#define STATUS_FITTED_ROWS 5
+#define STATUS_FITTED_W (22 * 8)
 #define TUNNEL_RINGS 8
 #define TUNNEL_SIDES 32
 // The rings grow from this, in pixels, to this many times as big, past the corners of the view
@@ -798,9 +948,13 @@ static void draw_status(void) {
 	}
 	y += STATUS_LINE;
 	screen_text(STATUS_X, y, "EQUIPMENT:", GAME_CYAN, false);
-	const char* fitted[6];
-	const uint32_t n = trade_equipment_names(fitted, 6);
-	for (uint32_t i = 0; i < n; ++i) screen_text(STATUS_X + 16, y + STATUS_LINE * (int32_t)(i + 1), fitted[i], GAME_WHITE, false);
+	// In columns, clear of the Cobra
+	const char* fitted[STATUS_FITTED_ROWS * 2];
+	const uint32_t n = trade_equipment_names(fitted, STATUS_FITTED_ROWS * 2);
+	for (uint32_t i = 0; i < n; ++i) {
+		const int32_t col = (int32_t)(i / STATUS_FITTED_ROWS), row = (int32_t)(i % STATUS_FITTED_ROWS);
+		screen_text(STATUS_X + 16 + col * STATUS_FITTED_W, y + STATUS_LINE * (row + 1), fitted[i], GAME_WHITE, false);
+	}
 	if (_state == STATE_DOCKED && (_frame / 30) & 1) screen_text_centre(VIEW_BOTTOM - 24, "FIRE TO LAUNCH", GAME_CYAN, true);
 
 	const float t = (float)_frame / 60.0f;
@@ -1061,11 +1215,12 @@ void game_play(void) {
 					if ((pressed & EL_INP_A) && !looking_out()) start_hyperspace();
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
-						if (mass_locked()) message("MASS LOCKED");
+						if (mass_locked(LOCK_PLANET)) message("MASS LOCKED");
 						else set_state(STATE_HYPERSPACE);
 					}
 					fire(held, pressed, &ev);
 					fly(held);
+					heat();
 					break;
 				case STATE_DEAD:
 					_speed = 0.0f;
@@ -1117,6 +1272,10 @@ void game_play(void) {
 			case VIEW_EQUIPMENT:
 				snprintf(title, sizeof(title), "EQUIP SHIP");
 				trade_draw_equipment(chart_system(chart_home()));
+				break;
+			case VIEW_INVENTORY:
+				snprintf(title, sizeof(title), "INVENTORY");
+				trade_draw_inventory();
 				break;
 			case VIEW_LOCAL:
 				snprintf(title, sizeof(title), "SHORT RANGE CHART");
