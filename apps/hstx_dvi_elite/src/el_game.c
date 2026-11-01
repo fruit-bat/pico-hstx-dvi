@@ -1492,6 +1492,7 @@ static bool choose_commander(void) {
 		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
 			const uint32_t c = i == pick ? GAME_YELLOW : GAME_WHITE;
 			const int32_t y = top + 24 * (int32_t)i;
+			if (i == pick) screen_select(x, y, 8 * (int32_t)widest);
 			if (used[i]) {
 				const Save_t* sv = &saves[i];
 				// Where it was saved, if in this galaxy

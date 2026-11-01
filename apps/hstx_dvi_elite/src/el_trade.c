@@ -242,6 +242,7 @@ void trade_draw_market(void) {
 	char s[GAME_TEXT_MAX + 1];
 	for (uint32_t i = 0; i < GOODS; ++i) {
 		const uint32_t c = i == _good ? GAME_YELLOW : GAME_WHITE;
+		if (i == _good) screen_select(MARKET_X, y, 46 * 8);
 		snprintf(s, sizeof(s), "%-15s %s", _goods[i].name, _unit_names[_goods[i].unit]);
 		screen_text(MARKET_X, y, s, c, false);
 		snprintf(s, sizeof(s), "%3u.%u  %8u  %7u", (unsigned)(_price[i] / 10), (unsigned)(_price[i] % 10),
@@ -376,6 +377,7 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	char s[GAME_TEXT_MAX + 1];
 	for (uint32_t i = 0; i < n; ++i) {
 		const uint32_t c = i == _item ? GAME_YELLOW : GAME_WHITE;
+		if (i == _item) screen_select(EQUIP_X, y, 35 * 8);
 		screen_text(EQUIP_X, y, _equipment[i].name, c, false);
 		if (i == _item && _equipment[i].laser != LASER_NONE) {
 			snprintf(s, sizeof(s), "<%s>", _mount_names[_mount]);

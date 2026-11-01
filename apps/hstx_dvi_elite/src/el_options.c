@@ -7,6 +7,7 @@
 #include "el_draw.h"
 #include "el_input.h"
 #include "el_save.h"
+#include "el_screen.h"
 #include "el_trade.h"
 #include "game_pallet.h"
 #include <stdio.h>
@@ -23,6 +24,11 @@ typedef enum {
 	OPTION_END,
 	OPTIONS
 } Option_e;
+
+// How wide the mark on the chosen option is, as wide as the widest
+#define SELECT_W (26 * 8)
+// And the panel they are on, with room for the arrows
+#define PANEL_W (SELECT_W + 64)
 
 static bool _shown = false;
 static bool _in_game = false;
@@ -129,6 +135,16 @@ void options_draw(void) {
 	const uint32_t n = count();
 	// Centred in the view, with the line at the end
 	const int32_t top = CENTRE_Y - (24 * (int32_t)n + 16) / 2;
+	// The mark on the chosen one, in front of the panel, so first
+	screen_select((GAME_SCREEN_W - SELECT_W) / 2, top + 24 * (int32_t)_option, SELECT_W);
+	// On a panel of their own, hiding the screen under them
+	if (object_begin()) {
+		const float x0 = (float)(GAME_SCREEN_W - PANEL_W) / 2.0f, x1 = x0 + PANEL_W;
+		const float y0 = (float)top - 16.0f, y1 = (float)(top + 24 * (int32_t)n + 16 + 8 + 12);
+		add_box(x0, y0, x1, y1, hstx_dvi_pixel_rgb(36, 109, 219));
+		add_rect(x0, y0, x1, y1, hstx_dvi_pixel_rgb(0, 0, 0));
+		object_end();
+	}
 	for (uint32_t i = 0; i < n; ++i) {
 		switch (i) {
 			case OPTION_STYLE:

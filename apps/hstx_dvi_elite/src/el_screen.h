@@ -22,6 +22,10 @@ void screen_end(const char* title, const char* label);
 // Returns how wide it is.
 int32_t screen_text(int32_t x, int32_t y, const char* s, uint32_t colour, bool big);
 int32_t screen_text_centre(int32_t y, const char* s, uint32_t colour, bool big);
+// Marks the chosen line of a list, of small text at x, y and w across, with a
+// bar behind it and arrows either side pointing at it. As text draws straight
+// into the row, it goes before the text of the line.
+void screen_select(int32_t x, int32_t y, int32_t w);
 
 #ifdef __cplusplus
 }

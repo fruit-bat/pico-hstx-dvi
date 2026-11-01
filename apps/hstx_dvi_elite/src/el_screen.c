@@ -67,6 +67,18 @@ int32_t screen_text_centre(int32_t y, const char* s, uint32_t colour, bool big) 
 	return game_text_width(t);
 }
 
+void screen_select(int32_t x, int32_t y, int32_t w) {
+	if (!object_begin()) return;
+	const float x0 = (float)x, x1 = (float)(x + w), y0 = (float)y;
+	const SpriteColour_t arrow = sprite_colour(hstx_dvi_pixel_rgb(0, 219, 255));
+	const Vec2_t left[3] = { { x0 - 20.0f, y0 - 1.0f }, { x0 - 11.0f, y0 + 4.0f }, { x0 - 20.0f, y0 + 9.0f } };
+	const Vec2_t right[3] = { { x1 + 20.0f, y0 - 1.0f }, { x1 + 20.0f, y0 + 9.0f }, { x1 + 11.0f, y0 + 4.0f } };
+	add_fill(left, 3, arrow);
+	add_fill(right, 3, arrow);
+	add_rect(x0 - 6.0f, y0 - 3.0f, x1 + 6.0f, y0 + 11.0f, hstx_dvi_pixel_rgb(0, 36, 146));
+	object_end();
+}
+
 void screen_end(const char* title, const char* label) {
 	const uint32_t set = draw_set();
 	game_text_set_smooth(&_title[set], title);
