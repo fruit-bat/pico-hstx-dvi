@@ -1,0 +1,50 @@
+# Elite
+
+A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can fly about Lave,
+from launching off its space station, and look at the charts of the galaxy and the data on its systems.
+
+## Between games
+
+The title, with a Cobra Mk III turning, then the galactic chart, the short range chart, the data on the systems nearest us,
+and every type of ship flying round a space station, the next galaxy each time round. Start or fire begins a game.
+
+## The controls
+
+- Left and right roll, and up and down dive and climb, as with a joystick.
+- B held with up or down speeds up or slows down.
+- Select shows the next screen: the front view, the short range chart, the galactic chart, and the data on the system
+  the cursor is on. On the charts the pad moves the cursor, faster with B held.
+- Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
+  or plain filled faces, whether the faces are dithered for more shades, the shape of the screen, and ending the game.
+- The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
+  everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
+
+A NES or SNES pad works when built with `GAME_NESPAD`, and buttons on GPIOs 4 to 11, each to ground,
+in the order left, right, up, down, A, B, select and start.
+
+## How it works
+
+- `el_draw` is the drawing of the wireframe test: each object is a sprite, with a list of the lines and convex shapes that make it up.
+  See the wireframe test's README for how it works and what it costs.
+- `el_space` holds where things are and which way they face, the dust that streams past as we fly, and the planets.
+  As in the original game we are always at the middle of things, and everything is seen along our ship's axes.
+  A planet's edge is worked out in 3D, as the circle on it where our line of sight just touches it, so it is right however close we are,
+  and it has more sides the bigger it looks.
+- `el_hud` is the dashboard, `el_chart` the charts and data, and `galaxy.c` makes the galaxies as the original game did.
+- `el_attract` is what is shown between games, and `el_game` the game.
+
+## The meter
+
+The line at the top shows how well the renderer is keeping up, as in the wireframe test, and it is printed over USB serial each second.
+It is turned on by `HSTX_DVI_SPRITE_TIMING` in `CMakeLists.txt`.
+
+## Running on the PC
+
+```sh
+host/build.sh
+host/build/elite_host attract 3600 300 frames
+host/build/elite_host fly 1500 100 frames
+```
+
+`fly` starts a game, flies about, looks at the charts and changes the options.
+See `../common/host` for more on how this works.

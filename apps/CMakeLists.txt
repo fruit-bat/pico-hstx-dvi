@@ -64,3 +64,4 @@ add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_
 add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
 add_subdirectory(hstx_dvi_android_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_android_test")
 add_subdirectory(hstx_dvi_wireframe_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wireframe_test")
+add_subdirectory(hstx_dvi_elite  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_elite")
