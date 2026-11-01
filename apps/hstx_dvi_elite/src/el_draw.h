@@ -26,8 +26,20 @@ extern "C" {
 #define VIEW_BOTTOM 332
 #define CENTRE_X (GAME_SCREEN_W / 2)
 #define CENTRE_Y ((VIEW_TOP + VIEW_BOTTOM) / 2)
-// The distance to the screen, in pixels, which sets the field of view
-#define FOCAL 320.0f
+// The distance to the screen, in pixels, which sets the field of view: the
+// further, the narrower, and the less things stretch towards the sides. On a
+// 16:9 screen wide is about 106 degrees across, normal 94 and narrow 88.
+typedef enum {
+	LENS_WIDE = 0,
+	LENS_NORMAL,
+	LENS_NARROW,
+	LENS_COUNT
+} Lens_e;
+extern Lens_e draw_lens;
+extern const char* const lens_names[LENS_COUNT];
+extern float draw_focal;
+#define FOCAL draw_focal
+void draw_set_lens(Lens_e lens);
 // Nothing closer than this is drawn
 #define NEAR_Z 16.0f
 #define PI_F 3.14159265f

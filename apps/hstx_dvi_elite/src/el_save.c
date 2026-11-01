@@ -209,24 +209,27 @@ typedef struct {
 	uint32_t dither;
 	uint32_t hud_filled;
 	uint32_t wide;
+	uint32_t lens;    // added later, so older settings are without it
 } Settings_t;
 
 void load_settings(void) {
 	if (!_card) return;
 	Settings_t t;
 	size_t n = 0;
-	if (!file_read(SETTINGS_FILE, &t, sizeof(t), &n) || n != sizeof(t)) return;
-	if (t.magic != SETTINGS_MAGIC || t.size != sizeof(t) || t.style >= STYLE_COUNT) return;
+	t.lens = LENS_NORMAL;
+	if (!file_read(SETTINGS_FILE, &t, sizeof(t), &n) || n < offsetof(Settings_t, lens) || n > sizeof(t)) return;
+	if (t.magic != SETTINGS_MAGIC || t.size != n || t.style >= STYLE_COUNT) return;
 	draw_style = (Style_e)t.style;
 	draw_dither = t.dither != 0;
 	draw_hud_filled = t.hud_filled != 0;
 	draw_aspect = t.wide ? ASPECT_16_9 : ASPECT_4_3;
+	draw_set_lens((Lens_e)t.lens);
 }
 
 void save_settings(void) {
 	if (!_card) return;
 	const Settings_t t = {
-		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9
+		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9, (uint32_t)draw_lens
 	};
 	file_write(SETTINGS_FILE, &t, sizeof(t));
 }

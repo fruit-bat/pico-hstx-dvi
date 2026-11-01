@@ -94,8 +94,8 @@ uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "autodock") || !strcmp(host_mode, "dodo")) {
 		// The options, down to docking, as the PC has no X
 		if (f >= 220 && f < 223) return START;
-		if (f >= 226 && f < 250 && (f - 226) % 6 < 3) return D;
-		if (f >= 252 && f < 255) return A;
+		if (f >= 226 && f < 256 && (f - 226) % 6 < 3) return D;
+		if (f >= 258 && f < 261) return A;
 	}
 	if (!strcmp(host_mode, "pod") && f >= 100 && f < 175) return D;
 	if (!strcmp(host_mode, "bomb") && f >= 100 && f < 175) return D;
@@ -206,8 +206,9 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 1184 && f < 1187) return D;
 		if (f >= 1188 && f < 1191) return D;
 		if (f >= 1192 && f < 1195) return D;
-		if (f >= 1196 && f < 1199) return A;
-		if (f >= 1204 && f < 1207) return START;
+		if (f >= 1196 && f < 1199) return D;
+		if (f >= 1200 && f < 1203) return A;
+		if (f >= 1208 && f < 1211) return START;
 		// Dive
 		if (f >= 1300 && f < 1360) return U;
 	}

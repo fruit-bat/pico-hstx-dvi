@@ -17,6 +17,7 @@ typedef enum {
 	OPTION_DITHER,
 	OPTION_HUD,
 	OPTION_SCREEN,
+	OPTION_LENS,
 	OPTION_DOCK,
 	// For trying things out, until the game is finished
 	OPTION_MAX_EQUIP,
@@ -44,7 +45,7 @@ static GameText_t _text[2][OPTIONS + 1];
 // How many there are: the docking computer, the equipment and ending the
 // game are only there in one
 static uint32_t count(void) {
-	return _in_game ? OPTIONS : OPTION_DOCK;
+	return _in_game ? OPTIONS : OPTION_LENS + 1;
 }
 
 void options_open(bool in_game) {
@@ -100,6 +101,9 @@ bool options_input(uint16_t pressed) {
 				draw_aspect = draw_aspect == ASPECT_16_9 ? ASPECT_4_3 : ASPECT_16_9;
 				chart_refresh();
 			}
+			break;
+		case OPTION_LENS:
+			if (change) draw_set_lens((Lens_e)((draw_lens + LENS_COUNT + change) % LENS_COUNT));
 			break;
 		case OPTION_DOCK:
 			// It goes back to the game, to see it
@@ -158,6 +162,9 @@ void options_draw(void) {
 				break;
 			case OPTION_SCREEN:
 				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
+				break;
+			case OPTION_LENS:
+				snprintf(s, sizeof(s), "LENS      < %s >", lens_names[draw_lens]);
 				break;
 			case OPTION_DOCK:
 				snprintf(s, sizeof(s), "DOCKING    (FIRE)");

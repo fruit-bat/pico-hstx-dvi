@@ -67,6 +67,15 @@ static int32_t _box_top, _box_bottom, _box_left, _box_right;
 Vec3_t draw_light = { -0.43f, 0.64f, -0.64f };
 Style_e draw_style = STYLE_SOLID;
 float draw_aspect = ASPECT_16_9;
+Lens_e draw_lens = LENS_NORMAL;
+const char* const lens_names[LENS_COUNT] = { "WIDE", "NORMAL", "NARROW" };
+static const float _focals[LENS_COUNT] = { 320.0f, 400.0f, 440.0f };
+float draw_focal = 400.0f;
+
+void draw_set_lens(Lens_e lens) {
+	draw_lens = lens < LENS_COUNT ? lens : LENS_NORMAL;
+	draw_focal = _focals[draw_lens];
+}
 bool draw_dither = false;
 bool draw_hud_filled = false;
 
