@@ -131,6 +131,19 @@
 #define OVERDRIVE_LOCK_PLANET 0.3f
 // The dust streams by no faster than this, or every speck would be gone in a frame
 #define DUST_SPEED_MAX (3.0f * MAX_SPEED)
+// The docking computer flies to a point this far out in front of the slot,
+// round the side if we are behind the station, then in along the line to the
+// slot, within this of it, as how far off it for how far out, at this speed.
+// It turns at this rate, slows down when not facing the way it is going, and
+// rolls to keep the slot level all the way.
+#define DOCK_APPROACH 2500.0f
+#define DOCK_ARRIVED 300.0f
+#define DOCK_LINE 0.3f
+#define DOCK_SPEED 10.0f
+#define DOCK_TURN 0.02f
+#define DOCK_SLOW 0.15f
+// Slowing on the way to the point in front, to be at this speed this many frames from it
+#define DOCK_BRAKE 50.0f
 // How far the cursor moves on the charts each frame, in steps across the galaxy
 #define CURSOR_STEP_LOCAL 0.25f
 #define CURSOR_STEP_GALAXY 0.75f
@@ -203,6 +216,8 @@ static float _speed, _roll, _pitch;
 static bool _overdrive;
 static float _over;
 static uint32_t _over_hold, _over_fuel;
+// Whether the docking computer is flying us, and whether it is on the run in
+static bool _docking, _dock_final;
 static Frame_t _planet, _station;
 static float _planet_radius;
 static Vec3_t _sun_pos;
@@ -320,6 +335,7 @@ static void set_state(State_e state) {
 	_state = state;
 	_state_frames = 0;
 	overdrive_off();
+	_docking = false;
 	// Docking or dying stops a countdown to hyperspace
 	if (state == STATE_DOCKING || state == STATE_DEAD) _hyper_frames = 0;
 	// The tunnels are seen ahead
@@ -417,6 +433,19 @@ void game_debug_approach(float roll) {
 	_speed = MAX_SPEED;
 	_roll = 0.0f;
 	_pitch = 0.0f;
+	_view = VIEW_FRONT;
+	set_state(STATE_FLYING);
+}
+
+// For trying the docking computer on the PC: fits one, and puts us behind
+// the station, facing away from it, rolled
+void game_debug_behind(void) {
+	cmdr.docking = true;
+	const Vec3_t at = vec_add(_station.pos, vec_add(vec_scale(_station.f, -4000.0f), vec_scale(_station.u, 600.0f)));
+	frame_set(&_me, at, vec_scale(_station.f, -1.0f), _station.u);
+	frame_roll(&_me, 1.0f);
+	frame_tidy(&_me);
+	_speed = MAX_SPEED * 0.5f;
 	_view = VIEW_FRONT;
 	set_state(STATE_FLYING);
 }
@@ -561,7 +590,85 @@ static void overdrive(void) {
 	_over = fminf(_over + OVERDRIVE_RAMP, 1.0f);
 }
 
+// The docking computer, on or off, if we have one
+static void docking_computer(bool on) {
+	if (on && !cmdr.docking) {
+		message("NO DOCKING COMPUTER");
+		return;
+	}
+	if (on == _docking || _state != STATE_FLYING) return;
+	_docking = on;
+	_dock_final = false;
+	if (on) overdrive_off();
+	message(on ? "DOCKING COMPUTER ON" : "DOCKING COMPUTER OFF");
+}
+
+// The docking computer flying us: turning towards where it is going, rolling
+// so the slot is level, and with the speed for it
+static void auto_dock(void) {
+	const Vec3_t d = vec_sub(_me.pos, _station.pos);
+	const float out = vec_dot(d, _station.f);
+	const Vec3_t across = vec_sub(d, vec_scale(_station.f, out));
+	const float off = vec_length(across);
+	const Vec3_t approach = vec_add(_station.pos, vec_scale(_station.f, DOCK_APPROACH));
+	// On the line in front of the slot it goes in; it leaves the line if blown off it
+	if (out > STATION_FACE && off < out * DOCK_LINE) {
+		if (vec_length(vec_sub(_me.pos, approach)) < DOCK_ARRIVED || out < DOCK_APPROACH) _dock_final = true;
+	}
+	else {
+		_dock_final = false;
+	}
+	Vec3_t target = approach;
+	float speed = MAX_SPEED;
+	if (_dock_final) {
+		target = _station.pos;
+		speed = DOCK_SPEED;
+	}
+	else if (out < 2.0f * STATION_FACE) {
+		// Round the side first, clear of the station
+		const Vec3_t side = off > 1.0f ? vec_scale(across, 1.0f / off) : _station.u;
+		target = vec_add(approach, vec_scale(side, DOCK_APPROACH));
+	}
+	else {
+		// Slowing to arrive
+		speed = fminf(speed, fmaxf(DOCK_SPEED, vec_length(vec_sub(approach, _me.pos)) / DOCK_BRAKE));
+	}
+
+	// Turning: straight towards it, a little up when it is right behind, to start the turn
+	Vec3_t dir = vec_unit(vec_sub(target, _me.pos));
+	const float facing = vec_dot(dir, _me.f);
+	if (facing < -0.99f) dir = vec_unit(vec_add(dir, vec_scale(_me.u, 0.2f)));
+	const Vec3_t was = _me.f;
+	const Vec3_t turn = vec_sub(dir, _me.f);
+	const float l = vec_length(turn);
+	_me.f = l > DOCK_TURN ? vec_add(_me.f, vec_scale(turn, DOCK_TURN / l)) : dir;
+	frame_tidy(&_me);
+	_pitch = vec_dot(vec_sub(_me.f, was), _me.u);
+
+	// Rolling, the shorter way, until the station's right is across us
+	const float p = vec_dot(_station.r, _me.r), q = vec_dot(_station.r, _me.u);
+	float a = atan2f(-q, p);
+	if (a > 0.5f * PI_F) a -= PI_F;
+	if (a < -0.5f * PI_F) a += PI_F;
+	_roll = fminf(fmaxf(a, -MAX_ROLL), MAX_ROLL);
+	frame_roll(&_me, _roll);
+	frame_tidy(&_me);
+
+	speed *= fminf(fmaxf((facing - 0.5f) * 2.0f, DOCK_SLOW), 1.0f);
+	_speed = towards(_speed, speed, SPEED_STEP);
+	if (!_message_frames) message("DOCKING COMPUTER ON");
+}
+
 static void fly(uint8_t held) {
+	if (_docking) {
+		auto_dock();
+		const float speed = _speed;
+		_me.pos = vec_add(_me.pos, vec_scale(_me.f, speed));
+		move_dust(_roll, _pitch, speed);
+		touch_station();
+		if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
+		return;
+	}
 	const bool b = held & EL_INP_B;
 	float roll_in = 0.0f, pitch_in = 0.0f;
 	if (looking_out()) {
@@ -1177,6 +1284,10 @@ void game_play(void) {
 		else {
 			ShipsEvents_t ev = { 0 };
 			if (pressed & EL_INP_START) options_open(true);
+			// The docking computer, from X or the options; any flying control takes over from it
+			if (options_dock()) docking_computer(true);
+			else if (pressed & EL_INP_X) docking_computer(!_docking);
+			else if (pressed & (EL_INP_LEFT | EL_INP_RIGHT | EL_INP_UP | EL_INP_DOWN | EL_INP_A | EL_INP_B)) docking_computer(false);
 			const bool can_look = _state == STATE_DOCKED || _state == STATE_FLYING;
 			if (pressed & EL_INP_SELECT) {
 				// With B held, the ECM blows up the missiles flying

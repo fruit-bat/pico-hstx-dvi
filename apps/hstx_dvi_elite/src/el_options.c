@@ -16,6 +16,7 @@ typedef enum {
 	OPTION_DITHER,
 	OPTION_HUD,
 	OPTION_SCREEN,
+	OPTION_DOCK,
 	// For trying things out, until the game is finished
 	OPTION_MAX_EQUIP,
 	OPTION_END,
@@ -27,22 +28,32 @@ static bool _in_game = false;
 static uint32_t _option = 0;
 // Whether the equipment was fitted since they were opened
 static bool _fitted = false;
+// Whether the docking computer was asked for
+static bool _dock = false;
 static GameText_t _text[2][OPTIONS + 1];
 
-// How many there are: the equipment and ending the game are only there in one
+// How many there are: the docking computer, the equipment and ending the
+// game are only there in one
 static uint32_t count(void) {
-	return _in_game ? OPTIONS : OPTION_MAX_EQUIP;
+	return _in_game ? OPTIONS : OPTION_DOCK;
 }
 
 void options_open(bool in_game) {
 	_shown = true;
 	_in_game = in_game;
 	_fitted = false;
+	_dock = false;
 	if (_option >= count()) _option = 0;
 }
 
 void options_close(void) {
 	_shown = false;
+}
+
+bool options_dock(void) {
+	const bool d = _dock;
+	_dock = false;
+	return d;
 }
 
 bool options_shown(void) {
@@ -73,6 +84,14 @@ bool options_input(uint16_t pressed) {
 			if (change) {
 				draw_aspect = draw_aspect == ASPECT_16_9 ? ASPECT_4_3 : ASPECT_16_9;
 				chart_refresh();
+			}
+			break;
+		case OPTION_DOCK:
+			// It goes back to the game, to see it
+			if (pressed & EL_INP_A) {
+				_dock = true;
+				_shown = false;
+				save_settings();
 			}
 			break;
 		case OPTION_MAX_EQUIP:
@@ -110,6 +129,9 @@ void options_draw(void) {
 				break;
 			case OPTION_SCREEN:
 				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
+				break;
+			case OPTION_DOCK:
+				snprintf(s, sizeof(s), "DOCKING    (FIRE)");
 				break;
 			case OPTION_MAX_EQUIP:
 				snprintf(s, sizeof(s), _fitted ? "MAX EQUIP  FITTED" : "MAX EQUIP  (FIRE)");

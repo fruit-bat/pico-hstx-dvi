@@ -16,6 +16,10 @@ the station spins, so roll to match it. Touching the station any other way, or t
 Close in front of the slot, squares hang in space to guide you in, turning with the station, green when you are lined up
 and amber when not. They are always drawn as wireframes.
 
+A docking computer, sold from tech level 9, flies you in: out to a point in front of the slot, round the side first
+if you are behind the station, then in along the line to the slot, rolling to keep it level. X on a SNES pad turns it
+on and off, as does DOCKING in the options for other pads. Touching the pad or fire takes over from it.
+
 ## Hyperspace
 
 On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
@@ -31,7 +35,7 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, a docking computer, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
@@ -84,10 +88,10 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
 - On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
-  and the left one the other way. From a chart either goes back to the front view.
+  and the left one the other way. From a chart either goes back to the front view. X turns the docking computer on and off.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
-  the shape of the screen, and in a game, MAX EQUIP, which fits everything (for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
+  the shape of the screen, and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything (for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -136,6 +140,7 @@ host/build/elite_host dock 420 20 frames
 
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
 `fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
+`autodock` is put behind the station, facing away, and the docking computer, turned on in the options, flies it in.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.

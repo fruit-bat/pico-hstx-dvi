@@ -41,6 +41,7 @@ typedef struct {
 	bool ecm;
 	Laser_e laser[MOUNTS]; // the front first, where it was when there was only one
 	bool scoops;
+	bool docking;        // whether we have a docking computer
 } Commander_t;
 
 extern Commander_t cmdr;

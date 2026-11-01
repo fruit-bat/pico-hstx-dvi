@@ -9,6 +9,9 @@
 //           dashboard in the options, and fits everything
 // dock    - starts a game, launches, then is put on a level run at the slot,
 //           and docks
+// autodock - starts a game, launches, then is put behind the station facing
+//           away, rolled, with a docking computer, turned on in the options, and
+//           it flies us round and in
 // crash   - as dock, but rolled so the slot is not level, and hits the station
 // hyper   - starts a game, launches, climbs away, tries to jump while still
 //           too close to the station, then picks Diso on the short range
@@ -44,6 +47,7 @@ void game_debug_pirate(const char* name);
 void game_debug_chaser(const char* name);
 void game_debug_scoop(void);
 void game_debug_face_sun(void);
+void game_debug_behind(void);
 
 // The buttons, as in el_input.h
 #define L 1
@@ -68,6 +72,12 @@ uint32_t host_input(uint32_t f) {
 	}
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return A;
+	if (!strcmp(host_mode, "autodock")) {
+		// The options, down to docking, as the PC has no X
+		if (f >= 220 && f < 223) return START;
+		if (f >= 226 && f < 250 && (f - 226) % 6 < 3) return D;
+		if (f >= 252 && f < 255) return A;
+	}
 	if (!strcmp(host_mode, "save")) {
 		// The options and out again, then slot 2, named NAMESON, then food in
 		// the market, and launch from the status
@@ -215,6 +225,7 @@ uint32_t host_input(uint32_t f) {
 
 void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "dock")) game_debug_approach(0.0f);
+	if (frame == 200 && !strcmp(host_mode, "autodock")) game_debug_behind();
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
