@@ -105,12 +105,16 @@ void ships_hit(uint32_t i, float damage, ShipsEvents_t* ev);
 bool ships_fire_missile(const Frame_t* me, uint32_t target);
 // Our ECM: blows up every missile flying
 void ships_ecm(void);
+// The energy bomb: every ship within range of me destroyed, by us, and the missiles flying
+void ships_bomb(Vec3_t me, float range, ShipsEvents_t* ev);
 // Whether a hostile ship is on the scanner, or a missile is coming for us
 bool ships_hostile_near(const Frame_t* me, float range);
 // For trying things on the PC: puts a ship of the named type at pos, facing
 // f, coming for us, or a canister at pos
 void ships_debug_place(uint32_t i, const char* name, Vec3_t pos, Vec3_t f, Vec3_t u, const ShipsWorld_t* w);
 void ships_debug_canister(Vec3_t pos);
+// An explosion, as when a ship is destroyed
+void ships_explode(Vec3_t pos, float size);
 // Explosions, lasers fired at us and missiles, before the ships so they are over them
 void ships_draw_effects(const Frame_t* me, Style_e style, uint32_t frame);
 

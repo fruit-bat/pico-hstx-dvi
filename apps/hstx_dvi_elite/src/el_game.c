@@ -107,6 +107,23 @@
 // long the end of a game is shown for
 #define TUNNEL_FRAMES 90
 #define DEAD_FRAMES (4 * 60)
+// With an escape pod, when our energy runs out we leave the ship, looking
+// back at it drifting and tumbling as we go, until it blows up, and then
+// come in to the station, with a new ship, the same but for the cargo and the
+// pod. How fast the pod goes, how much of our speed the ship keeps, how it
+// tumbles, when it blows up, and when we are in the tunnel.
+#define POD_SPEED 22.0f
+#define HULK_DRIFT 0.3f
+#define HULK_TUMBLE 0.02f
+#define HULK_BLOWS 120
+#define POD_FRAMES 210
+// The energy bomb goes off with three presses of its button within this
+// many frames, destroying every ship within this range, with a flash that
+// fades over this many frames
+#define BOMB_PRESSES 3
+#define BOMB_WINDOW 30
+#define BOMB_RANGE SCANNER_RANGE
+#define BOMB_FLASH 20
 // Where we start in the galaxy: Lave
 #define HOME 7
 
@@ -204,6 +221,7 @@ typedef enum {
 	STATE_FLYING,
 	STATE_DOCKING,
 	STATE_HYPERSPACE,
+	STATE_ESCAPE,
 	STATE_DEAD
 } State_e;
 
@@ -218,6 +236,12 @@ static float _over;
 static uint32_t _over_hold, _over_fuel;
 // Whether the docking computer is flying us, and whether it is on the run in
 static bool _docking, _dock_final;
+// Our ship, left behind when we escape in the pod, and how it is going
+static Frame_t _hulk;
+static Vec3_t _hulk_drift;
+static bool _hulk_on;
+// The presses of the bomb's button so far, how long is left for the rest, and the flash
+static uint32_t _bomb_presses, _bomb_frames, _bomb_flash;
 static Frame_t _planet, _station;
 static float _planet_radius;
 static Vec3_t _sun_pos;
@@ -336,6 +360,7 @@ static void set_state(State_e state) {
 	_state_frames = 0;
 	overdrive_off();
 	_docking = false;
+	_bomb_presses = _bomb_frames = 0;
 	// Docking or dying stops a countdown to hyperspace
 	if (state == STATE_DOCKING || state == STATE_DEAD) _hyper_frames = 0;
 	// The tunnels are seen ahead
@@ -448,6 +473,15 @@ void game_debug_behind(void) {
 	_speed = MAX_SPEED * 0.5f;
 	_view = VIEW_FRONT;
 	set_state(STATE_FLYING);
+}
+
+// For trying the escape pod on the PC: fits one, with some food in the hold,
+// and runs our energy out
+void game_debug_pod(void) {
+	cmdr.pod = true;
+	cmdr.cargo[0] = 5;
+	_fore = _aft = 0.0f;
+	_energy = 0.0f;
 }
 
 // Whether a point is inside the station, or close enough to touch it
@@ -742,6 +776,54 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (i >= 0) ships_hit((uint32_t)i, l->damage, ev);
 }
 
+// The energy bomb's button, which sets it off when pressed three times quickly
+static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
+	if (_bomb_flash) --_bomb_flash;
+	if (_bomb_frames && --_bomb_frames == 0) _bomb_presses = 0;
+	if (!(pressed & EL_INP_BOMB)) return;
+	if (!cmdr.bomb) {
+		message("NO ENERGY BOMB");
+		return;
+	}
+	if (!_bomb_frames) _bomb_frames = BOMB_WINDOW;
+	if (++_bomb_presses < BOMB_PRESSES) {
+		message("ENERGY BOMB");
+		return;
+	}
+	_bomb_presses = _bomb_frames = 0;
+	cmdr.bomb = false;
+	ships_bomb(_me.pos, BOMB_RANGE, ev);
+	_bomb_flash = BOMB_FLASH;
+	message("ENERGY BOMB USED");
+}
+
+// Out in the pod, looking back at the ship
+static void escape(void) {
+	set_state(STATE_ESCAPE);
+	_hulk = _me;
+	_hulk_drift = vec_scale(_me.f, _speed * HULK_DRIFT);
+	_hulk_on = true;
+	_speed = POD_SPEED;
+	_roll = _pitch = 0.0f;
+	_view = VIEW_REAR;
+	_offender = false;
+	trade_escape();
+	chart_set_fuel(cmdr.fuel);
+}
+
+static void move_pod(void) {
+	_me.pos = vec_add(_me.pos, vec_scale(_me.f, _speed));
+	move_dust(0.0f, 0.0f, _speed);
+	frame_roll(&_hulk, HULK_TUMBLE);
+	frame_pitch(&_hulk, HULK_TUMBLE * 0.7f);
+	frame_tidy(&_hulk);
+	_hulk.pos = vec_add(_hulk.pos, _hulk_drift);
+	if (_hulk_on && _state_frames == HULK_BLOWS) {
+		_hulk_on = false;
+		ships_explode(_hulk.pos, model_cobra.radius);
+	}
+}
+
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
 static void take(const ShipsEvents_t* ev) {
 	_fore -= ev->fore;
@@ -765,7 +847,8 @@ static void take(const ShipsEvents_t* ev) {
 	}
 	if (_energy <= 0.0f) {
 		_energy = 0.0f;
-		if (_state != STATE_DEAD) set_state(STATE_DEAD);
+		if (cmdr.pod) escape();
+		else if (_state != STATE_DEAD) set_state(STATE_DEAD);
 		return;
 	}
 	_energy = fminf(1.0f, _energy + RECHARGE);
@@ -829,6 +912,23 @@ void game_debug_face_sun(void) {
 
 // For trying the rear view on the PC: fits a rear laser, and puts a ship of
 // the named type behind us, coming after us
+// For trying the energy bomb on the PC: fits one, and puts a pirate ahead,
+// another behind and a third to the side
+void game_debug_bomb(void) {
+	const ShipsWorld_t w = world();
+	cmdr.bomb = true;
+	ships_debug_place(0, "SIDEWINDER", vec_add(_me.pos, vec_scale(_me.f, 2500.0f)), vec_scale(_me.f, -1.0f), _me.u, &w);
+	ships_debug_place(1, "MAMBA", vec_add(_me.pos, vec_scale(_me.f, 4000.0f)), vec_scale(_me.f, -1.0f), _me.u, &w);
+	ships_debug_place(2, "KRAIT", vec_sub(_me.pos, vec_scale(_me.r, 3000.0f)), _me.f, _me.u, &w);
+}
+
+// Buttons pressed from the PC, which has only the GPIO ones
+static uint16_t _debug_pressed;
+
+void game_debug_press(uint16_t buttons) {
+	_debug_pressed |= buttons;
+}
+
 void game_debug_chaser(const char* name) {
 	const ShipsWorld_t w = world();
 	cmdr.laser[MOUNT_REAR] = LASER_PULSE;
@@ -842,6 +942,7 @@ typedef enum {
 	THING_PLANET,
 	THING_SUN,
 	THING_STATION,
+	THING_HULK,
 	THING_SHIP,
 	THING_CANISTER
 } Thing_e;
@@ -940,7 +1041,7 @@ static void draw_view(void) {
 	draw_guides();
 
 	// Nearest first, so they cover the ones behind
-	Thing_t things[SHIPS + CANISTERS + 3];
+	Thing_t things[SHIPS + CANISTERS + 4];
 	uint32_t n = 0;
 	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
 	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
@@ -949,6 +1050,9 @@ static void draw_view(void) {
 		if (!ships[i].alive) continue;
 		const float d = vec_length(frame_view(&_eye, ships[i].fr.pos));
 		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_SHIP, i, d - ships[i].model->radius };
+	}
+	if (_state == STATE_ESCAPE && _hulk_on) {
+		things[n++] = (Thing_t){ THING_HULK, 0, vec_length(frame_view(&_eye, _hulk.pos)) - model_cobra.radius };
 	}
 	for (uint32_t i = 0; i < CANISTERS; ++i) {
 		if (!canisters[i].on) continue;
@@ -992,10 +1096,19 @@ static void draw_view(void) {
 			case THING_CANISTER:
 				draw_body(&model_canister, &canisters[t->i].fr);
 				break;
+			case THING_HULK:
+				draw_body(&model_cobra, &_hulk);
+				break;
 		}
 	}
 	// Behind it all
 	dust_draw();
+	// The energy bomb's flash, fading, behind everything
+	if (_bomb_flash && object_begin()) {
+		const uint8_t v = (uint8_t)(255 * _bomb_flash / BOMB_FLASH);
+		add_rect(0.0f, VIEW_TOP, GAME_SCREEN_W, VIEW_BOTTOM, hstx_dvi_pixel_rgb(v, v, v));
+		object_end();
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -1116,6 +1229,9 @@ static bool next_state(void) {
 			break;
 		case STATE_HYPERSPACE:
 			if (_state_frames >= HYPER_FRAMES) arrive();
+			break;
+		case STATE_ESCAPE:
+			if (_state_frames >= POD_FRAMES) set_state(STATE_DOCKING);
 			break;
 		case STATE_DEAD:
 			return _state_frames >= DEAD_FRAMES;
@@ -1276,7 +1392,8 @@ void game_play(void) {
 	start();
 	if (!choose_commander()) return;
 	for (;;) {
-		const uint16_t pressed = game_input_pressed();
+		const uint16_t pressed = game_input_pressed() | _debug_pressed;
+		_debug_pressed = 0;
 		const uint16_t held = game_input_get();
 		if (options_shown()) {
 			if (options_input(pressed)) return;
@@ -1330,12 +1447,16 @@ void game_play(void) {
 						else set_state(STATE_HYPERSPACE);
 					}
 					fire(held, pressed, &ev);
+					bomb(pressed, &ev);
 					fly(held);
 					heat();
 					break;
 				case STATE_DEAD:
 					_speed = 0.0f;
 					move_dust(0.0f, 0.0f, 0.0f);
+					break;
+				case STATE_ESCAPE:
+					move_pod();
 					break;
 				default:
 					move_dust(0.0f, 0.0f, 20.0f);
@@ -1400,6 +1521,7 @@ void game_play(void) {
 				snprintf(title, sizeof(title), "DATA ON %s", chart_draw_data(chart_selected(), chart_style, _frame));
 				break;
 		}
+		if (_state == STATE_ESCAPE) snprintf(title, sizeof(title), "ESCAPE POD");
 		if (_state == STATE_DEAD && looking_out()) {
 			label = "GAME OVER";
 			screen_text_centre(CENTRE_Y - 8, "GAME OVER", GAME_RED, true);

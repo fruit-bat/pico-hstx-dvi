@@ -12,6 +12,12 @@
 // autodock - starts a game, launches, then is put behind the station facing
 //           away, rolled, with a docking computer, turned on in the options, and
 //           it flies us round and in
+// pod     - starts a game, launches, climbs away, then has an escape pod
+//           fitted and food in the hold, and runs out of energy, so leaves
+//           in the pod and docks, without the food or the pod
+// bomb    - starts a game, launches, climbs away, then has an energy bomb
+//           fitted and three pirates put round us, presses its button once,
+//           which only arms it, then three times quickly, which sets it off
 // crash   - as dock, but rolled so the slot is not level, and hits the station
 // hyper   - starts a game, launches, climbs away, tries to jump while still
 //           too close to the station, then picks Diso on the short range
@@ -48,6 +54,9 @@ void game_debug_chaser(const char* name);
 void game_debug_scoop(void);
 void game_debug_face_sun(void);
 void game_debug_behind(void);
+void game_debug_pod(void);
+void game_debug_bomb(void);
+void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
 #define L 1
@@ -78,6 +87,8 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 226 && f < 250 && (f - 226) % 6 < 3) return D;
 		if (f >= 252 && f < 255) return A;
 	}
+	if (!strcmp(host_mode, "pod") && f >= 100 && f < 175) return D;
+	if (!strcmp(host_mode, "bomb") && f >= 100 && f < 175) return D;
 	if (!strcmp(host_mode, "save")) {
 		// The options and out again, then slot 2, named NAMESON, then food in
 		// the market, and launch from the status
@@ -226,6 +237,12 @@ uint32_t host_input(uint32_t f) {
 void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "dock")) game_debug_approach(0.0f);
 	if (frame == 200 && !strcmp(host_mode, "autodock")) game_debug_behind();
+	if (!strcmp(host_mode, "bomb")) {
+		// The bomb's button is a SNES pad's A, which the PC does not have
+		if (frame == 500) game_debug_bomb();
+		if (frame == 505 || frame == 540 || frame == 546 || frame == 552) game_debug_press(2048);
+	}
+	if (frame == 600 && !strcmp(host_mode, "pod")) game_debug_pod();
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");

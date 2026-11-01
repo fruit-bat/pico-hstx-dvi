@@ -42,6 +42,8 @@ typedef struct {
 	Laser_e laser[MOUNTS]; // the front first, where it was when there was only one
 	bool scoops;
 	bool docking;        // whether we have a docking computer
+	bool pod;            // whether we have an escape pod
+	bool bomb;           // whether we have an energy bomb
 } Commander_t;
 
 extern Commander_t cmdr;
@@ -66,6 +68,8 @@ void trade_draw_equipment(const GalaxySystem_t* sys);
 const char* trade_scoop(void);
 // What is in the hold, with the fuel and cash
 void trade_draw_inventory(void);
+// Escaping in the pod: the cargo goes with the ship, and so does the pod
+void trade_escape(void);
 // Everything fitted, the best lasers all round, and full of fuel and
 // missiles, for trying things out
 void trade_max_equipment(void);

@@ -20,6 +20,14 @@ A docking computer, sold from tech level 9, flies you in: out to a point in fron
 if you are behind the station, then in along the line to the slot, rolling to keep it level. X on a SNES pad turns it
 on and off, as does DOCKING in the options for other pads. Touching the pad or fire takes over from it.
 
+An escape pod, sold from tech level 6, saves you when your energy runs out: you leave in it, looking back at your ship
+tumbling away until it blows up, and are brought in to the station, with a new ship the same as the old but without
+the cargo or the pod, a full tank and a clean record. It cannot save you from flying into the planet, the sun or the station.
+
+An energy bomb, sold from tech level 7, destroys every ship within range of the scanner, police and traders too, and the missiles flying,
+with a white flash. It is used up, and can be bought again. It goes off with three quick presses of A on a SNES pad,
+within half a second; one press only arms it. On a SNES pad A is not fire: B is.
+
 ## Hyperspace
 
 On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
@@ -35,7 +43,7 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, a docking computer, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a docking computer, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
@@ -88,7 +96,8 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
 - On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
-  and the left one the other way. From a chart either goes back to the front view. X turns the docking computer on and off.
+  and the left one the other way. From a chart either goes back to the front view. X turns the docking computer on and off,
+  and three quick presses of A set off the energy bomb; fire is B alone.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
   the shape of the screen, and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything (for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
@@ -141,6 +150,8 @@ host/build/elite_host dock 420 20 frames
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
 `fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
 `autodock` is put behind the station, facing away, and the docking computer, turned on in the options, flies it in.
+`bomb` has an energy bomb fitted and three pirates put round it, arms the bomb, then sets it off.
+`pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.

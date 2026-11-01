@@ -271,6 +271,10 @@ static void explode(Vec3_t pos, float size) {
 	for (uint32_t i = 0; i < DEBRIS; ++i) e->dir[i] = rand_unit();
 }
 
+void ships_explode(Vec3_t pos, float size) {
+	explode(pos, size);
+}
+
 static void destroy(Ship_t* s, ShipsEvents_t* ev, bool by_us) {
 	explode(s->fr.pos, s->model->radius);
 	const uint32_t cargo = s->role == ROLE_TRADER ? TRADER_CARGO : s->role == ROLE_PIRATE ? PIRATE_CARGO : 0;
@@ -504,6 +508,14 @@ bool ships_fire_missile(const Frame_t* me, uint32_t target) {
 	Frame_t from = *me;
 	from.pos = vec_add(me->pos, vec_sub(vec_scale(me->f, 60.0f), vec_scale(me->u, 30.0f)));
 	return launch_missile(from, (int32_t)target);
+}
+
+void ships_bomb(Vec3_t me, float range, ShipsEvents_t* ev) {
+	for (uint32_t i = 0; i < SHIPS; ++i) {
+		Ship_t* s = &ships[i];
+		if (s->alive && vec_length(vec_sub(s->fr.pos, me)) < range) destroy(s, ev, true);
+	}
+	ships_ecm();
 }
 
 void ships_ecm(void) {

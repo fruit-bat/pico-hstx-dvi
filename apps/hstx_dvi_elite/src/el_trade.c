@@ -73,6 +73,8 @@ typedef enum {
 	EQUIP_PULSE_LASER,
 	EQUIP_BEAM_LASER,
 	EQUIP_FUEL_SCOOPS,
+	EQUIP_ESCAPE_POD,
+	EQUIP_ENERGY_BOMB,
 	EQUIP_DOCKING,
 	EQUIP_MILITARY_LASER,
 	EQUIPMENT
@@ -93,6 +95,8 @@ static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Pulse Laser", 4000, 4, LASER_PULSE },
 	{ "Beam Laser", 10000, 5, LASER_BEAM },
 	{ "Fuel Scoops", 5250, 6, LASER_NONE },
+	{ "Escape Pod", 10000, 6, LASER_NONE },
+	{ "Energy Bomb", 9000, 7, LASER_NONE },
 	{ "Docking Computer", 15000, 9, LASER_NONE },
 	{ "Military Laser", 60000, 10, LASER_MILITARY },
 };
@@ -126,6 +130,12 @@ void trade_new_commander(void) {
 	_item = 0;
 }
 
+void trade_escape(void) {
+	cmdr.pod = false;
+	memset(cmdr.cargo, 0, sizeof(cmdr.cargo));
+	cmdr.fuel = GALAXY_FUEL_MAX;
+}
+
 void trade_max_equipment(void) {
 	cmdr.fuel = GALAXY_FUEL_MAX;
 	cmdr.missiles = MISSILES_MAX;
@@ -133,6 +143,8 @@ void trade_max_equipment(void) {
 	cmdr.ecm = true;
 	cmdr.scoops = true;
 	cmdr.docking = true;
+	cmdr.pod = true;
+	cmdr.bomb = true;
 	for (uint32_t i = 0; i < MOUNTS; ++i) cmdr.laser[i] = LASER_MILITARY;
 }
 
@@ -288,6 +300,12 @@ static const char* fit(Equip_e e) {
 		case EQUIP_FUEL_SCOOPS:
 			if (cmdr.scoops) return "FITTED";
 			break;
+		case EQUIP_ESCAPE_POD:
+			if (cmdr.pod) return "FITTED";
+			break;
+		case EQUIP_ENERGY_BOMB:
+			if (cmdr.bomb) return "FITTED";
+			break;
 		case EQUIP_DOCKING:
 			if (cmdr.docking) return "FITTED";
 			break;
@@ -306,6 +324,8 @@ static const char* fit(Equip_e e) {
 		case EQUIP_CARGO_BAY: cmdr.hold = CARGO_LARGE; break;
 		case EQUIP_ECM: cmdr.ecm = true; break;
 		case EQUIP_FUEL_SCOOPS: cmdr.scoops = true; break;
+		case EQUIP_ESCAPE_POD: cmdr.pod = true; break;
+		case EQUIP_ENERGY_BOMB: cmdr.bomb = true; break;
 		case EQUIP_DOCKING: cmdr.docking = true; break;
 		default: cmdr.laser[_mount] = _equipment[e].laser; break;
 	}
@@ -365,6 +385,8 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	if (n < max && cmdr.hold >= CARGO_LARGE) names[n++] = "Large Cargo Bay";
 	if (n < max && cmdr.ecm) names[n++] = "E.C.M. System";
 	if (n < max && cmdr.scoops) names[n++] = "Fuel Scoops";
+	if (n < max && cmdr.pod) names[n++] = "Escape Pod";
+	if (n < max && cmdr.bomb) names[n++] = "Energy Bomb";
 	if (n < max && cmdr.docking) names[n++] = "Docking Computer";
 	return n;
 }
