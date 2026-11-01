@@ -65,6 +65,9 @@ void trade_draw_equipment(const GalaxySystem_t* sys);
 const char* trade_scoop(void);
 // What is in the hold, with the fuel and cash
 void trade_draw_inventory(void);
+// Everything fitted, the best lasers all round, and full of fuel and
+// missiles, for trying things out
+void trade_max_equipment(void);
 // What our ship has fitted, for the status
 uint32_t trade_equipment_names(const char** names, uint32_t max);
 

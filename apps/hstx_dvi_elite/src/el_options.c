@@ -7,6 +7,7 @@
 #include "el_draw.h"
 #include "el_input.h"
 #include "el_save.h"
+#include "el_trade.h"
 #include "game_pallet.h"
 #include <stdio.h>
 
@@ -15,6 +16,8 @@ typedef enum {
 	OPTION_DITHER,
 	OPTION_HUD,
 	OPTION_SCREEN,
+	// For trying things out, until the game is finished
+	OPTION_MAX_EQUIP,
 	OPTION_END,
 	OPTIONS
 } Option_e;
@@ -22,16 +25,19 @@ typedef enum {
 static bool _shown = false;
 static bool _in_game = false;
 static uint32_t _option = 0;
+// Whether the equipment was fitted since they were opened
+static bool _fitted = false;
 static GameText_t _text[2][OPTIONS + 1];
 
-// How many there are: ending the game is only there in one
+// How many there are: the equipment and ending the game are only there in one
 static uint32_t count(void) {
-	return _in_game ? OPTIONS : OPTION_END;
+	return _in_game ? OPTIONS : OPTION_MAX_EQUIP;
 }
 
 void options_open(bool in_game) {
 	_shown = true;
 	_in_game = in_game;
+	_fitted = false;
 	if (_option >= count()) _option = 0;
 }
 
@@ -69,6 +75,12 @@ bool options_input(uint16_t pressed) {
 				chart_refresh();
 			}
 			break;
+		case OPTION_MAX_EQUIP:
+			if (pressed & EL_INP_A) {
+				trade_max_equipment();
+				_fitted = true;
+			}
+			break;
 		default:
 			// The game ends
 			if (pressed & EL_INP_A) {
@@ -98,6 +110,9 @@ void options_draw(void) {
 				break;
 			case OPTION_SCREEN:
 				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
+				break;
+			case OPTION_MAX_EQUIP:
+				snprintf(s, sizeof(s), _fitted ? "MAX EQUIP  FITTED" : "MAX EQUIP  (FIRE)");
 				break;
 			default:
 				snprintf(s, sizeof(s), "END GAME   (FIRE)");

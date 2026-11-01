@@ -87,7 +87,7 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
   and the left one the other way. From a chart either goes back to the front view.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
-  the shape of the screen, and in a game, ending it. They can be changed on the title too.
+  the shape of the screen, and in a game, MAX EQUIP, which fits everything (for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -135,7 +135,7 @@ host/build/elite_host dock 420 20 frames
 ```
 
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
-`fly` starts a game, launches, flies about, looks at the charts and changes the options.
+`fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.

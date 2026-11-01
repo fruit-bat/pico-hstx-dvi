@@ -6,7 +6,7 @@
 //           the title after 30 seconds
 // fly     - starts a game, launches, speeds up, rolls and climbs, looks at
 //           the charts moving the cursor, then changes the style and the
-//           dashboard in the options
+//           dashboard in the options, and fits everything
 // dock    - starts a game, launches, then is put on a level run at the slot,
 //           and docks
 // crash   - as dock, but rolled so the slot is not level, and hits the station
@@ -155,6 +155,10 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 1160 && f < 1163) return R;
 		if (f >= 1170 && f < 1173) return D;
 		if (f >= 1180 && f < 1183) return R;
+		// Everything fitted
+		if (f >= 1184 && f < 1187) return D;
+		if (f >= 1188 && f < 1191) return D;
+		if (f >= 1192 && f < 1195) return A;
 		if (f >= 1200 && f < 1203) return START;
 		// Dive
 		if (f >= 1300 && f < 1360) return U;

@@ -124,6 +124,15 @@ void trade_new_commander(void) {
 	_item = 0;
 }
 
+void trade_max_equipment(void) {
+	cmdr.fuel = GALAXY_FUEL_MAX;
+	cmdr.missiles = MISSILES_MAX;
+	cmdr.hold = CARGO_LARGE;
+	cmdr.ecm = true;
+	cmdr.scoops = true;
+	for (uint32_t i = 0; i < MOUNTS; ++i) cmdr.laser[i] = LASER_MILITARY;
+}
+
 void trade_arrive(const GalaxySystem_t* sys) {
 	const uint32_t fluct = (uint32_t)rand() & 0xff;
 	for (uint32_t i = 0; i < GOODS; ++i) {
