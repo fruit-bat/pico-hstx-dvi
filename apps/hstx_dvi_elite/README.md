@@ -1,7 +1,7 @@
 # Elite
 
 A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
-fly about, look at the charts of the galaxy and the data on its systems, and dock again.
+fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, and dock again.
 
 ## Between games
 
@@ -16,11 +16,19 @@ the station spins, so roll to match it. Touching the station any other way, or t
 Close in front of the slot, squares hang in space to guide you in, turning with the station, green when you are lined up
 and amber when not. They are always drawn as wireframes.
 
+## Hyperspace
+
+On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
+if it is within reach of the fuel, shown by the circle round us on the charts. The jump uses as much fuel as it is long,
+up to 7 light years with full tanks, and docking fills them up again for now.
+Each system's planet is as big as its data says and coloured as it is on the charts,
+and where its sun and station are comes from its numbers, so it is the same each time.
+
 ## The controls
 
 - Left and right roll, and up and down dive and climb, as with a joystick.
 - B held with up or down speeds up or slows down.
-- A launches you when docked.
+- A launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
 - Select shows the next screen: the front view, the short range chart, the galactic chart, and the data on the system
   the cursor is on. On the charts the pad moves the cursor, faster with B held.
 - Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
@@ -58,4 +66,5 @@ host/build/elite_host dock 420 20 frames
 
 `fly` starts a game, launches, flies about, looks at the charts and changes the options.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
+`hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 See `../common/host` for more on how this works.

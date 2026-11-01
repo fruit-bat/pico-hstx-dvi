@@ -6,6 +6,8 @@
 // dock    - starts a game, launches, then is put on a level run at the slot,
 //           and docks
 // crash   - as dock, but rolled so the slot is not level, and hits the station
+// hyper   - starts a game, launches, picks Diso on the short range chart and
+//           jumps there, then tries Lave's far neighbours, out of range
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -48,6 +50,16 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 1200 && f < 1203) return START;
 		// Dive
 		if (f >= 1300 && f < 1360) return U;
+	}
+	if (!strcmp(host_mode, "hyper")) {
+		// Diso is 9 steps left of Lave
+		if (f >= 200 && f < 203) return SELECT;
+		if (f >= 220 && f < 260) return L;
+		if (f >= 300 && f < 303) return A;
+		// Too far
+		if (f >= 1300 && f < 1303) return SELECT;
+		if (f >= 1320 && f < 1340) return R | B;
+		if (f >= 1400 && f < 1403) return A;
 	}
 	return 0;
 }

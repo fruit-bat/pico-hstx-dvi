@@ -13,7 +13,9 @@
 // The controls:
 //   left and right roll, and up and down dive and climb, as with a joystick
 //   B held with up or down speeds up or slows down
-//   A launches us when docked
+//   A launches us when docked, from the status, and on the charts or data starts the
+//   countdown to hyperspace, to the system the cursor is on, if it is in
+//   range of our fuel
 //   select shows the next screen: the view, or our status when docked, the
 //   charts and the data on the system the cursor is on, which the pad moves
 //   on the charts
@@ -31,15 +33,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// The system: a planet, the station going round it with its slot facing it,
-// and the sun far beyond
-#define PLANET_RADIUS 12000.0f
-#define STATION_DISTANCE 26000.0f
+// The system: a planet as big as its data says, in units for each km, the
+// station going round it with its slot facing it, this many planet radii
+// from its middle, and the sun far beyond. Where the sun and the station are
+// comes from the system's numbers, so it is the same each time we visit.
+#define PLANET_SCALE 3.0f
+#define STATION_ORBIT 2.2f
 #define STATION_SPIN 0.005f
 #define SUN_RADIUS 30000.0f
-static const Vec3_t _sun_pos = { 150000.0f, 40000.0f, 300000.0f };
-// Close to the station the compass points to it, and otherwise to the planet
-#define SAFE_ZONE 40000.0f
+#define SUN_DISTANCE 330000.0f
+// Close to the station the compass points to it, and otherwise to the
+// planet, in planet radii
+#define SAFE_ZONE 3.3f
+// Out of hyperspace this many planet radii from the planet's middle, facing it
+#define ARRIVAL 6.0f
+// The countdown to hyperspace, in seconds as in the original, and the jump
+#define HYPER_COUNT 10
+#define HYPER_FRAMES 150
+// How long a message, such as that a system is too far, is shown for
+#define MESSAGE_FRAMES 120
 // Where we start, in front of the slot, in station radii from its middle
 #define LAUNCH_DISTANCE 2.0f
 // The station is a cuboctahedron: its square faces this far from its middle,
@@ -109,6 +121,7 @@ typedef enum {
 	STATE_LAUNCHING,
 	STATE_FLYING,
 	STATE_DOCKING,
+	STATE_HYPERSPACE,
 	STATE_DEAD
 } State_e;
 
@@ -123,6 +136,15 @@ typedef enum {
 static Frame_t _me;
 static float _speed, _roll, _pitch;
 static Frame_t _planet, _station;
+static float _planet_radius;
+static Vec3_t _sun_pos;
+// How far we can jump, in tenths of a light year
+static uint32_t _fuel;
+// Frames left counting down to hyperspace, and where to
+static uint32_t _hyper_frames;
+static uint32_t _hyper_to;
+static const char* _message;
+static uint32_t _message_frames;
 static Ship_t _ships[SHIPS];
 static View_e _view;
 static State_e _state;
@@ -157,18 +179,50 @@ static void new_ship(Ship_t* s) {
 	s->pitch = rand_range(-0.004f, 0.004f);
 }
 
+// A number from -1 to 1 made from the system's numbers, the k-th of several
+static float system_number(const GalaxySystem_t* sys, uint32_t k) {
+	uint32_t h = sys->seed[0] * 2654435761u ^ sys->seed[1] * 40503u ^ (uint32_t)sys->seed[2] << 7 ^ k * 0x9e3779b9u;
+	h ^= h >> 15;
+	h *= 0x2c1b3c6du;
+	h ^= h >> 12;
+	return (float)(h & 0xffff) / 32767.5f - 1.0f;
+}
+
+// A way from the angle round from +z and the angle up
+static Vec3_t direction(float round, float up) {
+	return (Vec3_t){ sinf(round) * cosf(up), sinf(up), cosf(round) * cosf(up) };
+}
+
+// Sets up the system we are at, with the planet in the middle and coming in
+// from -z: the sun ahead of us off to one side, and the station on our side
+// of the planet
+static void enter_system(uint32_t i) {
+	chart_set_home(i);
+	const GalaxySystem_t* sys = chart_system(i);
+	_planet_radius = PLANET_SCALE * (float)sys->radius;
+	frame_set(&_planet, (Vec3_t){ 0.0f, 0.0f, 0.0f }, (Vec3_t){ 0.0f, 0.0f, 1.0f },
+		(Vec3_t){ 0.3f * system_number(sys, 0), 1.0f, 0.0f });
+	float round = 1.2f * system_number(sys, 1);
+	if (fabsf(round) < 0.3f) round = round < 0.0f ? -0.3f : 0.3f;
+	_sun_pos = vec_scale(direction(round, 0.4f * system_number(sys, 2)), SUN_DISTANCE);
+	const Vec3_t sp = vec_scale(direction(PI_F + 0.8f * system_number(sys, 3), 0.5f * system_number(sys, 4)),
+		STATION_ORBIT * _planet_radius);
+	// Its slot faces the planet
+	frame_set(&_station, sp, vec_unit(vec_sub(_planet.pos, sp)), (Vec3_t){ 0.0f, 1.0f, 0.0f });
+	for (uint32_t s = 0; s < SHIPS; ++s) new_ship(&_ships[s]);
+}
+
 static void start(void) {
 	chart_set_galaxy(0);
-	chart_set_home(HOME);
-	frame_set(&_planet, (Vec3_t){ 0.0f, 0.0f, 0.0f }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.2f, 1.0f, 0.0f });
-	// The station's slot faces the planet
-	const Vec3_t sp = { 0.0f, 0.0f, -STATION_DISTANCE };
-	frame_set(&_station, sp, vec_unit(vec_sub(_planet.pos, sp)), (Vec3_t){ 0.0f, 1.0f, 0.0f });
-	frame_set(&_me, sp, _station.f, _station.u);
+	enter_system(HOME);
+	frame_set(&_me, _station.pos, _station.f, _station.u);
 	_speed = 0.0f;
 	_roll = 0.0f;
 	_pitch = 0.0f;
-	for (uint32_t i = 0; i < SHIPS; ++i) new_ship(&_ships[i]);
+	_fuel = GALAXY_FUEL_MAX;
+	chart_set_fuel(_fuel);
+	_hyper_frames = 0;
+	_message_frames = 0;
 	_view = VIEW_FRONT;
 	_state = STATE_DOCKED;
 	_state_frames = 0;
@@ -181,6 +235,45 @@ static void start(void) {
 static void set_state(State_e state) {
 	_state = state;
 	_state_frames = 0;
+	// Docking or dying stops a countdown to hyperspace
+	if (state == STATE_DOCKING || state == STATE_DEAD) _hyper_frames = 0;
+	// The tunnels are seen ahead
+	if (state == STATE_LAUNCHING || state == STATE_DOCKING || state == STATE_HYPERSPACE) _view = VIEW_FRONT;
+}
+
+static void message(const char* m) {
+	_message = m;
+	_message_frames = MESSAGE_FRAMES;
+}
+
+// Starts the countdown to the system the cursor is on, if we can reach it
+static void start_hyperspace(void) {
+	if (_hyper_frames) return;
+	const uint32_t to = chart_selected();
+	if (to == chart_home()) {
+		message("WE ARE HERE");
+		return;
+	}
+	if (galaxy_distance(chart_system(chart_home()), chart_system(to)) > _fuel) {
+		message("OUT OF RANGE");
+		return;
+	}
+	_hyper_to = to;
+	_hyper_frames = HYPER_COUNT * 60;
+}
+
+// Out of hyperspace in the new system, facing its planet
+static void arrive(void) {
+	_fuel -= galaxy_distance(chart_system(chart_home()), chart_system(_hyper_to));
+	chart_set_fuel(_fuel);
+	enter_system(_hyper_to);
+	frame_set(&_me, (Vec3_t){ 0.0f, 0.0f, -ARRIVAL * _planet_radius }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.0f, 1.0f, 0.0f });
+	_speed = MAX_SPEED * 0.25f;
+	_roll = 0.0f;
+	_pitch = 0.0f;
+	_view = VIEW_FRONT;
+	dust_init();
+	set_state(STATE_FLYING);
 }
 
 // Out through the slot, facing the way it does, which is towards the planet
@@ -275,7 +368,7 @@ static void fly(uint8_t held) {
 	dust_move(_roll, _pitch, _speed * 0.5f);
 
 	touch_station();
-	if (vec_length(vec_sub(_me.pos, _planet.pos)) < PLANET_RADIUS) set_state(STATE_DEAD);
+	if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
 }
 
 static void move_world(void) {
@@ -310,11 +403,11 @@ typedef struct {
 static void draw_dashboard(void) {
 	const Vec3_t planet = frame_view(&_me, _planet.pos);
 	const Vec3_t station = frame_view(&_me, _station.pos);
-	const float altitude = (vec_length(planet) - PLANET_RADIUS) / PLANET_RADIUS;
+	const float altitude = (vec_length(planet) - _planet_radius) / _planet_radius;
 	Hud_t hud = {
 		.fore_shield = 1.0f,
 		.aft_shield = 1.0f,
-		.fuel = 1.0f,
+		.fuel = (float)_fuel / GALAXY_FUEL_MAX,
 		.cabin_temp = 0.1f,
 		.laser_temp = 0.0f,
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
@@ -323,7 +416,7 @@ static void draw_dashboard(void) {
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
 		.missiles = 4,
-		.compass = vec_length(station) < SAFE_ZONE ? station : planet,
+		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
 		.sights = _view == VIEW_FRONT && _state == STATE_FLYING && !_options,
 	};
@@ -383,7 +476,7 @@ static void draw_front(void) {
 	// Nearest first, so they cover the ones behind
 	Thing_t things[SHIPS + 3];
 	uint32_t n = 0;
-	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_me, _planet.pos)) - PLANET_RADIUS };
+	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_me, _planet.pos)) - _planet_radius };
 	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
 	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_me, _station.pos)) - model_coriolis.radius };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
@@ -403,7 +496,7 @@ static void draw_front(void) {
 			case THING_PLANET: {
 				float m[3][3];
 				frame_matrix(&_me, &_planet, m);
-				draw_planet(frame_view(&_me, _planet.pos), PLANET_RADIUS, m, chart_economy_rgb(sys->economy),
+				draw_planet(frame_view(&_me, _planet.pos), _planet_radius, m, chart_economy_rgb(sys->economy),
 					!(sys->seed[1] & 2), draw_style);
 				break;
 			}
@@ -510,10 +603,12 @@ static void draw_status(void) {
 	const char* const names[] = {
 		"Present System", "Hyperspace System", "Condition", "Fuel", "Cash", "Legal Status", "Rating"
 	};
+	char fuel[24];
+	snprintf(fuel, sizeof(fuel), "%u.%u Light Years", (unsigned)(_fuel / 10), (unsigned)(_fuel % 10));
 	const char* values[] = {
 		chart_system(chart_home())->name, chart_system(chart_selected())->name,
 		_state == STATE_DOCKED ? "Docked" : ships_near() ? "Yellow" : "Green",
-		"7.0 Light Years", "100.0 Cr", "Clean", "Harmless"
+		fuel, "100.0 Cr", "Clean", "Harmless"
 	};
 	int32_t y = STATUS_TOP;
 	for (uint32_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
@@ -534,8 +629,14 @@ static void draw_status(void) {
 	draw_object(&model_cobra, pos, m, model_cobra.rgb, draw_style);
 }
 
-// Rings flying out from the middle, going through the station's tunnel
-static void draw_tunnel(void) {
+// The colours of the rings in hyperspace
+static const uint8_t _hyper_rgb[6][3] = {
+	{ 255, 73, 0 }, { 255, 219, 0 }, { 0, 255, 0 }, { 0, 219, 255 }, { 73, 73, 255 }, { 255, 0, 255 }
+};
+
+// Rings flying out from the middle, going through the station's tunnel, or
+// in colours through hyperspace
+static void draw_tunnel(bool hyper) {
 	const float t = (float)_state_frames / (float)TUNNEL_FRAMES;
 	for (uint32_t i = 0; i < TUNNEL_RINGS; ++i) {
 		const float phase = fmodf(t * 3.0f + (float)i / TUNNEL_RINGS, 1.0f);
@@ -543,8 +644,9 @@ static void draw_tunnel(void) {
 		if (!object_begin()) break;
 		Vec2_t p[TUNNEL_SIDES];
 		circle_points(p, TUNNEL_SIDES, CENTRE_X, CENTRE_Y, r);
-		const uint8_t level = (uint8_t)(80.0f + 175.0f * phase);
-		const hstx_dvi_pixel_t c = hstx_dvi_pixel_rgb(level, level, level);
+		const float level = 0.3f + 0.7f * phase;
+		static const uint8_t white[3] = { 255, 255, 255 };
+		const hstx_dvi_pixel_t c = shade(hyper ? _hyper_rgb[(i + _state_frames / 8) % 6] : white, level);
 		for (uint32_t j = 0; j < TUNNEL_SIDES; ++j) add_line(p[j], p[(j + 1) % TUNNEL_SIDES], c);
 		object_end();
 	}
@@ -564,8 +666,14 @@ static bool next_state(void) {
 				_roll = 0.0f;
 				_pitch = 0.0f;
 				_view = VIEW_FRONT;
+				// Filled up, for now
+				_fuel = GALAXY_FUEL_MAX;
+				chart_set_fuel(_fuel);
 				set_state(STATE_DOCKED);
 			}
+			break;
+		case STATE_HYPERSPACE:
+			if (_state_frames >= HYPER_FRAMES) arrive();
 			break;
 		case STATE_DEAD:
 			return _state_frames >= DEAD_FRAMES;
@@ -592,9 +700,13 @@ void game_play(void) {
 			switch (_state) {
 				case STATE_DOCKED:
 					move_cursor(held);
-					if (pressed & EL_INP_A) launch();
+					// Only from the status, so not by mistake on the charts
+					if ((pressed & EL_INP_A) && _view == VIEW_FRONT) launch();
 					break;
 				case STATE_FLYING:
+					// Fire on the charts or data jumps to the system the cursor is on
+					if ((pressed & EL_INP_A) && _view != VIEW_FRONT) start_hyperspace();
+					if (_hyper_frames && --_hyper_frames == 0) set_state(STATE_HYPERSPACE);
 					fly(held);
 					break;
 				case STATE_DEAD:
@@ -622,10 +734,11 @@ void game_play(void) {
 					label = "STATUS";
 					draw_status();
 				}
-				else if (_state == STATE_LAUNCHING || _state == STATE_DOCKING) {
-					snprintf(title, sizeof(title), _state == STATE_LAUNCHING ? "LAUNCHING" : "DOCKING");
+				else if (_state == STATE_LAUNCHING || _state == STATE_DOCKING || _state == STATE_HYPERSPACE) {
+					snprintf(title, sizeof(title), _state == STATE_LAUNCHING ? "LAUNCHING" :
+						_state == STATE_DOCKING ? "DOCKING" : "HYPERSPACE");
 					label = "TUNNEL";
-					draw_tunnel();
+					draw_tunnel(_state == STATE_HYPERSPACE);
 				}
 				else {
 					snprintf(title, sizeof(title), "FRONT VIEW");
@@ -647,6 +760,16 @@ void game_play(void) {
 			default:
 				snprintf(title, sizeof(title), "DATA ON %s", chart_draw_data(chart_selected(), chart_style, _frame));
 				break;
+		}
+		// The countdown to hyperspace, and any message
+		if (_hyper_frames) {
+			char count[12];
+			snprintf(count, sizeof(count), "%u", (unsigned)((_hyper_frames + 59) / 60));
+			screen_text(16, VIEW_TOP + 6, count, GAME_YELLOW, true);
+		}
+		if (_message_frames) {
+			--_message_frames;
+			screen_text_centre(VIEW_BOTTOM - 44, _message, GAME_YELLOW, true);
 		}
 		// Text draws straight into the row, so the options go last, over everything else
 		if (_options) {

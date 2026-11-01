@@ -21,8 +21,6 @@
 #define LOCAL_SCALE 7.2f
 #define LOCAL_DX ((int32_t)(40.0f / draw_aspect))
 #define LOCAL_DY 38
-// How far we can jump, in tenths of a light year
-#define FUEL_RANGE 70
 #define CHART_LABELS 32
 #define CHART_INFO_Y (VIEW_BOTTOM - 10)
 // In the attract, the cursor moves to another system this often, taking this long to get there
@@ -43,6 +41,8 @@ static uint8_t _near[GALAXY_SYSTEMS];
 static uint32_t _near_count;
 // The cursor, in steps across the galaxy
 static float _cursor_x, _cursor_y;
+// How far we can jump, in tenths of a light year
+static uint32_t _fuel = GALAXY_FUEL_MAX;
 
 // The colour of a system on the short range chart, from rich industrial to poor agricultural
 static const uint8_t _economy_rgb[8][3] = {
@@ -87,6 +87,10 @@ void chart_set_home(uint32_t i) {
 	_home = i % GALAXY_SYSTEMS;
 	find_near();
 	chart_cursor_set((float)_galaxy[_home].x, (float)_galaxy[_home].y);
+}
+
+void chart_set_fuel(uint32_t tenths) {
+	_fuel = tenths;
 }
 
 void chart_refresh(void) {
@@ -201,7 +205,7 @@ void chart_draw_galaxy(void) {
 		const Vec2_t c = galaxy_point((float)h->x, (float)h->y);
 		chart_cross(c, 0.0f, 6.0f, white);
 		// A jump is 4 tenths of a light year for each step across
-		chart_ring(c, 2.0f * (float)FUEL_RANGE / 4.0f, 24, hstx_dvi_pixel_rgb(0, 255, 0));
+		chart_ring(c, 2.0f * (float)_fuel / 4.0f, 24, hstx_dvi_pixel_rgb(0, 255, 0));
 		object_end();
 	}
 
@@ -280,7 +284,7 @@ void chart_draw_local(Style_e style) {
 	}
 
 	// How far we can jump, in two halves so each sprite looks at fewer lines on a row
-	const float range = (float)FUEL_RANGE / 4.0f * LOCAL_SCALE;
+	const float range = (float)_fuel / 4.0f * LOCAL_SCALE;
 	Vec2_t ring[32];
 	circle_points(ring, 32, home.x, home.y, range);
 	for (uint32_t half = 0; half < 2; ++half) {

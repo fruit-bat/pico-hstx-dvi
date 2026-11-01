@@ -18,6 +18,8 @@ void chart_set_galaxy(uint32_t g);
 uint32_t chart_galaxy(void);
 void chart_set_home(uint32_t i);
 uint32_t chart_home(void);
+// How far we can jump, in tenths of a light year, for the circles round us
+void chart_set_fuel(uint32_t tenths);
 // Finds the systems on the short range chart again, after draw_aspect changes
 void chart_refresh(void);
 const GalaxySystem_t* chart_system(uint32_t i);

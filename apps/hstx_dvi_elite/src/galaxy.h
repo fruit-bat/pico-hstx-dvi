@@ -9,6 +9,8 @@
 
 #define GALAXIES 8
 #define GALAXY_SYSTEMS 256
+// The most fuel a ship holds, in tenths of a light year
+#define GALAXY_FUEL_MAX 70
 // The longest name, 8 letters, and the end
 #define GALAXY_NAME_MAX 9
 
