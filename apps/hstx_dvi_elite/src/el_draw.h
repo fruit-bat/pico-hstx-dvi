@@ -50,9 +50,11 @@ typedef struct {
 	float x, y;
 } Vec2_t;
 
-// The way of drawing chosen, and whether lit faces are dithered, for more shades
+// The way of drawing chosen, whether lit faces are dithered, for more shades,
+// and whether the dashboard is filled or in outlines
 extern Style_e draw_style;
 extern bool draw_dither;
+extern bool draw_hud_filled;
 // Towards the light, in the view
 extern Vec3_t draw_light;
 // How wide a pixel is drawn for its height. The display is 4:3, and a 16:9

@@ -168,6 +168,7 @@ typedef enum {
 typedef enum {
 	OPTION_STYLE = 0,
 	OPTION_DITHER,
+	OPTION_HUD,
 	OPTION_SCREEN,
 	OPTION_END,
 	OPTIONS
@@ -425,6 +426,16 @@ static View_e next_view(void) {
 	}
 }
 
+// The view turned round the ship, clockwise for step 1 and the other way
+// for -1, as the shoulders turn it; from a chart, back to the front
+static View_e look_round(int32_t step) {
+	static const View_e round[4] = { VIEW_FRONT, VIEW_RIGHT, VIEW_REAR, VIEW_LEFT };
+	if (!looking_out()) return VIEW_FRONT;
+	uint32_t i = 0;
+	while (round[i] != _view) ++i;
+	return round[(uint32_t)((int32_t)i + 4 + step) % 4];
+}
+
 // Where we look from: our frame turned the way the view is
 static void look(void) {
 	_eye = _me;
@@ -640,7 +651,7 @@ static void draw_dashboard(void) {
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (ships[i].alive) blips[n++] = (Blip_t){ frame_view(&_me, ships[i].fr.pos), ships[i].model->rgb, false };
 	}
-	hud_draw(&hud, blips, n, draw_style);
+	hud_draw(&hud, blips, n, draw_hud_filled);
 }
 
 static void draw_body(const WireModel_t* model, const Frame_t* fr) {
@@ -751,6 +762,7 @@ static void draw_view(void) {
 static bool options(uint8_t pressed) {
 	if (pressed & EL_INP_START) {
 		_options = false;
+		save_settings();
 		return false;
 	}
 	if (pressed & EL_INP_DOWN) _option = (_option + 1) % OPTIONS;
@@ -762,6 +774,9 @@ static bool options(uint8_t pressed) {
 			break;
 		case OPTION_DITHER:
 			if (change) draw_dither = !draw_dither;
+			break;
+		case OPTION_HUD:
+			if (change) draw_hud_filled = !draw_hud_filled;
 			break;
 		case OPTION_SCREEN:
 			if (change) {
@@ -784,13 +799,16 @@ static void draw_options(void) {
 	for (uint32_t i = 0; i < OPTIONS; ++i) {
 		switch (i) {
 			case OPTION_STYLE:
-				snprintf(s, sizeof(s), "STYLE    < %s >", style_names[draw_style]);
+				snprintf(s, sizeof(s), "VIEW      < %s >", style_names[draw_style]);
 				break;
 			case OPTION_DITHER:
-				snprintf(s, sizeof(s), "DITHERED < %s >", draw_dither ? "ON" : "OFF");
+				snprintf(s, sizeof(s), "DITHERED  < %s >", draw_dither ? "ON" : "OFF");
+				break;
+			case OPTION_HUD:
+				snprintf(s, sizeof(s), "DASHBOARD < %s >", draw_hud_filled ? "FILLED" : "LINES");
 				break;
 			case OPTION_SCREEN:
-				snprintf(s, sizeof(s), "SCREEN   < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
+				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
 				break;
 			default:
 				snprintf(s, sizeof(s), "END GAME   (FIRE)");
@@ -995,26 +1013,41 @@ static void enter_name(void) {
 }
 
 // When there is somewhere to save, picks which commander to play: fire plays
-// the one in a slot, or a new one if it is empty, and select starts a new one
-static void choose_commander(void) {
+// the one in a slot, or a new one if it is empty, and select starts a new one.
+// Start shows the options, as in the game. Returns false if the game is ended
+// from the options.
+static bool choose_commander(void) {
 	_slot = -1;
-	if (!save_ready()) return;
+	if (!save_ready()) return true;
 	static Save_t saves[SAVE_SLOTS];
 	bool used[SAVE_SLOTS];
 	for (uint32_t i = 0; i < SAVE_SLOTS; ++i) used[i] = save_read(i, &saves[i]);
 	uint32_t pick = 0;
 	for (;;) {
-		const uint8_t pressed = game_input_pressed();
-		if (pressed & EL_INP_DOWN) pick = (pick + 1) % SAVE_SLOTS;
-		if (pressed & EL_INP_UP) pick = (pick + SAVE_SLOTS - 1) % SAVE_SLOTS;
-		if (pressed & (EL_INP_A | EL_INP_SELECT)) {
-			_slot = (int32_t)pick;
-			if ((pressed & EL_INP_A) && used[pick]) load(&saves[pick]);
-			else enter_name();
-			return;
+		const uint16_t pressed = game_input_pressed();
+		if (_options) {
+			if (options(pressed)) return false;
+		}
+		else {
+			if (pressed & EL_INP_START) _options = true;
+			if (pressed & EL_INP_DOWN) pick = (pick + 1) % SAVE_SLOTS;
+			if (pressed & EL_INP_UP) pick = (pick + SAVE_SLOTS - 1) % SAVE_SLOTS;
+			if (pressed & (EL_INP_A | EL_INP_SELECT)) {
+				_slot = (int32_t)pick;
+				if ((pressed & EL_INP_A) && used[pick]) load(&saves[pick]);
+				else enter_name();
+				return true;
+			}
 		}
 		screen_begin();
 		draw_dashboard();
+		// Text draws straight into the row, so the options go over nothing else
+		if (_options) {
+			draw_options();
+			screen_end("COMMANDERS", "OPTIONS");
+			++_frame;
+			continue;
+		}
 		char line[GAME_TEXT_MAX + 1];
 		const int32_t top = VIEW_TOP + 40;
 		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
@@ -1043,10 +1076,10 @@ static void choose_commander(void) {
 
 void game_play(void) {
 	start();
-	choose_commander();
+	if (!choose_commander()) return;
 	for (;;) {
-		const uint8_t pressed = game_input_pressed();
-		const uint8_t held = game_input_get();
+		const uint16_t pressed = game_input_pressed();
+		const uint16_t held = game_input_get();
 		if (_options) {
 			if (options(pressed)) return;
 		}
@@ -1071,6 +1104,9 @@ void game_play(void) {
 					_view = next_view();
 				}
 			}
+			// A SNES pad's shoulders look round the ship, in flight
+			if (_state == STATE_FLYING && (pressed & EL_INP_R)) _view = look_round(1);
+			if (_state == STATE_FLYING && (pressed & EL_INP_L)) _view = look_round(-1);
 			switch (_state) {
 				case STATE_DOCKED: {
 					const char* m = NULL;

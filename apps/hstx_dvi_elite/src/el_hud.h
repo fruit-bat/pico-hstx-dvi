@@ -33,7 +33,7 @@ typedef struct {
 } Blip_t;
 
 void hud_init(void);
-void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, Style_e style);
+void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, bool filled);
 
 #ifdef __cplusplus
 }

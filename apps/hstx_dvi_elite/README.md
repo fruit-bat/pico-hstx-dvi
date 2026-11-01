@@ -64,9 +64,13 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
 - A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
 - B held with A launches a missile, and with select sets off the ECM.
 - Select shows the next screen: the front, rear, left and right views, the short range chart, the galactic chart,
-  and the data on the system the cursor is on. The controls fly the ship the same whichever way you look. On the charts the pad moves the cursor, faster with B held.
-- Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
-  or plain filled faces, whether the faces are dithered for more shades, the shape of the screen, and ending the game.
+  and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
+  On the charts the pad moves the cursor, faster with B held.
+- On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
+  and the left one the other way. From a chart either goes back to the front view.
+- Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
+  or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
+  the shape of the screen, and ending the game.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -76,7 +80,8 @@ in the order left, right, up, down, A, B, select and start, unless built with `G
 ## Saving
 
 Built with `-DELITE_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIOs 2 to 5 as for `hstx_dvi_cpm`,
-in the directory `pico_dvi_elite`, as `commander1.dat` to `commander4.dat`.
+in the directory `pico_dvi_elite`, as `commander1.dat` to `commander4.dat`, and the options in `settings.dat`,
+saved when you leave them and read when it starts.
 Starting a game then shows the four slots: fire plays the commander in one, or a new one if it is empty,
 and select starts a new one in it. A new commander is named first: up and down change the letter, held to go on, left and right
 move along, and fire takes the name. The game is saved whenever you dock or launch, so always as docked, as in the original,
@@ -119,5 +124,6 @@ host/build/elite_host dock 420 20 frames
 `views` puts a Sidewinder behind with a rear laser fitted, looks back and fires at it, then looks left and right.
 `trade` buys and sells in the market at Lave, buys a missile, and tries for a rear pulse laser.
 Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
-names it NAMESON, buys food and launches, saving it, to show in the slot when run again.
+names it NAMESON, buys food and launches, saving it, to show in the slot when run again,
+then fills the dashboard in the options, which stays filled when run again.
 See `../common/host` for more on how this works.

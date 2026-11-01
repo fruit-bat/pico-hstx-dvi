@@ -4,6 +4,7 @@
 // on, holding a Save_t as it is.
 
 #include "el_save.h"
+#include "el_draw.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -88,10 +89,6 @@ bool save_built(void) {
 	return true;
 }
 
-static void slot_path(char* path, size_t n, uint32_t slot) {
-	snprintf(path, n, SAVE_DIR "/commander%u.dat", (unsigned)(slot + 1));
-}
-
 bool save_ready(void) {
 	// Some cards do not answer the first time after power up, so it tries a few times
 	FRESULT r = FR_NOT_READY;
@@ -110,76 +107,128 @@ bool save_ready(void) {
 	return _card;
 }
 
-bool save_read(uint32_t slot, Save_t* s) {
-	char path[40];
-	slot_path(path, sizeof(path), slot);
+// Reads up to max bytes of a file in the directory, returning how many in n
+static bool file_read(const char* name, void* buf, size_t max, size_t* n) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
 	FIL f;
 	const FRESULT o = f_open(&f, path, FA_READ);
 	printf("SD card: open %s %d\n", path, (int)o);
 	if (o != FR_OK) return false;
-	UINT n = 0;
-	const FRESULT r = f_read(&f, &_read, sizeof(_read), &n);
+	UINT got = 0;
+	const FRESULT r = f_read(&f, buf, max, &got);
 	f_close(&f);
-	return r == FR_OK && save_good(s, n);
+	*n = got;
+	return r == FR_OK;
 }
 
-bool save_write(uint32_t slot, Save_t* s) {
-	s->magic = SAVE_MAGIC;
-	s->size = sizeof(*s);
-	char path[40];
-	slot_path(path, sizeof(path), slot);
+static bool file_write(const char* name, const void* buf, size_t n) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
 	FIL f;
 	const FRESULT o = f_open(&f, path, FA_WRITE | FA_CREATE_ALWAYS);
 	if (o != FR_OK) {
 		printf("SD card: create %s %d\n", path, (int)o);
 		return false;
 	}
-	UINT n = 0;
-	FRESULT r = f_write(&f, s, sizeof(*s), &n);
+	UINT put = 0;
+	const FRESULT r = f_write(&f, buf, n, &put);
 	const FRESULT c = f_close(&f);
 	printf("SD card: write %s %d %d\n", path, (int)r, (int)c);
-	return r == FR_OK && c == FR_OK && n == sizeof(*s);
+	return r == FR_OK && c == FR_OK && put == n;
 }
 
 #elif defined(EL_HOST_SAVE)
 
 // On the PC, for trying it: the files in pico_dvi_elite where it is run
 
-static void slot_path(char* path, size_t n, uint32_t slot) {
-	snprintf(path, n, "pico_dvi_elite/commander%u.dat", (unsigned)(slot + 1));
-}
+#define SAVE_DIR "pico_dvi_elite"
 
 bool save_built(void) {
 	return true;
 }
 
 bool save_ready(void) {
-	FILE* f = fopen("pico_dvi_elite/.ready", "w");
+	FILE* f = fopen(SAVE_DIR "/.ready", "w");
 	_card = f != NULL;
 	if (!f) return false;
 	fclose(f);
 	return true;
 }
 
-bool save_read(uint32_t slot, Save_t* s) {
+static bool file_read(const char* name, void* buf, size_t max, size_t* n) {
 	char path[48];
-	slot_path(path, sizeof(path), slot);
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
 	FILE* f = fopen(path, "rb");
 	if (!f) return false;
-	const size_t n = fread(&_read, 1, sizeof(_read), f);
+	*n = fread(buf, 1, max, f);
 	fclose(f);
-	return save_good(s, n);
+	return true;
+}
+
+static bool file_write(const char* name, const void* buf, size_t n) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
+	FILE* f = fopen(path, "wb");
+	if (!f) return false;
+	const size_t put = fwrite(buf, 1, n, f);
+	return fclose(f) == 0 && put == n;
+}
+
+#endif
+
+#if defined(EL_SDCARD) || defined(EL_HOST_SAVE)
+
+static void slot_name(char* name, size_t n, uint32_t slot) {
+	snprintf(name, n, "commander%u.dat", (unsigned)(slot + 1));
+}
+
+bool save_read(uint32_t slot, Save_t* s) {
+	char name[20];
+	slot_name(name, sizeof(name), slot);
+	size_t n = 0;
+	return file_read(name, &_read, sizeof(_read), &n) && save_good(s, n);
 }
 
 bool save_write(uint32_t slot, Save_t* s) {
 	s->magic = SAVE_MAGIC;
 	s->size = sizeof(*s);
-	char path[48];
-	slot_path(path, sizeof(path), slot);
-	FILE* f = fopen(path, "wb");
-	if (!f) return false;
-	const size_t n = fwrite(s, 1, sizeof(*s), f);
-	return fclose(f) == 0 && n == sizeof(*s);
+	char name[20];
+	slot_name(name, sizeof(name), slot);
+	return file_write(name, s, sizeof(*s));
+}
+
+// The options, in settings.dat
+#define SETTINGS_MAGIC 0x504f4c45u // "ELOP"
+#define SETTINGS_FILE "settings.dat"
+
+typedef struct {
+	uint32_t magic;
+	uint32_t size;
+	uint32_t style;
+	uint32_t dither;
+	uint32_t hud_filled;
+	uint32_t wide;
+} Settings_t;
+
+void load_settings(void) {
+	if (!_card) return;
+	Settings_t t;
+	size_t n = 0;
+	if (!file_read(SETTINGS_FILE, &t, sizeof(t), &n) || n != sizeof(t)) return;
+	if (t.magic != SETTINGS_MAGIC || t.size != sizeof(t) || t.style >= STYLE_COUNT) return;
+	draw_style = (Style_e)t.style;
+	draw_dither = t.dither != 0;
+	draw_hud_filled = t.hud_filled != 0;
+	draw_aspect = t.wide ? ASPECT_16_9 : ASPECT_4_3;
+}
+
+void save_settings(void) {
+	if (!_card) return;
+	const Settings_t t = {
+		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9
+	};
+	file_write(SETTINGS_FILE, &t, sizeof(t));
 }
 
 #else
@@ -202,6 +251,12 @@ bool save_write(uint32_t slot, Save_t* s) {
 	(void)slot;
 	(void)s;
 	return false;
+}
+
+void load_settings(void) {
+}
+
+void save_settings(void) {
 }
 
 #endif

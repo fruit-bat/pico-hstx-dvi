@@ -181,7 +181,7 @@ static void draw_dashboard(uint32_t frame, bool parade) {
 	for (uint32_t i = 0; i < OBJECTS; ++i) {
 		blips[i] = (Blip_t){ _objects[i].pos, _objects[i].model->rgb, i == OBJ_STATION };
 	}
-	hud_draw(&hud, blips, OBJECTS, draw_style);
+	hud_draw(&hud, blips, OBJECTS, draw_hud_filled);
 }
 
 // The title: a Cobra turning slowly in the middle of the view

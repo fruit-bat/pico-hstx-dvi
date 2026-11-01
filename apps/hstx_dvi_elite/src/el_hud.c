@@ -1,7 +1,6 @@
 // Copyright (c) 2024 fruit-bat.
 
-// See el_hud.h. It is drawn in outlines for the wireframe styles, and solid
-// for the filled ones. Each part of it is an object of its own, as an
+// See el_hud.h. It is drawn in outlines, or solid when filled. Each part of it is an object of its own, as an
 // object's sprite looks at all its parts on every row it covers.
 
 #include "el_hud.h"
@@ -44,7 +43,7 @@ static hstx_dvi_pixel_t hud_rgb(uint8_t r, uint8_t g, uint8_t b) {
 	return hstx_dvi_pixel_rgb(r, g, b);
 }
 
-// A box that is filled or outlined, to suit the style
+// A box that is filled or outlined
 static void hud_block(bool filled, float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) {
 	if (filled) add_rect(x0, y0, x1 + 1.0f, y1 + 1.0f, c);
 	else add_box(x0, y0, x1, y1, c);
@@ -100,8 +99,7 @@ void hud_init(void) {
 	for (uint32_t g = 0; g < GAUGES; ++g) game_text_set(&_gauge_labels[g], _gauge_names[g], 1);
 }
 
-void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, Style_e style) {
-	const bool filled = style == STYLE_OUTLINED || style == STYLE_FILLED;
+void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, bool filled) {
 	const hstx_dvi_pixel_t frame_c = hud_rgb(36, 109, 219);
 	const hstx_dvi_pixel_t track = hud_rgb(36, 73, 109);
 	const hstx_dvi_pixel_t scan = hud_rgb(0, 146, 182);

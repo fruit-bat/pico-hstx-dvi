@@ -40,8 +40,9 @@ int main(void)
 	sleep_ms(2000); // Allow time for initialization
 
 	printf("HSTX DVI Elite\n");
-	// Whether there is a card to save on, shown on the title
+	// Whether there is a card to save on, shown on the title, and the options saved on it
 	save_ready();
+	load_settings();
 
 	for (;;) {
 		attract_run();

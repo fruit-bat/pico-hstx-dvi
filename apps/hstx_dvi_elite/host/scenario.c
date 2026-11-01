@@ -2,7 +2,8 @@
 //
 // attract - nobody touches the buttons
 // fly     - starts a game, launches, speeds up, rolls and climbs, looks at
-//           the charts moving the cursor, then changes the style in the options
+//           the charts moving the cursor, then changes the style and the
+//           dashboard in the options
 // dock    - starts a game, launches, then is put on a level run at the slot,
 //           and docks
 // crash   - as dock, but rolled so the slot is not level, and hits the station
@@ -18,9 +19,12 @@
 // views   - starts a game, launches and climbs, then a Sidewinder is put
 //           behind and a rear laser fitted, and we look back and shoot at it,
 //           then look left and right
-// save    - built with EL_HOST_SAVE, picks commander slot 2, names it NAMESON,
+// save    - built with EL_HOST_SAVE, looks at the options on the commanders,
+//           picks commander slot 2, names it NAMESON,
 //           holding up to go on changing the letter, buys food and launches,
-//           which saves; run again, the slot holds it
+//           which saves, then fills the dashboard in the options, saving
+//           the settings; run again, the slot holds it, and the dashboard
+//           is filled
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -44,7 +48,10 @@ uint32_t host_input(uint32_t f) {
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return START;
 	if (!strcmp(host_mode, "save")) {
-		// Slot 2, named NAMESON, then food in the market, and launch from the status
+		// The options and out again, then slot 2, named NAMESON, then food in
+		// the market, and launch from the status
+		if (f >= 40 && f < 43) return START;
+		if (f >= 46 && f < 49) return START;
 		if (f >= 50 && f < 53) return D;
 		if (f >= 60 && f < 63) return A;
 		if (f >= 66 && f < 94) return U;
@@ -62,6 +69,12 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 163 && f < 166) return 0;
 		if (f >= 170 && f < 173) return SELECT;
 		if (f >= 200 && f < 203) return A;
+		// The dashboard filled, saved in the settings
+		if (f >= 230 && f < 233) return START;
+		if (f >= 240 && f < 243) return D;
+		if (f >= 250 && f < 253) return D;
+		if (f >= 260 && f < 263) return R;
+		if (f >= 270 && f < 273) return START;
 		return 0;
 	}
 	if (!strcmp(host_mode, "trade")) {
@@ -112,13 +125,15 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 780 && f < 860) return L;
 		if (f >= 900 && f < 903) return SELECT;
 		if (f >= 1000 && f < 1003) return SELECT;
-		// The options: filled and dithered
+		// The options: filled and dithered, with the dashboard filled
 		if (f >= 1100 && f < 1103) return START;
 		if (f >= 1120 && f < 1123) return R;
 		if (f >= 1130 && f < 1133) return R;
 		if (f >= 1140 && f < 1143) return R;
 		if (f >= 1150 && f < 1153) return D;
 		if (f >= 1160 && f < 1163) return R;
+		if (f >= 1170 && f < 1173) return D;
+		if (f >= 1180 && f < 1183) return R;
 		if (f >= 1200 && f < 1203) return START;
 		// Dive
 		if (f >= 1300 && f < 1360) return U;

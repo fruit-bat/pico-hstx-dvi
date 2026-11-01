@@ -37,6 +37,9 @@ bool save_card(void);
 int save_error(void);
 // Whether there is somewhere to save, trying the card again each time
 bool save_ready(void);
+// The options, read when there is a card and written when they are left
+void load_settings(void);
+void save_settings(void);
 // Returns false if the slot is empty, or cannot be read
 bool save_read(uint32_t slot, Save_t* s);
 bool save_write(uint32_t slot, Save_t* s);

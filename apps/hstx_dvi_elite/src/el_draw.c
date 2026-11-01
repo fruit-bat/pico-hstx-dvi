@@ -68,6 +68,7 @@ Vec3_t draw_light = { -0.43f, 0.64f, -0.64f };
 Style_e draw_style = STYLE_SOLID;
 float draw_aspect = ASPECT_16_9;
 bool draw_dither = false;
+bool draw_hud_filled = false;
 
 // Starts an object, returning false if there is no room
 bool object_begin(void) {
