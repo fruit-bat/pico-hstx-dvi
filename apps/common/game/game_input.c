@@ -3,12 +3,16 @@
 #include "nespad.h"
 #endif
 
+#ifdef GAME_BUTTONS
 static uint32_t _first = 0;
 static uint32_t _mask = 0;
+#endif
 static uint8_t _last_input = 0;
 
 #ifdef GAME_NESPAD
 static const uint16_t *_pad_map = NULL;
+// The bits a pad can press, which can be more than there are GPIOs
+static uint32_t _pad_mask = 0;
 
 // The buttons held on either pad, one bit for each of the 16 a pad sends
 static uint32_t __not_in_flash_func(pad_buttons)(void) {
@@ -29,6 +33,11 @@ static uint32_t __not_in_flash_func(pad_buttons)(void) {
 #endif
 
 void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map) {
+	game_input_init_pad(first, count, pad_map, count);
+}
+
+void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map, uint32_t pad_count) {
+#ifdef GAME_BUTTONS
 	_first = first;
 	_mask = (1u << count) - 1;
 	for(uint i = 0; i < count; ++i) {
@@ -38,18 +47,28 @@ void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map) {
 		gpio_set_dir(gpio, GPIO_IN);
 		gpio_pull_up(gpio);
 	}
+#else
+	(void)first;
+	(void)count;
+#endif
 #ifdef GAME_NESPAD
+	_pad_mask = (1u << pad_count) - 1;
 	_pad_map = pad_map;
 	nespad_default_init();
+#else
+	(void)pad_count;
+	(void)pad_map;
 #endif
 }
 
 uint8_t __not_in_flash_func(game_input_get)(void) {
-	const uint32_t all_gpio = gpio_get_all();
-	uint8_t input = (~all_gpio >> _first) & _mask;
+	uint8_t input = 0;
+#ifdef GAME_BUTTONS
+	input = (~gpio_get_all() >> _first) & _mask;
+#endif
 #ifdef GAME_NESPAD
 	const uint32_t buttons = pad_buttons();
-	for (uint i = 0; (_mask >> i) != 0; ++i) {
+	for (uint i = 0; (_pad_mask >> i) != 0; ++i) {
 		if (buttons & _pad_map[i]) input |= 1u << i;
 	}
 #endif

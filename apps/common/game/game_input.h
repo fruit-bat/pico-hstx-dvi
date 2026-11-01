@@ -18,10 +18,13 @@ extern "C" {
 #define GAME_PAD_RIGHT  0x0080
 
 // Buttons on count consecutive GPIOs from first, each connecting the GPIO to
-// ground. The first button is bit 0.
+// ground, when built with GAME_BUTTONS. The first button is bit 0.
 // When built with GAME_NESPAD, NES or SNES pads work too. pad_map has count
 // entries of GAME_PAD_ buttons, the ones that press each bit.
 void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map);
+// As game_input_init, but with more bits from a pad than there are GPIOs:
+// pad_map has pad_count entries
+void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map, uint32_t pad_count);
 
 uint8_t game_input_get(void);
 

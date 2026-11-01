@@ -15,6 +15,10 @@ target_sources(game_common INTERFACE
 
 target_include_directories(game_common INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
+if (GAME_BUTTONS)
+  target_compile_definitions(game_common INTERFACE GAME_BUTTONS=1)
+endif()
+
 if (GAME_NESPAD)
   target_compile_definitions(game_common INTERFACE
     GAME_NESPAD=1
