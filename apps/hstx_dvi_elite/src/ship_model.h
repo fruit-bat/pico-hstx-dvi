@@ -49,6 +49,7 @@ typedef struct {
 
 extern const WireModel_t model_cobra;
 extern const WireModel_t model_coriolis;
+extern const WireModel_t model_dodo;
 extern const WireModel_t model_missile;
 extern const WireModel_t model_canister;
 

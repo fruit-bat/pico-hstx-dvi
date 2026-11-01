@@ -83,10 +83,6 @@
 #define MESSAGE_FRAMES 120
 // Where we start, in front of the slot, in station radii from its middle
 #define LAUNCH_DISTANCE 2.0f
-// The station is a cuboctahedron: its square faces this far from its middle,
-// and its triangles twice that along all three axes together. The slot is
-// in the middle of the front face.
-#define STATION_FACE 400.0f
 // How close to the station we can be, as our ship has some size
 #define STATION_MARGIN 30.0f
 // To dock we must be within this of straight in front of the slot, and
@@ -251,6 +247,10 @@ static uint32_t _witch_to;
 static uint32_t _bomb_presses, _bomb_frames, _bomb_flash;
 static Frame_t _planet, _station;
 static float _planet_radius;
+// The station's model, a Coriolis or a dodecahedron, and how far its front
+// face, with the slot in the middle, is from its middle
+static const WireModel_t* _station_model = &model_coriolis;
+static float _station_face;
 static Vec3_t _sun_pos;
 // Frames left counting down to hyperspace, and where to
 static uint32_t _hyper_frames;
@@ -313,6 +313,18 @@ static Vec3_t direction(float round, float up) {
 // Sets up the system we are at, with the planet in the middle and coming in
 // from -z: the sun ahead of us off to one side, and the station on our side
 // of the planet
+// How far the face of a model pointing along n is from its middle
+static float model_face(const WireModel_t* m, Vec3_t n) {
+	float d = 0.0f;
+	for (uint32_t i = 0; i < m->nf; ++i) {
+		const WireFace_t* f = &m->f[i];
+		if (f->nx * n.x + f->ny * n.y + f->nz * n.z < 0.99f) continue;
+		const WireVertex_t* v = &m->v[f->v[0]];
+		d = f->nx * v->x + f->ny * v->y + f->nz * v->z;
+	}
+	return d;
+}
+
 static void enter_system(uint32_t i) {
 	chart_set_home(i);
 	_witch = false;
@@ -326,6 +338,8 @@ static void enter_system(uint32_t i) {
 	_sun_pos = vec_scale(direction(round, 0.4f * system_number(sys, 2)), SUN_DISTANCE);
 	const Vec3_t sp = vec_scale(direction(PI_F + 0.8f * system_number(sys, 3), 0.5f * system_number(sys, 4)),
 		STATION_ORBIT * _planet_radius);
+	_station_model = chart_station_model(sys);
+	_station_face = model_face(_station_model, (Vec3_t){ 0.0f, 0.0f, 1.0f });
 	// Its slot faces the planet
 	frame_set(&_station, sp, vec_unit(vec_sub(_planet.pos, sp)), (Vec3_t){ 0.0f, 1.0f, 0.0f });
 	const ShipsWorld_t w = world();
@@ -474,7 +488,7 @@ static void save(void) {
 // saving first what we bought
 static void launch(void) {
 	save();
-	frame_set(&_me, vec_add(_station.pos, vec_scale(_station.f, model_coriolis.radius * LAUNCH_DISTANCE)), _station.f, _station.u);
+	frame_set(&_me, vec_add(_station.pos, vec_scale(_station.f, _station_model->radius * LAUNCH_DISTANCE)), _station.f, _station.u);
 	_speed = MAX_SPEED * 0.25f;
 	_roll = 0.0f;
 	_pitch = 0.0f;
@@ -519,11 +533,30 @@ void game_debug_pod(void) {
 	_energy = 0.0f;
 }
 
-// Whether a point is inside the station, or close enough to touch it
+// For trying the dodecahedron on the PC: moves us to the nearest system
+// with one, and behind its station with a docking computer
+void game_debug_dodo(void) {
+	for (uint32_t k = 1; k < GALAXY_SYSTEMS; ++k) {
+		const uint32_t i = chart_nearest(k);
+		if (chart_system(i)->tech < DODO_TECH) continue;
+		enter_system(i);
+		trade_arrive(chart_system(i));
+		break;
+	}
+	game_debug_behind();
+}
+
+// Whether a point is inside the station, or close enough to touch it,
+// whichever shape it is: behind every face, with the margin
 static bool in_station(Vec3_t local) {
-	const float x = fabsf(local.x), y = fabsf(local.y), z = fabsf(local.z);
-	const float f = STATION_FACE + STATION_MARGIN;
-	return x <= f && y <= f && z <= f && x + y + z <= 2.0f * STATION_FACE + STATION_MARGIN * 1.7f;
+	const WireModel_t* m = _station_model;
+	for (uint32_t i = 0; i < m->nf; ++i) {
+		const WireFace_t* f = &m->f[i];
+		const WireVertex_t* v = &m->v[f->v[0]];
+		const float d = f->nx * v->x + f->ny * v->y + f->nz * v->z;
+		if (f->nx * local.x + f->ny * local.y + f->nz * local.z > d + STATION_MARGIN) return false;
+	}
+	return true;
 }
 
 // Docks us if we have come in through the slot, and ends the game if we have hit the station
@@ -685,7 +718,7 @@ static void auto_dock(void) {
 	const float off = vec_length(across);
 	const Vec3_t approach = vec_add(_station.pos, vec_scale(_station.f, DOCK_APPROACH));
 	// On the line in front of the slot it goes in; it leaves the line if blown off it
-	if (out > STATION_FACE && off < out * DOCK_LINE) {
+	if (out > _station_face && off < out * DOCK_LINE) {
 		if (vec_length(vec_sub(_me.pos, approach)) < DOCK_ARRIVED || out < DOCK_APPROACH) _dock_final = true;
 	}
 	else {
@@ -697,7 +730,7 @@ static void auto_dock(void) {
 		target = _station.pos;
 		speed = DOCK_SPEED;
 	}
-	else if (out < 2.0f * STATION_FACE) {
+	else if (out < 2.0f * _station_face) {
 		// Round the side first, clear of the station
 		const Vec3_t side = off > 1.0f ? vec_scale(across, 1.0f / off) : _station.u;
 		target = vec_add(approach, vec_scale(side, DOCK_APPROACH));
@@ -1025,7 +1058,7 @@ static void draw_dashboard(void) {
 	};
 	Blip_t blips[SHIPS + CANISTERS + 1];
 	uint32_t n = 0;
-	blips[n++] = (Blip_t){ station, model_coriolis.rgb, true };
+	blips[n++] = (Blip_t){ station, _station_model->rgb, true };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (ships[i].alive) blips[n++] = (Blip_t){ frame_view(&_me, ships[i].fr.pos), ships[i].model->rgb, false };
 	}
@@ -1053,7 +1086,7 @@ static bool lined_up(void) {
 // only there to guide us.
 static void draw_guides(void) {
 	const Vec3_t d = vec_sub(_me.pos, _station.pos);
-	if (vec_length(d) > GUIDE_RANGE || vec_dot(d, _station.f) < STATION_FACE) return;
+	if (vec_length(d) > GUIDE_RANGE || vec_dot(d, _station.f) < _station_face) return;
 	const hstx_dvi_pixel_t c = lined_up() ? hstx_dvi_pixel_rgb(0, 255, 0) : hstx_dvi_pixel_rgb(255, 182, 0);
 	for (uint32_t i = 0; i < GUIDES; ++i) {
 		const float z = GUIDE_NEAR + GUIDE_GAP * (float)i;
@@ -1096,7 +1129,7 @@ static void draw_view(void) {
 	if (!_witch) {
 		things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
 		things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
-		things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_eye, _station.pos)) - model_coriolis.radius };
+		things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_eye, _station.pos)) - _station_model->radius };
 	}
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (!ships[i].alive) continue;
@@ -1140,7 +1173,7 @@ static void draw_view(void) {
 				break;
 			}
 			case THING_STATION:
-				draw_body(&model_coriolis, &_station);
+				draw_body(_station_model, &_station);
 				break;
 			case THING_SHIP:
 				draw_body(ships[t->i].model, &ships[t->i].fr);

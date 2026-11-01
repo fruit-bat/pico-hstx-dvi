@@ -21,6 +21,8 @@
 // witch   - starts a game, launches, climbs away, then a jump to the nearest
 //           system goes wrong, into witchspace, among Thargoids, firing at
 //           them, then looks at the short range and galactic charts
+// dodo    - starts a game, launches, then is moved to a system with a
+//           dodecahedron station, behind it, and the docking computer flies in
 // crash   - as dock, but rolled so the slot is not level, and hits the station
 // hyper   - starts a game, launches, climbs away, tries to jump while still
 //           too close to the station, then picks Diso on the short range
@@ -60,6 +62,7 @@ void game_debug_behind(void);
 void game_debug_pod(void);
 void game_debug_bomb(void);
 void game_debug_witch(void);
+void game_debug_dodo(void);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -85,7 +88,7 @@ uint32_t host_input(uint32_t f) {
 	}
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return A;
-	if (!strcmp(host_mode, "autodock")) {
+	if (!strcmp(host_mode, "autodock") || !strcmp(host_mode, "dodo")) {
 		// The options, down to docking, as the PC has no X
 		if (f >= 220 && f < 223) return START;
 		if (f >= 226 && f < 250 && (f - 226) % 6 < 3) return D;
@@ -249,6 +252,7 @@ uint32_t host_input(uint32_t f) {
 void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "dock")) game_debug_approach(0.0f);
 	if (frame == 200 && !strcmp(host_mode, "autodock")) game_debug_behind();
+	if (frame == 200 && !strcmp(host_mode, "dodo")) game_debug_dodo();
 	if (!strcmp(host_mode, "bomb")) {
 		// The bomb's button is a SNES pad's A, which the PC does not have
 		if (frame == 500) game_debug_bomb();

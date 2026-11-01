@@ -16,6 +16,10 @@ the station spins, so roll to match it. Touching the station any other way, or t
 Close in front of the slot, squares hang in space to guide you in, turning with the station, green when you are lined up
 and amber when not. They are always drawn as wireframes.
 
+Systems of tech level 10 or more have a dodecahedron station, as in the original, as big as the Coriolis station,
+with the slot in the middle of its front face; it is docked with in the same way. The data on a system shows its station,
+and the parade on the title shows each in turn.
+
 A docking computer, sold from tech level 9, flies you in: out to a point in front of the slot, round the side first
 if you are behind the station, then in along the line to the slot, rolling to keep it level. X on a SNES pad turns it
 on and off, as does DOCKING in the options for other pads. Touching the pad or fire takes over from it.
@@ -160,6 +164,7 @@ host/build/elite_host dock 420 20 frames
 
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
 `fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
+`dodo` is moved to the nearest system with a dodecahedron station, behind it, and the docking computer flies it in.
 `autodock` is put behind the station, facing away, and the docking computer, turned on in the options, flies it in.
 `witch` has a jump go wrong into witchspace, among Thargoids, fires at them, and looks at the charts, centred halfway.
 `bomb` has an energy bomb fitted and three pirates put round it, arms the bomb, then sets it off.

@@ -81,7 +81,8 @@ static void face_along(Parader_t* o, const Vec3_t* from, const Vec3_t* to, float
 static void move_objects(uint32_t frame) {
 	const float t = (float)frame / 60.0f;
 	Parader_t* o = &_objects[OBJ_STATION];
-	o->model = &model_coriolis;
+	// Every other time round, the dodecahedron
+	o->model = (frame / 100000u) & 1 ? &model_dodo : &model_coriolis;
 	o->pos = (Vec3_t){ 0.0f, 0.0f, STATION_Z };
 	o->yaw = PI_F;
 	o->pitch = 0.15f;

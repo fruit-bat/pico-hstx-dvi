@@ -385,11 +385,16 @@ static void planet_matrix(float m[3][3], float spin) {
 	m[2][0] = -ct * ss; m[2][1] = st; m[2][2] = ct * cs;
 }
 
+const WireModel_t* chart_station_model(const GalaxySystem_t* sys) {
+	return sys->tech >= DODO_TECH ? &model_dodo : &model_coriolis;
+}
+
 static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame) {
 	const float t = (float)frame / 60.0f;
 
 	// The planet, as big on the screen as it is in km
-	const float z = model_coriolis.radius * SYSTEM_DEPTH;
+	const WireModel_t* sm_model = chart_station_model(sys);
+	const float z = sm_model->radius * SYSTEM_DEPTH;
 	const float r_px = 18.0f + 26.0f * (float)(sys->radius - 2816) / 4096.0f;
 	const float r = r_px * z / FOCAL;
 	const Vec3_t centre = { (SYSTEM_X - CENTRE_X) * z / (FOCAL * draw_aspect), (CENTRE_Y - SYSTEM_Y) * z / FOCAL, z };
@@ -400,11 +405,11 @@ static void draw_system(const GalaxySystem_t* sys, Style_e style, uint32_t frame
 	float sm[3][3];
 	make_matrix(sm, 0.3f * sinf(t * 0.2f), 0.2f, t * 0.6f);
 	const bool in_front = station.z < centre.z;
-	if (in_front) draw_object(&model_coriolis, station, sm, model_coriolis.rgb, style);
+	if (in_front) draw_object(sm_model, station, sm, sm_model->rgb, style);
 	float pm[3][3];
 	planet_matrix(pm, t * 0.4f);
 	draw_planet(centre, r, pm, _economy_rgb[sys->economy], !(sys->seed[1] & 2), style);
-	if (!in_front) draw_object(&model_coriolis, station, sm, model_coriolis.rgb, style);
+	if (!in_front) draw_object(sm_model, station, sm, sm_model->rgb, style);
 
 	// The sun, off to one side
 	draw_sun((Vec2_t){ PICTURE_LEFT + PICTURE_SUN * SUN_RAY_REACH * draw_aspect, SYSTEM_Y }, PICTURE_SUN, style, frame);

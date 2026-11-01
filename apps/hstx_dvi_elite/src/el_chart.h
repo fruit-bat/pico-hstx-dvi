@@ -31,6 +31,10 @@ void chart_refresh(void);
 const GalaxySystem_t* chart_system(uint32_t i);
 // The k-th nearest system to us, us being the 0th
 uint32_t chart_nearest(uint32_t k);
+// The station at a system: a dodecahedron where the tech level is this or
+// more, as in the original, and otherwise a Coriolis station
+#define DODO_TECH 10
+const WireModel_t* chart_station_model(const GalaxySystem_t* sys);
 // The colour a system is shown in, from what it makes
 const uint8_t* chart_economy_rgb(uint32_t economy);
 

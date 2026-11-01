@@ -40,6 +40,22 @@ def engines(x0, y0, x1, y1, z):
 	]
 
 
+def dodecahedron(inradius):
+	# A dodecahedron turned so a face points forwards, along z, with its
+	# corners as floats so its faces are found flat, rounded when written
+	g = (1 + math.sqrt(5)) / 2
+	pts = [(x, y, z) for x in (1, -1) for y in (1, -1) for z in (1, -1)]
+	pts += [(0, s / g, t * g) for s in (1, -1) for t in (1, -1)]
+	pts += [(s / g, t * g, 0) for s in (1, -1) for t in (1, -1)]
+	pts += [(s * g, 0, t / g) for s in (1, -1) for t in (1, -1)]
+	# The face round (0, g, 1) turned down onto z
+	a = math.atan2(g, 1)
+	c, s = math.cos(a), math.sin(a)
+	pts = [(x, y * c - z * s, y * s + z * c) for x, y, z in pts]
+	k = inradius / max(z for x, y, z in pts)
+	return [(x * k, y * k, z * k) for x, y, z in pts]
+
+
 def ring(n, r, y, turn=0.5):
 	# n corners round a circle across y
 	return [(round(r * math.cos(2 * math.pi * (i + turn) / n)), y, round(r * math.sin(2 * math.pi * (i + turn) / n))) for i in range(n)]
@@ -76,6 +92,14 @@ MODELS = {
 		],
 		"details": [
 			("slot", [(-100, 30, 400), (100, 30, 400), (100, -30, 400), (-100, -30, 400)], True, TRIM),
+		],
+	},
+	# A dodecahedron, as big as the Coriolis station, with the slot on the face at the front
+	"dodo": {
+		"name": "DODECAHEDRON STATION", "rgb": (255, 255, 255),
+		"hull": dodecahedron(450),
+		"details": [
+			("slot", [(-100, 30, 450), (100, 30, 450), (100, -30, 450), (-100, -30, 450)], True, TRIM),
 		],
 	},
 	# A pointed body with four fins at the back
@@ -329,7 +353,7 @@ def emit_model(out, name, m):
 	hull, details = m["hull"], m["details"]
 	verts, faces, loops, edges, polys, radius = make_model(hull, details)
 	out += [f"// {name}", f"static const WireVertex_t _{name}_vertices[{len(verts)}] = {{"]
-	out += [f"\t{{ {x}, {y}, {z} }}," for x, y, z in verts]
+	out += [f"\t{{ {round(x)}, {round(y)}, {round(z)} }}," for x, y, z in verts]
 	out += ["};", "", f"static const WireFace_t _{name}_faces[{len(faces)}] = {{"]
 	for (n, d, on), loop in zip(faces, loops):
 		out.append(f"\t{{ {n[0]:.4f}f, {n[1]:.4f}f, {n[2]:.4f}f, {len(loop)}, {{ {', '.join(map(str, loop))} }} }},")
