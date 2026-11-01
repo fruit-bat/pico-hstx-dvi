@@ -84,7 +84,25 @@ typedef enum {
 	STYLE_COUNT
 } Style_e;
 
-static const char* const _style_names[STYLE_COUNT] = { "SOLID WIREFRAME", "WIREFRAME", "OUTLINED", "FILLED" };
+// The ways of drawing shown in turn, the faces shaded with or without dithering
+typedef struct {
+	const char* name;
+	Style_e style;
+	bool dither;
+} Mode_t;
+
+static const Mode_t _modes[] = {
+	{ "SOLID WIREFRAME", STYLE_SOLID, false },
+	{ "WIREFRAME", STYLE_WIRE, false },
+	{ "OUTLINED", STYLE_OUTLINED, false },
+	{ "OUTLINED DITHERED", STYLE_OUTLINED, true },
+	{ "FILLED", STYLE_FILLED, false },
+	{ "FILLED DITHERED", STYLE_FILLED, true },
+};
+#define MODE_COUNT (sizeof(_modes) / sizeof(_modes[0]))
+
+// Whether the faces are dithered this frame
+static bool _dither;
 
 // The colours on a model, as in art/ship_model.py
 enum {
@@ -209,6 +227,13 @@ static hstx_dvi_pixel_t shade(const uint8_t rgb[3], float k) {
 	return hstx_dvi_pixel_rgb((uint8_t)(rgb[0] * k), (uint8_t)(rgb[1] * k), (uint8_t)(rgb[2] * k));
 }
 
+// The colour of a lit face, dithered for the shades between the screen's colours if asked
+static SpriteColour_t face_colour(const uint8_t rgb[3], float k) {
+	if (!_dither) return sprite_colour(shade(rgb, k));
+	if (k > 1.0f) k = 1.0f;
+	return sprite_colour_dither((uint8_t)(rgb[0] * k + 0.5f), (uint8_t)(rgb[1] * k + 0.5f), (uint8_t)(rgb[2] * k + 0.5f));
+}
+
 static Vec2_t project(const Vec3_t* v) {
 	return (Vec2_t){ CENTRE_X + FOCAL * v->x / v->z, CENTRE_Y - FOCAL * v->y / v->z };
 }
@@ -264,7 +289,7 @@ static void add_line(Vec2_t p0, Vec2_t p1, hstx_dvi_pixel_t colour) {
 	SpritePart_t* p = object_add(top, rows, (int32_t)fminf(p0.x, p1.x), (int32_t)fmaxf(p0.x, p1.x) + 1);
 	if (!p) return;
 	p->is_shape = 0;
-	p->colour = colour;
+	p->colour = sprite_colour(colour);
 	p->line.x0 = (int32_t)(p0.x * (1 << FX));
 	p->line.x1 = (int32_t)(p1.x * (1 << FX));
 	p->line.dxdy = rows > 1 ? (p->line.x1 - p->line.x0) / (rows - 1) : 0;
@@ -323,7 +348,7 @@ static void set_band(SpriteBand_t* k, int32_t r0, int32_t r1, const Vec2_t* a0, 
 }
 
 // Adds a convex shape on the screen to the object, its corners in order round it
-static void add_fill(const Vec2_t* corners, uint32_t n, hstx_dvi_pixel_t colour) {
+static void add_fill(const Vec2_t* corners, uint32_t n, SpriteColour_t colour) {
 	if (n < 3 || n > MAX_POLY) return;
 	// Cut to the view
 	Vec2_t p[MAX_POLY + 4], q[MAX_POLY + 4];
@@ -384,7 +409,7 @@ static void add_fill(const Vec2_t* corners, uint32_t n, hstx_dvi_pixel_t colour)
 }
 
 // Adds a flat convex shape to the object, cutting off the part behind us
-static void add_shape(const Vec3_t* corners, uint32_t n, hstx_dvi_pixel_t colour) {
+static void add_shape(const Vec3_t* corners, uint32_t n, SpriteColour_t colour) {
 	Vec2_t p[MAX_POLY];
 	uint32_t m = 0;
 	for (uint32_t i = 0; i < n && m + 2 <= MAX_POLY; ++i) {
@@ -542,7 +567,7 @@ static void draw_model(const Object_t* o, Style_e style) {
 	if (!behind && size < DETAIL_SIZE && (style == STYLE_SOLID || style == STYLE_WIRE)) {
 		const hstx_dvi_pixel_t c = shade(o->rgb, 1.0f);
 		for (uint32_t i = 0; i < hull_n; ++i) add_line(hull[i], hull[(i + 1) % hull_n], c);
-		if (style == STYLE_SOLID) add_fill(hull, hull_n, hstx_dvi_pixel_rgb(0, 0, 0));
+		if (style == STYLE_SOLID) add_fill(hull, hull_n, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0)));
 		return;
 	}
 
@@ -580,7 +605,7 @@ static void draw_model(const Object_t* o, Style_e style) {
 
 	Vec3_t corners[WIRE_MAX_LOOP];
 	if (style == STYLE_SOLID) {
-		const hstx_dvi_pixel_t black = hstx_dvi_pixel_rgb(0, 0, 0);
+		const SpriteColour_t black = sprite_colour(hstx_dvi_pixel_rgb(0, 0, 0));
 		if (!behind) {
 			// The outline of the hull, as one shape
 			add_fill(hull, hull_n, black);
@@ -603,13 +628,13 @@ static void draw_model(const Object_t* o, Style_e style) {
 		const WirePoly_t* p = &model->p[i];
 		if (!facing[p->f]) continue;
 		for (uint32_t j = 0; j < p->n; ++j) corners[j] = cam[p->v[j]];
-		add_shape(corners, p->n, shade(_part_rgb[p->colour], 0.5f + 0.5f * light[p->f]));
+		add_shape(corners, p->n, face_colour(_part_rgb[p->colour], 0.5f + 0.5f * light[p->f]));
 	}
 	for (uint32_t i = 0; i < model->nf; ++i) {
 		const WireFace_t* f = &model->f[i];
 		if (!facing[i]) continue;
 		for (uint32_t j = 0; j < f->n; ++j) corners[j] = cam[f->v[j]];
-		add_shape(corners, f->n, shade(o->rgb, 0.3f + 0.7f * light[i]));
+		add_shape(corners, f->n, face_colour(o->rgb, 0.3f + 0.7f * light[i]));
 	}
 }
 
@@ -732,7 +757,7 @@ static void draw_sun(Style_e style, uint32_t frame) {
 		object_end();
 	}
 	if (style != STYLE_WIRE && object_begin()) {
-		add_fill(outline, SUN_SIDES, style == STYLE_SOLID ? hstx_dvi_pixel_rgb(0, 0, 0) : edge);
+		add_fill(outline, SUN_SIDES, sprite_colour(style == STYLE_SOLID ? hstx_dvi_pixel_rgb(0, 0, 0) : edge));
 		object_end();
 	}
 	// And each ray
@@ -809,7 +834,7 @@ static void hud_box(float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) 
 // Fills the pixels from x0 up to x1 and y0 up to y1
 static void hud_rect(float x0, float y0, float x1, float y1, hstx_dvi_pixel_t c) {
 	const Vec2_t r[4] = { { x0, y0 }, { x1, y0 }, { x1, y1 }, { x0, y1 } };
-	add_fill(r, 4, c);
+	add_fill(r, 4, sprite_colour(c));
 }
 
 // A box that is filled or outlined, to suit the style
@@ -1007,7 +1032,7 @@ static void bench_rect(void) {
 		{ 0.0f, (float)VIEW_TOP }, { (float)GAME_SCREEN_W, (float)VIEW_TOP },
 		{ (float)GAME_SCREEN_W, (float)VIEW_BOTTOM }, { 0.0f, (float)VIEW_BOTTOM }
 	};
-	add_fill(r, 4, hstx_dvi_pixel_rgb(0, 0, 146));
+	add_fill(r, 4, sprite_colour(hstx_dvi_pixel_rgb(0, 0, 146)));
 }
 
 static void bench_line(uint32_t i) {
@@ -1143,7 +1168,9 @@ static void bench(void) {
 
 void main_loop(void) {
 	for (uint32_t frame = 0; ; ++frame) {
-		const Style_e style = (Style_e)((frame / STYLE_FRAMES) % STYLE_COUNT);
+		const Mode_t* mode = &_modes[(frame / STYLE_FRAMES) % MODE_COUNT];
+		const Style_e style = mode->style;
+		_dither = mode->dither;
 		move_objects(frame);
 		_set ^= 1;
 		_object_count = 0;
@@ -1183,15 +1210,15 @@ void main_loop(void) {
 		char ahead[16];
 		rows_text(ahead, sizeof(ahead), timing.ahead_min);
 		if (timing.frame) {
-			snprintf(s, sizeof(s), "%s AHEAD %s AVG %u%%", _style_names[style], ahead,
+			snprintf(s, sizeof(s), "%s AHEAD %s AVG %u%%", mode->name, ahead,
 				(unsigned)percent(timing.frame, FRAME_LINES));
 		}
 		else {
-			snprintf(s, sizeof(s), "%s PARTS %u", _style_names[style], (unsigned)_prim_count);
+			snprintf(s, sizeof(s), "%s PARTS %u", mode->name, (unsigned)_prim_count);
 		}
 		game_text_set(status, s, 1);
 		if (timing.frame && frame % 60 == 0) {
-			printf("%s parts %u sprites %u hidden %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", _style_names[style],
+			printf("%s parts %u sprites %u hidden %u calls %u ahead %s line %u%% load %u%% avg %u%%\n", mode->name,
 				(unsigned)_prim_count, (unsigned)_sprite_count, (unsigned)_hidden_count, (unsigned)timing.calls_max, ahead,
 				(unsigned)percent(timing.line_max, 1),
 				(unsigned)percent(timing.window_max, HSTX_DVI_ROW_FIFO_SIZE),

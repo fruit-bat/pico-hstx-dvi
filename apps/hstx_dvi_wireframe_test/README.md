@@ -2,7 +2,8 @@
 
 Every type of ship from Elite flies round a spinning Coriolis space station, past a sun, through a field of stars,
 with missiles chasing two of them. The name of the nearest ship is shown at the top, and a dashboard after the original game's at the bottom.
-Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces.
+Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces,
+the filled ones shown both with and without dithering.
 
 ## How it works
 
@@ -18,6 +19,10 @@ Every 10 seconds it changes between solid wireframes, see-through wireframes, fi
   The models are convex, so the faces left never cover each other.
 - For the solid wireframes each object's outline is filled in black after its edges. A convex object always has a convex outline,
   so this takes one shape. Close up, when part of an object is behind us, each face is filled instead.
+- The screen has 8 shades of red and green and 4 of blue, so the faces of a ship can only be lit in a few steps.
+  Dithered, a face mixes the two nearest colours in a pattern 2 pixels by 2, for 3 more shades between each step.
+  A part's colour is a word of 4 pixels for the even rows and one for the odd, so this costs the renderer nothing,
+  and the pattern stays fixed to the screen as the ships move.
 - An object wholly behind the outline of something solid and nearer is left out, from its circle on the screen.
 - The objects are added nearest first. Lower sprite ids take priority, so the nearer ones cover the ones behind without a depth buffer.
   This goes wrong only if objects pass through each other.
