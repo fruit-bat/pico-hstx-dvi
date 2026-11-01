@@ -6,10 +6,14 @@
 // dock    - starts a game, launches, then is put on a level run at the slot,
 //           and docks
 // crash   - as dock, but rolled so the slot is not level, and hits the station
-// hyper   - starts a game, launches, picks Diso on the short range chart and
-//           jumps there, then tries Lave's far neighbours, out of range
+// hyper   - starts a game, launches, climbs away, tries to jump while still
+//           too close to the station, then picks Diso on the short range
+//           chart and jumps there once clear, then tries Lave's far
+//           neighbours, out of range
 // fight   - starts a game, launches, then a Sidewinder is put ahead, which
 //           we shoot down, and then a Python, at which we fire a missile
+// trade   - starts a game, and docked, buys food, holding to buy more, and
+//           computers, then a missile, and sells some food
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -31,6 +35,35 @@ uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "attract")) return 0;
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return START;
+	if (!strcmp(host_mode, "trade")) {
+		// The market: food, held to buy more, then computers
+		if (f >= 60 && f < 63) return SELECT;
+		if (f >= 80 && f < 83) return R;
+		if (f >= 100 && f < 140) return R;
+		if (f >= 160 && f < 163) return D;
+		if (f >= 170 && f < 173) return D;
+		if (f >= 180 && f < 183) return D;
+		if (f >= 190 && f < 193) return D;
+		if (f >= 200 && f < 203) return D;
+		if (f >= 210 && f < 213) return D;
+		if (f >= 220 && f < 223) return D;
+		if (f >= 240 && f < 243) return R;
+		// Sell some food
+		if (f >= 260 && f < 263) return U;
+		if (f >= 263 && f < 266) return 0;
+		if (f >= 270 && f < 273) return U;
+		if (f >= 280 && f < 283) return U;
+		if (f >= 290 && f < 293) return U;
+		if (f >= 300 && f < 303) return U;
+		if (f >= 310 && f < 313) return U;
+		if (f >= 320 && f < 323) return U;
+		if (f >= 340 && f < 343) return L;
+		// The equipment: a missile
+		if (f >= 400 && f < 403) return SELECT;
+		if (f >= 420 && f < 423) return D;
+		if (f >= 440 && f < 443) return A;
+		return 0;
+	}
 	if (f >= 60 && f < 63) return A;
 	if (!strcmp(host_mode, "fly")) {
 		// Speed up, then roll right and climb
@@ -63,14 +96,19 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 510 && f < 513) return B | A;
 	}
 	if (!strcmp(host_mode, "hyper")) {
-		// Diso is 9 steps left of Lave
-		if (f >= 200 && f < 203) return SELECT;
-		if (f >= 220 && f < 260) return L;
-		if (f >= 300 && f < 303) return A;
-		// Too far
-		if (f >= 1300 && f < 1303) return SELECT;
-		if (f >= 1320 && f < 1340) return R | B;
-		if (f >= 1400 && f < 1403) return A;
+		// Climb a quarter turn, away from both the planet and the station,
+		// and speed up, trying to jump too soon on the way, then go to Diso,
+		// 9 steps left of Lave, once clear
+		if (f >= 160 && f < 235) return D;
+		if (f >= 240 && f < 310) return B | U;
+		if (f >= 320 && f < 323) return SELECT;
+		if (f >= 330 && f < 370) return L;
+		if (f >= 380 && f < 383) return A;
+		if (f >= 700 && f < 703) return A;
+		// Then too far
+		if (f >= 1600 && f < 1603) return SELECT;
+		if (f >= 1620 && f < 1640) return R | B;
+		if (f >= 1700 && f < 1703) return A;
 	}
 	return 0;
 }

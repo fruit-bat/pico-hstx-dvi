@@ -14,6 +14,8 @@
 //   left and right roll, and up and down dive and climb, as with a joystick
 //   B held with up or down speeds up or slows down
 //   B held with fire launches a missile, and with select sets off the ECM
+//   docked, select also shows the market, where up and down pick a good,
+//   right buys and left sells, and the equipment, where fire buys
 //   A launches us when docked, from the status, and on the charts or data starts the
 //   countdown to hyperspace, to the system the cursor is on, if it is in
 //   range of our fuel
@@ -30,6 +32,7 @@
 #include "el_screen.h"
 #include "el_ships.h"
 #include "el_space.h"
+#include "el_trade.h"
 #include "game_pallet.h"
 #include <math.h>
 #include <stdio.h>
@@ -52,6 +55,13 @@
 // The countdown to hyperspace, in seconds as in the original, and the jump
 #define HYPER_COUNT 10
 #define HYPER_FRAMES 150
+// Hyperspace is not allowed this close to anything: within this many planet
+// radii of the planet's surface, sun radii of the sun's middle, or units of
+// the station or another ship
+#define LOCK_PLANET 1.0f
+#define LOCK_SUN 3.0f
+#define LOCK_STATION 8000.0f
+#define LOCK_SHIP 6000.0f
 // How long a message, such as that a system is too far, is shown for
 #define MESSAGE_FRAMES 120
 // Where we start, in front of the slot, in station radii from its middle
@@ -97,32 +107,48 @@
 #define CURSOR_FAST 3.0f
 
 #define SCANNER_RANGE 12000.0f
+// Further than this, the other ships are not seen at all
+#define SHIP_SEEN 20000.0f
 
 // Our shields and energy go from 0 to 1, and build up again by this much a frame
 #define RECHARGE 0.0006f
-// Our pulse laser: how far it reaches, what a pulse does, how often it
-// fires while fire is held, for how long a pulse is seen, and how much a
-// pulse heats it, how fast it cools, and how cool it must be to fire again
-// once too hot
+// Our laser: how far it reaches, for how long a shot is seen, how fast it
+// cools, and how cool it must be to fire again once too hot
 #define LASER_RANGE 8000.0f
-#define LASER_DAMAGE 1.0f
-#define LASER_PULSE 10
-#define LASER_BEAM 4
-#define LASER_HEAT 0.05f
+#define LASER_SEEN 4
 #define LASER_COOL 0.0025f
 #define LASER_COOLED 0.6f
-#define MISSILES_MAX 4
+
+// Each laser, as Laser_e: what a shot does, how often it fires while fire
+// is held, and how much a shot heats it. The beam and military lasers fire
+// all the time, so they are seen all the time.
+typedef struct {
+	float damage;
+	uint32_t every;
+	float heat;
+} Laser_t;
+
+static const Laser_t _lasers[] = {
+	{ 1.0f, 10, 0.05f },
+	{ 0.6f, 4, 0.025f },
+	{ 1.0f, 4, 0.022f },
+};
 
 // The front view is our status when docked
+// The market and equipment are only seen docked
 typedef enum {
 	VIEW_FRONT = 0,
+	VIEW_MARKET,
+	VIEW_EQUIPMENT,
 	VIEW_LOCAL,
 	VIEW_GALAXY,
 	VIEW_DATA,
 	VIEWS
 } View_e;
 
-static const char* const _view_labels[VIEWS] = { "FRONT VIEW", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM" };
+static const char* const _view_labels[VIEWS] = {
+	"FRONT VIEW", "MARKET PRICES", "EQUIP SHIP", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
+};
 
 typedef enum {
 	STATE_DOCKED = 0,
@@ -146,8 +172,6 @@ static float _speed, _roll, _pitch;
 static Frame_t _planet, _station;
 static float _planet_radius;
 static Vec3_t _sun_pos;
-// How far we can jump, in tenths of a light year
-static uint32_t _fuel;
 // Frames left counting down to hyperspace, and where to
 static uint32_t _hyper_frames;
 static uint32_t _hyper_to;
@@ -158,9 +182,7 @@ static float _fore, _aft, _energy;
 static float _laser_temp;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
-static uint32_t _missiles;
 static uint32_t _kills;
-static uint32_t _cash; // in tenths of a credit
 static bool _offender;
 static View_e _view;
 static State_e _state;
@@ -183,14 +205,11 @@ static ShipsWorld_t world(void) {
 	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender };
 }
 
-// Full up, as when docked
+// Repaired, as when docked
 static void refit(void) {
-	_fuel = GALAXY_FUEL_MAX;
-	chart_set_fuel(_fuel);
 	_fore = _aft = _energy = 1.0f;
 	_laser_temp = 0.0f;
 	_overheated = false;
-	_missiles = MISSILES_MAX;
 }
 
 // A number from -1 to 1 made from the system's numbers, the k-th of several
@@ -236,7 +255,9 @@ static void start(void) {
 	_roll = 0.0f;
 	_pitch = 0.0f;
 	_kills = 0;
-	_cash = 1000;
+	trade_new_commander();
+	trade_arrive(chart_system(chart_home()));
+	chart_set_fuel(cmdr.fuel);
 	refit();
 	_laser_wait = _laser_beam = 0;
 	_hyper_frames = 0;
@@ -264,15 +285,30 @@ static void message(const char* m) {
 	_message_frames = MESSAGE_FRAMES;
 }
 
+// Whether we are too close to something to go into hyperspace
+static bool mass_locked(void) {
+	if (vec_length(vec_sub(_me.pos, _planet.pos)) < (1.0f + LOCK_PLANET) * _planet_radius) return true;
+	if (vec_length(vec_sub(_me.pos, _sun_pos)) < LOCK_SUN * SUN_RADIUS) return true;
+	if (vec_length(vec_sub(_me.pos, _station.pos)) < LOCK_STATION) return true;
+	for (uint32_t i = 0; i < SHIPS; ++i) {
+		if (ships[i].alive && vec_length(vec_sub(_me.pos, ships[i].fr.pos)) < LOCK_SHIP) return true;
+	}
+	return false;
+}
+
 // Starts the countdown to the system the cursor is on, if we can reach it
 static void start_hyperspace(void) {
 	if (_hyper_frames) return;
+	if (mass_locked()) {
+		message("MASS LOCKED");
+		return;
+	}
 	const uint32_t to = chart_selected();
 	if (to == chart_home()) {
 		message("WE ARE HERE");
 		return;
 	}
-	if (galaxy_distance(chart_system(chart_home()), chart_system(to)) > _fuel) {
+	if (galaxy_distance(chart_system(chart_home()), chart_system(to)) > cmdr.fuel) {
 		message("OUT OF RANGE");
 		return;
 	}
@@ -282,11 +318,12 @@ static void start_hyperspace(void) {
 
 // Out of hyperspace in the new system, facing its planet
 static void arrive(void) {
-	_fuel -= galaxy_distance(chart_system(chart_home()), chart_system(_hyper_to));
-	chart_set_fuel(_fuel);
+	cmdr.fuel -= galaxy_distance(chart_system(chart_home()), chart_system(_hyper_to));
+	chart_set_fuel(cmdr.fuel);
 	// The police of the new system do not know us, for now
 	_offender = false;
 	enter_system(_hyper_to);
+	trade_arrive(chart_system(_hyper_to));
 	frame_set(&_me, (Vec3_t){ 0.0f, 0.0f, -ARRIVAL * _planet_radius }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.0f, 1.0f, 0.0f });
 	_speed = MAX_SPEED * 0.25f;
 	_roll = 0.0f;
@@ -402,22 +439,23 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (held & EL_INP_B) {
 		if (!(pressed & EL_INP_A)) return;
 		const int32_t target = ships_nearest_ahead(&_me);
-		if (!_missiles) message("NO MISSILES");
+		if (!cmdr.missiles) message("NO MISSILES");
 		else if (target < 0) message("NO TARGET");
-		else if (ships_fire_missile(&_me, (uint32_t)target)) --_missiles;
+		else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
 		return;
 	}
 	if (!(held & EL_INP_A) || _laser_wait || _overheated) return;
-	_laser_wait = LASER_PULSE;
-	_laser_beam = LASER_BEAM;
-	_laser_temp += LASER_HEAT;
+	const Laser_t* l = &_lasers[cmdr.laser];
+	_laser_wait = l->every;
+	_laser_beam = LASER_SEEN;
+	_laser_temp += l->heat;
 	if (_laser_temp >= 1.0f) {
 		_laser_temp = 1.0f;
 		_overheated = true;
 		message("LASER TEMPERATURE");
 	}
 	const int32_t i = ships_in_sights(&_me, LASER_RANGE);
-	if (i >= 0) ships_hit((uint32_t)i, LASER_DAMAGE, ev);
+	if (i >= 0) ships_hit((uint32_t)i, l->damage, ev);
 }
 
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
@@ -434,7 +472,7 @@ static void take(const ShipsEvents_t* ev) {
 	}
 	if (ev->missile) message("INCOMING MISSILE");
 	_kills += ev->kills;
-	_cash += ev->bounty;
+	cmdr.cash += ev->bounty;
 	if (ev->innocent && !_offender) {
 		_offender = true;
 		message("OFFENDER");
@@ -485,7 +523,7 @@ static void draw_dashboard(void) {
 	Hud_t hud = {
 		.fore_shield = _fore,
 		.aft_shield = _aft,
-		.fuel = (float)_fuel / GALAXY_FUEL_MAX,
+		.fuel = (float)cmdr.fuel / GALAXY_FUEL_MAX,
 		.cabin_temp = 0.1f,
 		.laser_temp = _laser_temp,
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
@@ -493,7 +531,7 @@ static void draw_dashboard(void) {
 		.energy = _energy,
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
-		.missiles = _missiles,
+		.missiles = cmdr.missiles,
 		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
 		.sights = _view == VIEW_FRONT && _state == STATE_FLYING && !_options,
@@ -567,7 +605,8 @@ static void draw_front(void) {
 	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_me, _station.pos)) - model_coriolis.radius };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (!ships[i].alive) continue;
-		things[n++] = (Thing_t){ THING_SHIP, i, vec_length(frame_view(&_me, ships[i].fr.pos)) - ships[i].model->radius };
+		const float d = vec_length(frame_view(&_me, ships[i].fr.pos));
+		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_SHIP, i, d - ships[i].model->radius };
 	}
 	for (uint32_t i = 1; i < n; ++i) {
 		const Thing_t t = things[i];
@@ -704,9 +743,9 @@ static void draw_status(void) {
 		"Present System", "Hyperspace System", "Condition", "Fuel", "Cash", "Legal Status", "Rating"
 	};
 	char fuel[24];
-	snprintf(fuel, sizeof(fuel), "%u.%u Light Years", (unsigned)(_fuel / 10), (unsigned)(_fuel % 10));
+	snprintf(fuel, sizeof(fuel), "%u.%u Light Years", (unsigned)(cmdr.fuel / 10), (unsigned)(cmdr.fuel % 10));
 	char cash[24];
-	snprintf(cash, sizeof(cash), "%u.%u Cr", (unsigned)(_cash / 10), (unsigned)(_cash % 10));
+	snprintf(cash, sizeof(cash), "%u.%u Cr", (unsigned)(cmdr.cash / 10), (unsigned)(cmdr.cash % 10));
 	const char* values[] = {
 		chart_system(chart_home())->name, chart_system(chart_selected())->name,
 		_state == STATE_DOCKED ? "Docked" : ships_hostile_near(&_me, SCANNER_RANGE) ? "Red" : ships_near() ? "Yellow" : "Green",
@@ -720,7 +759,9 @@ static void draw_status(void) {
 	}
 	y += STATUS_LINE;
 	screen_text(STATUS_X, y, "EQUIPMENT:", GAME_CYAN, false);
-	screen_text(STATUS_X + 16, y + STATUS_LINE, "Front Pulse Laser", GAME_WHITE, false);
+	const char* fitted[4];
+	const uint32_t n = trade_equipment_names(fitted, 4);
+	for (uint32_t i = 0; i < n; ++i) screen_text(STATUS_X + 16, y + STATUS_LINE * (int32_t)(i + 1), fitted[i], GAME_WHITE, false);
 	if (_state == STATE_DOCKED && (_frame / 30) & 1) screen_text_centre(VIEW_BOTTOM - 24, "FIRE TO LAUNCH", GAME_CYAN, true);
 
 	const float t = (float)_frame / 60.0f;
@@ -768,7 +809,6 @@ static bool next_state(void) {
 				_roll = 0.0f;
 				_pitch = 0.0f;
 				_view = VIEW_FRONT;
-				// Filled up, for now
 				refit();
 				set_state(STATE_DOCKED);
 			}
@@ -802,24 +842,41 @@ void game_play(void) {
 				// With B held, the ECM blows up the missiles flying
 				if (held & EL_INP_B) {
 					if (_state == STATE_FLYING) {
-						ships_ecm();
-						message("ECM");
+						if (cmdr.ecm) {
+							ships_ecm();
+							message("E.C.M.");
+						}
+						else {
+							message("NO E.C.M.");
+						}
 					}
 				}
 				else if (can_look) {
 					_view = (View_e)((_view + 1) % VIEWS);
+					// The market and equipment only when docked
+					if (_state != STATE_DOCKED && (_view == VIEW_MARKET || _view == VIEW_EQUIPMENT)) _view = VIEW_LOCAL;
 				}
 			}
 			switch (_state) {
-				case STATE_DOCKED:
-					move_cursor(held);
+				case STATE_DOCKED: {
+					const char* m = NULL;
+					if (_view == VIEW_MARKET) m = trade_market_input(pressed, held);
+					else if (_view == VIEW_EQUIPMENT) m = trade_equipment_input(pressed, chart_system(chart_home()));
+					else move_cursor(held);
+					if (m) message(m);
+					chart_set_fuel(cmdr.fuel);
 					// Only from the status, so not by mistake on the charts
 					if ((pressed & EL_INP_A) && _view == VIEW_FRONT) launch();
 					break;
+				}
 				case STATE_FLYING:
 					// Fire on the charts or data jumps to the system the cursor is on
 					if ((pressed & EL_INP_A) && _view != VIEW_FRONT) start_hyperspace();
-					if (_hyper_frames && --_hyper_frames == 0) set_state(STATE_HYPERSPACE);
+					if (_hyper_frames && --_hyper_frames == 0) {
+						// Still clear of everything at the end of the countdown
+						if (mass_locked()) message("MASS LOCKED");
+						else set_state(STATE_HYPERSPACE);
+					}
 					fire(held, pressed, &ev);
 					fly(held);
 					break;
@@ -864,6 +921,14 @@ void game_play(void) {
 					}
 				}
 				break;
+			case VIEW_MARKET:
+				snprintf(title, sizeof(title), "%s MARKET PRICES", chart_system(chart_home())->name);
+				trade_draw_market();
+				break;
+			case VIEW_EQUIPMENT:
+				snprintf(title, sizeof(title), "EQUIP SHIP");
+				trade_draw_equipment(chart_system(chart_home()));
+				break;
 			case VIEW_LOCAL:
 				snprintf(title, sizeof(title), "SHORT RANGE CHART");
 				chart_draw_local(chart_style);
@@ -884,7 +949,7 @@ void game_play(void) {
 		}
 		if (_message_frames) {
 			--_message_frames;
-			screen_text_centre(VIEW_BOTTOM - 44, _message, GAME_YELLOW, true);
+			screen_text_centre(VIEW_BOTTOM - 32, _message, GAME_YELLOW, true);
 		}
 		// Text draws straight into the row, so the options go last, over everything else
 		if (_options) {

@@ -1,7 +1,7 @@
 # Elite
 
 A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
-fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, fight pirates, and dock again.
+fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, fight pirates, dock again, and trade.
 
 ## Between games
 
@@ -20,15 +20,25 @@ and amber when not. They are always drawn as wireframes.
 
 On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
 if it is within reach of the fuel, shown by the circle round us on the charts. The jump uses as much fuel as it is long,
-up to 7 light years with full tanks, and docking fills them up again for now.
+up to 7 light years with full tanks, and fuel is bought at the station.
+It cannot start, or end, too close to anything, the planet, the sun, the station or another ship: we are mass locked.
 Each system's planet is as big as its data says and coloured as it is on the charts,
 and where its sun and station are comes from its numbers, so it is the same each time.
+
+## Trading
+
+Docked, select also shows the market and the equipment for sale. In the market, up and down pick a good,
+right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
+moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
+gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, and beam and military lasers, which fire all the time.
+Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
 ## Combat
 
 Fire shoots the pulse laser, which heats up as it fires and stops when too hot until it has cooled.
-B held with fire launches a missile at the ship nearest ahead; there are four, filled up on docking.
-B held with select sets off the ECM, which blows up every missile flying.
+B held with fire launches a missile at the ship nearest ahead, if any are left.
+B held with select sets off the ECM, if fitted, which blows up every missile flying.
 
 The other ships are traders going about their business, pirates that come for you,
 and the police, who come for you if you destroy anyone but a pirate. Anyone shot at shoots back, or runs if it is a trader badly hurt.
@@ -93,4 +103,5 @@ host/build/elite_host dock 420 20 frames
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
+`trade` buys and sells in the market at Lave, and buys a missile.
 See `../common/host` for more on how this works.

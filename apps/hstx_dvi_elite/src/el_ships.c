@@ -15,8 +15,8 @@
 
 Ship_t ships[SHIPS];
 
-// How far from the station new ships turn up, and how far from us they are
-// left behind and replaced
+// How far from the station new ships turn up, and how far from both it and
+// us they are left behind and replaced, as we may be far from the station
 #define SPAWN_NEAR 3000.0f
 #define SPAWN_FAR 12000.0f
 #define LEAVE_RANGE 30000.0f
@@ -390,7 +390,7 @@ void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 			ev->fore += RAM_DAMAGE;
 			destroy(s, ev, true);
 		}
-		else if (d > LEAVE_RANGE) {
+		else if (d > LEAVE_RANGE && vec_length(vec_sub(s->fr.pos, w->station)) > LEAVE_RANGE) {
 			new_ship(s, w);
 		}
 	}

@@ -15,8 +15,10 @@
 // A shape can gain a corner for each side of the view it is cut by, and one
 // at the near plane. Planets close up need many corners for a smooth edge.
 #define MAX_POLY 100
-// Smaller than this, in pixels across, and a ship is just a dot
+// Smaller than this, in pixels across, and a ship is just a dot of two
+// pixels, or of one smaller than PIXEL_SIZE
 #define DOT_SIZE 6.0f
+#define PIXEL_SIZE 2.0f
 // Smaller than this and a ship has no dark outlines when outlined
 #define OUTLINE_SIZE 40.0f
 // Smaller than this and a wireframe is just its outline
@@ -415,10 +417,11 @@ void draw_model(const WireModel_t* model, Vec3_t pos, const float m[3][3], const
 		++_hidden_count;
 		return;
 	}
-	// Far away it is just a dot
+	// Far away it is just a dot, in its own colour
 	const float size = pos.z > model->radius ? FOCAL * model->radius * 2.0f / pos.z : (float)GAME_SCREEN_W;
 	if (size < DOT_SIZE) {
-		add_line(centre, (Vec2_t){ centre.x + 1.0f, centre.y + 1.0f }, shade(rgb, 1.0f));
+		const float d = size < PIXEL_SIZE ? 0.0f : 1.0f;
+		add_line(centre, (Vec2_t){ centre.x + d, centre.y + d }, shade(rgb, 1.0f));
 		return;
 	}
 
