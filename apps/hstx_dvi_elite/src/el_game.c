@@ -29,6 +29,7 @@
 #include "el_draw.h"
 #include "el_hud.h"
 #include "el_input.h"
+#include "el_options.h"
 #include "el_screen.h"
 #include "el_save.h"
 #include "el_ships.h"
@@ -165,15 +166,6 @@ typedef enum {
 	STATE_DEAD
 } State_e;
 
-typedef enum {
-	OPTION_STYLE = 0,
-	OPTION_DITHER,
-	OPTION_HUD,
-	OPTION_SCREEN,
-	OPTION_END,
-	OPTIONS
-} Option_e;
-
 static Frame_t _me;
 // Where we look from, the way the view is
 static Frame_t _eye;
@@ -200,10 +192,7 @@ static View_e _view;
 static State_e _state;
 // Frames into the state, for the tunnel and the end
 static uint32_t _state_frames;
-static bool _options;
-static uint32_t _option;
 static uint32_t _frame;
-static GameText_t _option_text[2][OPTIONS + 1];
 
 // Moves a value towards a target by at most step
 static float towards(float v, float target, float step) {
@@ -278,8 +267,7 @@ static void start(void) {
 	_view = VIEW_FRONT;
 	_state = STATE_DOCKED;
 	_state_frames = 0;
-	_options = false;
-	_option = 0;
+	options_close();
 	_frame = 0;
 	dust_init();
 }
@@ -643,7 +631,7 @@ static void draw_dashboard(void) {
 		.missiles = cmdr.missiles,
 		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
-		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !_options,
+		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
 	};
 	Blip_t blips[SHIPS + 1];
 	uint32_t n = 0;
@@ -754,73 +742,6 @@ static void draw_view(void) {
 	}
 	// Behind it all
 	dust_draw();
-}
-
-// ----------------------------------------------------------------------------
-// The options, over the view while the game waits
-
-static bool options(uint8_t pressed) {
-	if (pressed & EL_INP_START) {
-		_options = false;
-		save_settings();
-		return false;
-	}
-	if (pressed & EL_INP_DOWN) _option = (_option + 1) % OPTIONS;
-	if (pressed & EL_INP_UP) _option = (_option + OPTIONS - 1) % OPTIONS;
-	const int32_t change = (pressed & EL_INP_RIGHT ? 1 : 0) - (pressed & EL_INP_LEFT ? 1 : 0);
-	switch (_option) {
-		case OPTION_STYLE:
-			if (change) draw_style = (Style_e)((draw_style + STYLE_COUNT + change) % STYLE_COUNT);
-			break;
-		case OPTION_DITHER:
-			if (change) draw_dither = !draw_dither;
-			break;
-		case OPTION_HUD:
-			if (change) draw_hud_filled = !draw_hud_filled;
-			break;
-		case OPTION_SCREEN:
-			if (change) {
-				draw_aspect = draw_aspect == ASPECT_16_9 ? ASPECT_4_3 : ASPECT_16_9;
-				chart_refresh();
-			}
-			break;
-		default:
-			// The game ends
-			if (pressed & EL_INP_A) return true;
-			break;
-	}
-	return false;
-}
-
-static void draw_options(void) {
-	GameText_t* t = _option_text[draw_set()];
-	char s[GAME_TEXT_MAX + 1];
-	const int32_t top = CENTRE_Y - 50;
-	for (uint32_t i = 0; i < OPTIONS; ++i) {
-		switch (i) {
-			case OPTION_STYLE:
-				snprintf(s, sizeof(s), "VIEW      < %s >", style_names[draw_style]);
-				break;
-			case OPTION_DITHER:
-				snprintf(s, sizeof(s), "DITHERED  < %s >", draw_dither ? "ON" : "OFF");
-				break;
-			case OPTION_HUD:
-				snprintf(s, sizeof(s), "DASHBOARD < %s >", draw_hud_filled ? "FILLED" : "LINES");
-				break;
-			case OPTION_SCREEN:
-				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
-				break;
-			default:
-				snprintf(s, sizeof(s), "END GAME   (FIRE)");
-				break;
-		}
-		game_text_set(&t[i], s, 1);
-		game_spr_text_centre(&t[i], top + 24 * (int32_t)i, game_pallet(i == _option ? GAME_YELLOW : GAME_WHITE));
-		draw_count_sprite();
-	}
-	game_text_set(&t[OPTIONS], "START TO GO ON", 1);
-	game_spr_text_centre(&t[OPTIONS], top + 24 * OPTIONS + 16, game_pallet(GAME_CYAN));
-	draw_count_sprite();
 }
 
 // ----------------------------------------------------------------------------
@@ -958,8 +879,11 @@ static void load(const Save_t* s) {
 	frame_set(&_me, _station.pos, _station.f, _station.u);
 }
 
-// The list of commanders, centred: the slot, name, where, cash and rating
-#define SLOTS_X ((GAME_SCREEN_W - 54 * 8) / 2)
+// With nothing pressed for this long, the commanders go back to the title
+#define COMMANDERS_WAIT (30 * 60)
+
+// The list of commanders: the slot, name, where and cash, and then the rating
+#define SLOTS_RATING 35
 
 // The letters a name is made of; a space ends it
 static const char _letters[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -1015,7 +939,7 @@ static void enter_name(void) {
 // When there is somewhere to save, picks which commander to play: fire plays
 // the one in a slot, or a new one if it is empty, and select starts a new one.
 // Start shows the options, as in the game. Returns false if the game is ended
-// from the options.
+// from the options, or nothing is pressed for a while.
 static bool choose_commander(void) {
 	_slot = -1;
 	if (!save_ready()) return true;
@@ -1023,13 +947,19 @@ static bool choose_commander(void) {
 	bool used[SAVE_SLOTS];
 	for (uint32_t i = 0; i < SAVE_SLOTS; ++i) used[i] = save_read(i, &saves[i]);
 	uint32_t pick = 0;
+	uint32_t idle = 0;
 	for (;;) {
 		const uint16_t pressed = game_input_pressed();
-		if (_options) {
-			if (options(pressed)) return false;
+		idle = game_input_get() ? 0 : idle + 1;
+		if (idle >= COMMANDERS_WAIT) {
+			options_close();
+			return false;
+		}
+		if (options_shown()) {
+			if (options_input(pressed)) return false;
 		}
 		else {
-			if (pressed & EL_INP_START) _options = true;
+			if (pressed & EL_INP_START) options_open(true);
 			if (pressed & EL_INP_DOWN) pick = (pick + 1) % SAVE_SLOTS;
 			if (pressed & EL_INP_UP) pick = (pick + SAVE_SLOTS - 1) % SAVE_SLOTS;
 			if (pressed & (EL_INP_A | EL_INP_SELECT)) {
@@ -1042,14 +972,21 @@ static bool choose_commander(void) {
 		screen_begin();
 		draw_dashboard();
 		// Text draws straight into the row, so the options go over nothing else
-		if (_options) {
-			draw_options();
+		if (options_shown()) {
+			options_draw();
 			screen_end("COMMANDERS", "OPTIONS");
 			++_frame;
 			continue;
 		}
 		char line[GAME_TEXT_MAX + 1];
 		const int32_t top = VIEW_TOP + 40;
+		// Centred on the widest
+		uint32_t widest = 8;
+		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
+			const uint32_t w = used[i] ? SLOTS_RATING + (uint32_t)strlen(rating(saves[i].kills)) : 8;
+			if (w > widest) widest = w;
+		}
+		const int32_t x = (GAME_SCREEN_W - 8 * (int32_t)widest) / 2;
 		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
 			const uint32_t c = i == pick ? GAME_YELLOW : GAME_WHITE;
 			const int32_t y = top + 24 * (int32_t)i;
@@ -1059,12 +996,12 @@ static bool choose_commander(void) {
 				const char* at = sv->galaxy == chart_galaxy() ? chart_system(sv->home)->name : "";
 				snprintf(line, sizeof(line), "%u  %-8s %-9s %6u.%u Cr", (unsigned)(i + 1), sv->name, at,
 					(unsigned)(sv->cmdr.cash / 10), (unsigned)(sv->cmdr.cash % 10));
-				screen_text(SLOTS_X, y, line, c, false);
-				screen_text(SLOTS_X + 35 * 8, y, rating(sv->kills), c, false);
+				screen_text(x, y, line, c, false);
+				screen_text(x + SLOTS_RATING * 8, y, rating(sv->kills), c, false);
 			}
 			else {
 				snprintf(line, sizeof(line), "%u  EMPTY", (unsigned)(i + 1));
-				screen_text(SLOTS_X, y, line, c, false);
+				screen_text(x, y, line, c, false);
 			}
 		}
 		screen_text_centre(VIEW_BOTTOM - 40, "FIRE PLAYS", GAME_CYAN, false);
@@ -1080,12 +1017,12 @@ void game_play(void) {
 	for (;;) {
 		const uint16_t pressed = game_input_pressed();
 		const uint16_t held = game_input_get();
-		if (_options) {
-			if (options(pressed)) return;
+		if (options_shown()) {
+			if (options_input(pressed)) return;
 		}
 		else {
 			ShipsEvents_t ev = { 0 };
-			if (pressed & EL_INP_START) _options = true;
+			if (pressed & EL_INP_START) options_open(true);
 			const bool can_look = _state == STATE_DOCKED || _state == STATE_FLYING;
 			if (pressed & EL_INP_SELECT) {
 				// With B held, the ECM blows up the missiles flying
@@ -1208,9 +1145,9 @@ void game_play(void) {
 			screen_text_centre(VIEW_BOTTOM - 32, _message, GAME_YELLOW, true);
 		}
 		// Text draws straight into the row, so the options go last, over everything else
-		if (_options) {
+		if (options_shown()) {
 			label = "OPTIONS";
-			draw_options();
+			options_draw();
 		}
 		screen_end(title, label);
 		++_frame;

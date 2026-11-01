@@ -6,7 +6,7 @@ fly about, look at the charts of the galaxy and the data on its systems, jump to
 ## Between games
 
 The title, with a Cobra Mk III turning, then the galactic chart, the short range chart, the data on the systems nearest us,
-and every type of ship flying round a space station, the next galaxy each time round. Start or fire begins a game.
+and every type of ship flying round a space station, the next galaxy each time round. Fire begins a game, and start shows the options.
 
 ## Docking
 
@@ -70,7 +70,7 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
   and the left one the other way. From a chart either goes back to the front view.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
-  the shape of the screen, and ending the game.
+  the shape of the screen, and in a game, ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -83,7 +83,7 @@ Built with `-DELITE_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIO
 in the directory `pico_dvi_elite`, as `commander1.dat` to `commander4.dat`, and the options in `settings.dat`,
 saved when you leave them and read when it starts.
 Starting a game then shows the four slots: fire plays the commander in one, or a new one if it is empty,
-and select starts a new one in it. A new commander is named first: up and down change the letter, held to go on, left and right
+and select starts a new one in it. Left for 30 seconds, it goes back to the title. A new commander is named first: up and down change the letter, held to go on, left and right
 move along, and fire takes the name. The game is saved whenever you dock or launch, so always as docked, as in the original,
 and a commander loaded starts docked where it was saved.
 The SD card takes GPIOs 4 and 5, so the buttons move to GPIOs 6 to 11, without select and start, which come from a pad.
@@ -117,6 +117,7 @@ host/build/elite_host fly 1500 100 frames
 host/build/elite_host dock 420 20 frames
 ```
 
+`options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
 `fly` starts a game, launches, flies about, looks at the charts and changes the options.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.

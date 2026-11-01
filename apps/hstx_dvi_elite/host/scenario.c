@@ -1,6 +1,9 @@
 // Drives the Elite game on the PC, see common/host
 //
 // attract - nobody touches the buttons
+// options - shows the options on the title and dithers, then starts a game
+//           and waits; built with EL_HOST_SAVE, the commanders go back to
+//           the title after 30 seconds
 // fly     - starts a game, launches, speeds up, rolls and climbs, looks at
 //           the charts moving the cursor, then changes the style and the
 //           dashboard in the options
@@ -45,8 +48,17 @@ void game_debug_chaser(const char* name);
 
 uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "attract")) return 0;
+	if (!strcmp(host_mode, "options")) {
+		// The options on the title: dithered, then into a game, and wait
+		if (f >= 30 && f < 33) return START;
+		if (f >= 40 && f < 43) return D;
+		if (f >= 50 && f < 53) return R;
+		if (f >= 70 && f < 73) return START;
+		if (f >= 100 && f < 103) return A;
+		return 0;
+	}
 	// Into a game, and launch
-	if (f >= 30 && f < 33) return START;
+	if (f >= 30 && f < 33) return A;
 	if (!strcmp(host_mode, "save")) {
 		// The options and out again, then slot 2, named NAMESON, then food in
 		// the market, and launch from the status

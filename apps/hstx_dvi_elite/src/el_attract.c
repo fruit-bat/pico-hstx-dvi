@@ -1,13 +1,15 @@
 // Copyright (c) 2024 fruit-bat.
 
 // See el_attract.h. Each screen is shown for a while, and any of them goes
-// straight into a game when start or fire is pressed.
+// straight into a game when fire is pressed, or shows the options over it
+// when start is.
 
 #include "el_attract.h"
 #include "el_chart.h"
 #include "el_draw.h"
 #include "el_hud.h"
 #include "el_input.h"
+#include "el_options.h"
 #include "el_save.h"
 #include "el_screen.h"
 #include "el_space.h"
@@ -191,7 +193,7 @@ static void draw_title(uint32_t frame) {
 	make_matrix(m, t * 0.5f, 0.45f + 0.15f * sinf(t * 0.3f), 0.15f * sinf(t * 0.4f));
 	draw_object(&model_cobra, (Vec3_t){ 0.0f, 0.0f, 420.0f }, m, model_cobra.rgb, draw_style);
 	GameText_t* p = &_press[draw_set()];
-	game_text_set_smooth(p, "PRESS START");
+	game_text_set_smooth(p, "PRESS FIRE");
 	// Flashing
 	if ((frame / 30) & 1) {
 		game_spr_text_centre(p, VIEW_BOTTOM - 30, game_pallet(GAME_CYAN));
@@ -204,6 +206,19 @@ static void draw_title(uint32_t frame) {
 		else snprintf(s, sizeof(s), "NO SD CARD (ERROR %d)", save_error());
 		screen_text_centre(VIEW_BOTTOM - 10, s, save_card() ? GAME_GREEN : GAME_RED, false);
 	}
+	screen_text_centre(VIEW_BOTTOM - 46, "START FOR OPTIONS", GAME_GREY, false);
+}
+
+// The options, over the dashboard, until start is pressed again
+static void show_options(uint32_t frame) {
+	options_open(false);
+	while (options_shown()) {
+		options_input(game_input_pressed());
+		screen_begin();
+		draw_dashboard(frame, false);
+		options_draw();
+		screen_end("OPTIONS", "OPTIONS");
+	}
 }
 
 void attract_run(void) {
@@ -212,10 +227,10 @@ void attract_run(void) {
 		const uint32_t g = round % GALAXIES;
 		chart_set_galaxy(g);
 		chart_set_home(HOME);
-		// The charts and data are always wireframes, to look like data
-		const Style_e chart_style = draw_style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
 		for (uint32_t show = 0; show < SHOWS; ++show) {
 			for (uint32_t f = 0; f < _show_frames[show]; ++f) {
+				// The charts and data are always wireframes, to look like data
+				const Style_e chart_style = draw_style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
 				const uint32_t frame = round * 100000u + show * 10000u + f;
 				move_objects(frame);
 				screen_begin();
@@ -245,7 +260,9 @@ void attract_run(void) {
 						break;
 				}
 				screen_end(title, _show_labels[show]);
-				if (game_input_pressed() & (EL_INP_START | EL_INP_A)) return;
+				const uint16_t pressed = game_input_pressed();
+				if (pressed & EL_INP_A) return;
+				if (pressed & EL_INP_START) show_options(frame);
 			}
 		}
 	}

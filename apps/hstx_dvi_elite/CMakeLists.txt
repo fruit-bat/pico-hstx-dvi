@@ -5,6 +5,7 @@ add_executable(hstx_dvi_elite
   ${CMAKE_CURRENT_LIST_DIR}/src/el_draw.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_hud.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_options.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_save.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_screen.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_ships.c
