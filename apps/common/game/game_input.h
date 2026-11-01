@@ -16,9 +16,12 @@ extern "C" {
 #define GAME_PAD_DOWN   0x0020
 #define GAME_PAD_LEFT   0x0040
 #define GAME_PAD_RIGHT  0x0080
+#define GAME_PAD_L      0x0400 // SNES shoulders
+#define GAME_PAD_R      0x0800
 
 // Buttons on count consecutive GPIOs from first, each connecting the GPIO to
-// ground, when built with GAME_BUTTONS. The first button is bit 0.
+// ground, when built with GAME_BUTTONS. The first button is bit 0, and there
+// can be up to 16 bits.
 // When built with GAME_NESPAD, NES or SNES pads work too. pad_map has count
 // entries of GAME_PAD_ buttons, the ones that press each bit.
 void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map);
@@ -26,10 +29,10 @@ void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map);
 // pad_map has pad_count entries
 void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map, uint32_t pad_count);
 
-uint8_t game_input_get(void);
+uint16_t game_input_get(void);
 
 // Buttons that have gone down since the last call
-uint8_t game_input_pressed(void);
+uint16_t game_input_pressed(void);
 
 #ifdef __cplusplus
 }

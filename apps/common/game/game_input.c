@@ -7,7 +7,7 @@
 static uint32_t _first = 0;
 static uint32_t _mask = 0;
 #endif
-static uint8_t _last_input = 0;
+static uint16_t _last_input = 0;
 
 #ifdef GAME_NESPAD
 static const uint16_t *_pad_map = NULL;
@@ -61,8 +61,8 @@ void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map
 #endif
 }
 
-uint8_t __not_in_flash_func(game_input_get)(void) {
-	uint8_t input = 0;
+uint16_t __not_in_flash_func(game_input_get)(void) {
+	uint16_t input = 0;
 #ifdef GAME_BUTTONS
 	input = (~gpio_get_all() >> _first) & _mask;
 #endif
@@ -75,9 +75,9 @@ uint8_t __not_in_flash_func(game_input_get)(void) {
 	return input;
 }
 
-uint8_t game_input_pressed(void) {
-	const uint8_t input = game_input_get();
-	const uint8_t pressed = input & ~_last_input;
+uint16_t game_input_pressed(void) {
+	const uint16_t input = game_input_get();
+	const uint16_t pressed = input & ~_last_input;
 	_last_input = input;
 	return pressed;
 }
