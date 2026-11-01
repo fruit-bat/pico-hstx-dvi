@@ -35,6 +35,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "game_pallet.h"
 #include "game_render.h"
 #include "game_util.h"
@@ -88,7 +89,8 @@ typedef enum {
 typedef enum {
 	SCREEN_SPACE = 0,
 	SCREEN_GALAXY,
-	SCREEN_LOCAL
+	SCREEN_LOCAL,
+	SCREEN_DATA
 } Screen_e;
 
 // What is shown in turn: the view of space or a chart, and the way of
@@ -104,6 +106,7 @@ static const Mode_t _modes[] = {
 	{ "GALACTIC CHART", SCREEN_GALAXY, STYLE_SOLID, false },
 	{ "SHORT RANGE CHART", SCREEN_LOCAL, STYLE_SOLID, false },
 	{ "SHORT RANGE FILLED", SCREEN_LOCAL, STYLE_FILLED, false },
+	{ "DATA ON SYSTEM", SCREEN_DATA, STYLE_SOLID, false },
 	{ "SOLID WIREFRAME", SCREEN_SPACE, STYLE_SOLID, false },
 	{ "WIREFRAME", SCREEN_SPACE, STYLE_WIRE, false },
 	{ "OUTLINED", SCREEN_SPACE, STYLE_OUTLINED, false },
@@ -1252,6 +1255,103 @@ static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, 
 	chart_info(info, to);
 }
 
+// The data on a system: us first, then the nearest systems in turn
+#define DATA_FRAMES (STYLE_FRAMES / 4)
+#define DATA_X 24
+#define DATA_TOP (VIEW_TOP + 10)
+#define DATA_LINE 20
+// The width of the description, in letters
+#define DATA_WRAP 37
+#define DATA_TEXTS 24
+
+static GameText_t _data_text[2][DATA_TEXTS];
+
+// The k-th nearest system to us, us being the 0th
+static uint32_t nearest_system(uint32_t k) {
+	uint8_t order[GALAXY_SYSTEMS];
+	uint32_t n = 0;
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	for (uint32_t i = 0; i < _near_count; ++i) {
+		const uint32_t d = galaxy_distance(h, &_galaxy[_near[i]]);
+		uint32_t j = n++;
+		for (; j > 0 && galaxy_distance(h, &_galaxy[order[j - 1]]) > d; --j) order[j] = order[j - 1];
+		order[j] = _near[i];
+	}
+	return n ? order[k % n] : HOME;
+}
+
+// A line of the data, its name in cyan and the rest in white, returning the next free text
+static uint32_t data_line(GameText_t* texts, uint32_t t, int32_t y, const char* name, const char* value) {
+	if (t + 2 > DATA_TEXTS) return t;
+	int32_t x = DATA_X;
+	if (name) {
+		game_text_set(&texts[t], name, 2);
+		game_spr_text(&texts[t], x, y, game_pallet(GAME_CYAN));
+		x += game_text_width(&texts[t]) + 16;
+		++t;
+		++_sprite_count;
+	}
+	game_text_set(&texts[t], value, 2);
+	game_spr_text(&texts[t], x, y, game_pallet(GAME_WHITE));
+	++_sprite_count;
+	return t + 1;
+}
+
+// Returns the name of the system
+static const char* draw_data(uint32_t frame, GameText_t* texts) {
+	const GalaxySystem_t* h = &_galaxy[HOME];
+	const GalaxySystem_t* sys = &_galaxy[nearest_system((frame % STYLE_FRAMES) / DATA_FRAMES)];
+	char v[160];
+	uint32_t t = 0;
+	int32_t y = DATA_TOP;
+	const uint32_t d = galaxy_distance(h, sys);
+	snprintf(v, sizeof(v), "%u.%u Light Years", (unsigned)(d / 10), (unsigned)(d % 10));
+	t = data_line(texts, t, y, "Distance:", v);
+	y += DATA_LINE;
+	t = data_line(texts, t, y, "Economy:", galaxy_economy_names[sys->economy]);
+	y += DATA_LINE;
+	t = data_line(texts, t, y, "Government:", galaxy_government_names[sys->government]);
+	y += DATA_LINE;
+	snprintf(v, sizeof(v), "%u", (unsigned)sys->tech);
+	t = data_line(texts, t, y, "Tech.Level:", v);
+	y += DATA_LINE;
+	snprintf(v, sizeof(v), "%u.%u Billion", (unsigned)(sys->population / 10), (unsigned)(sys->population % 10));
+	t = data_line(texts, t, y, "Population:", v);
+	y += DATA_LINE;
+	char species[48];
+	galaxy_species(sys, species, sizeof(species));
+	snprintf(v, sizeof(v), "(%s)", species);
+	t = data_line(texts, t, y, NULL, v);
+	y += DATA_LINE;
+	const uint32_t productivity = ((sys->economy ^ 7) + 3) * (sys->government + 4) * sys->population * 8;
+	snprintf(v, sizeof(v), "%u M CR", (unsigned)productivity);
+	t = data_line(texts, t, y, "Gross Productivity:", v);
+	y += DATA_LINE;
+	snprintf(v, sizeof(v), "%u km", (unsigned)sys->radius);
+	t = data_line(texts, t, y, "Average Radius:", v);
+	y += DATA_LINE * 2;
+
+	// What it is known for, a word at a time to fit the width
+	galaxy_description(sys, v, sizeof(v));
+	const char* p = v;
+	while (*p && y + 16 <= VIEW_BOTTOM) {
+		uint32_t n = 0, cut = 0;
+		while (p[n] && n < DATA_WRAP) {
+			if (p[n] == ' ') cut = n;
+			++n;
+		}
+		if (!p[n] || !cut) cut = n;
+		char line[DATA_WRAP + 1];
+		memcpy(line, p, cut);
+		line[cut] = 0;
+		t = data_line(texts, t, y, NULL, line);
+		y += DATA_LINE;
+		p += cut;
+		while (*p == ' ') ++p;
+	}
+	return sys->name;
+}
+
 static float distance2(const Vec3_t* v) {
 	return v->x * v->x + v->y * v->y + v->z * v->z;
 }
@@ -1470,9 +1570,12 @@ void main_loop(void) {
 				snprintf(s, sizeof(s), "GALACTIC CHART %u", (unsigned)(g + 1));
 				draw_galaxy_chart(frame, &_chart_info[frame & 1]);
 			}
-			else {
+			else if (mode->screen == SCREEN_LOCAL) {
 				snprintf(s, sizeof(s), "SHORT RANGE CHART");
 				draw_local_chart(style, frame, _chart_labels[frame & 1], &_chart_info[frame & 1]);
+			}
+			else {
+				snprintf(s, sizeof(s), "DATA ON %s", draw_data(frame, _data_text[frame & 1]));
 			}
 			game_text_set(title, s, 2);
 		}

@@ -1,6 +1,6 @@
 # Wireframe ships
 
-The galactic and short range charts from Elite, then every type of ship from Elite flying round a spinning Coriolis space station, past a sun, through a field of stars,
+The galactic and short range charts and the data on systems from Elite, then every type of ship from Elite flying round a spinning Coriolis space station, past a sun, through a field of stars,
 with missiles chasing two of them. The name of the nearest ship is shown at the top, and a dashboard after the original game's at the bottom.
 Every 10 seconds it changes between solid wireframes, see-through wireframes, filled faces with dark outlines, and plain filled faces,
 the filled ones shown both with and without dithering.
@@ -46,7 +46,7 @@ the filled ones shown both with and without dithering.
 
 ## The charts
 
-Before the ships come the galactic chart and the short range chart, with the next of the eight galaxies each time round.
+Before the ships come the galactic chart, the short range chart and the data on a system, with the next of the eight galaxies each time round.
 
 - The galaxies are made as the original game made them, by `src/galaxy.c`: three numbers, turned over for each system in turn,
   give where it is, its name, what it makes and the rest, and twisted give the next galaxy. So Lave is where it should be,
@@ -55,6 +55,9 @@ Before the ships come the galactic chart and the short range chart, with the nex
   so each sprite has only a few to look at on a row. The cross is where we are, Lave in the first galaxy, inside the circle we can jump to.
 - The short range chart shows the systems round us as circles as big as their planets, coloured from red for rich industrial
   to blue for poor agricultural, with their names where there is room. They are drawn in outline, solid, or filled to suit the style.
+- The data on a system shows us first, then the nearest systems in turn: its economy, government, tech level,
+  population and who lives there, and what it is known for, made up from its numbers as in Ian Bell's Text Elite,
+  so Lave is most famous for its vast rain forests and the Lavian tree grub.
 - A yellow cursor moves from system to system, and the name of the one it is on and how far it is are shown at the bottom.
 
 ## The meter
