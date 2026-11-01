@@ -1259,10 +1259,11 @@ static void draw_local_chart(Style_e style, uint32_t frame, GameText_t* labels, 
 #define DATA_FRAMES (STYLE_FRAMES / 4)
 #define DATA_X 24
 #define DATA_TOP (VIEW_TOP + 10)
-#define DATA_LINE 20
-// The width of the description, in letters
-#define DATA_WRAP 37
-#define DATA_TEXTS 24
+#define DATA_TEXTS 32
+
+#define DATA_LINE 14
+// The letters in a line of the description
+#define DATA_WRAP 74
 
 static GameText_t _data_text[2][DATA_TEXTS];
 
@@ -1280,21 +1281,30 @@ static uint32_t nearest_system(uint32_t k) {
 	return n ? order[k % n] : HOME;
 }
 
-// A line of the data, its name in cyan and the rest in white, returning the next free text
+// A line of the data, its name in cyan and the rest in white, returning the
+// next free text. A text holds GAME_TEXT_MAX letters, so a longer line takes more.
 static uint32_t data_line(GameText_t* texts, uint32_t t, int32_t y, const char* name, const char* value) {
-	if (t + 2 > DATA_TEXTS) return t;
 	int32_t x = DATA_X;
-	if (name) {
-		game_text_set(&texts[t], name, 2);
+	if (name && t < DATA_TEXTS) {
+		game_text_set(&texts[t], name, 1);
 		game_spr_text(&texts[t], x, y, game_pallet(GAME_CYAN));
-		x += game_text_width(&texts[t]) + 16;
+		x += game_text_width(&texts[t]) + 8;
 		++t;
 		++_sprite_count;
 	}
-	game_text_set(&texts[t], value, 2);
-	game_spr_text(&texts[t], x, y, game_pallet(GAME_WHITE));
-	++_sprite_count;
-	return t + 1;
+	for (size_t len = strlen(value); len && t < DATA_TEXTS; ++t) {
+		char part[GAME_TEXT_MAX + 1];
+		const size_t n = len < GAME_TEXT_MAX ? len : GAME_TEXT_MAX;
+		memcpy(part, value, n);
+		part[n] = 0;
+		game_text_set(&texts[t], part, 1);
+		game_spr_text(&texts[t], x, y, game_pallet(GAME_WHITE));
+		x += game_text_width(&texts[t]);
+		value += n;
+		len -= n;
+		++_sprite_count;
+	}
+	return t;
 }
 
 // Returns the name of the system
@@ -1334,7 +1344,7 @@ static const char* draw_data(uint32_t frame, GameText_t* texts) {
 	// What it is known for, a word at a time to fit the width
 	galaxy_description(sys, v, sizeof(v));
 	const char* p = v;
-	while (*p && y + 16 <= VIEW_BOTTOM) {
+	while (*p && y + DATA_LINE <= VIEW_BOTTOM) {
 		uint32_t n = 0, cut = 0;
 		while (p[n] && n < DATA_WRAP) {
 			if (p[n] == ' ') cut = n;
@@ -1440,7 +1450,7 @@ static void bench_lines_stacked(void) {
 
 // The cycles the renderer spends on a frame of the scene
 static uint32_t bench_run(const char* name, void (*scene)(void)) {
-	game_text_set(&_bench_title, name, 2);
+	game_text_set_smooth(&_bench_title, name);
 	uint64_t sum = 0;
 	for (uint32_t f = 0; f < BENCH_SETTLE + BENCH_FRAMES; ++f) {
 		_set ^= 1;
@@ -1479,7 +1489,7 @@ static void bench_result(uint32_t i, const char* name, int32_t tenths) {
 	char s[GAME_TEXT_MAX];
 	if (tenths < 0) tenths = 0;
 	snprintf(s, sizeof(s), "%-14s %5u.%u", name, (unsigned)(tenths / 10), (unsigned)(tenths % 10));
-	game_text_set(&_bench_lines[i], s, 2);
+	game_text_set_smooth(&_bench_lines[i], s);
 	printf("%s\n", s);
 }
 
@@ -1509,7 +1519,7 @@ static void bench(void) {
 	bench_result(7, "LINE BUDGET", LINE_CYCLES * 10);
 
 	// Show the results for a while
-	game_text_set(&_bench_title, "CYCLES", 2);
+	game_text_set_smooth(&_bench_title, "CYCLES");
 	for (uint32_t f = 0; f < BENCH_SHOW_FRAMES; ++f) {
 		game_spr_begin();
 		game_spr_text_centre(&_bench_title, 12, game_pallet(GAME_YELLOW));
@@ -1559,7 +1569,7 @@ void main_loop(void) {
 			// The name of the nearest ship, which comes first bar the station
 			const Object_t* nearest = &_objects[order[0]];
 			if (order[0] == OBJ_STATION) nearest = &_objects[order[1]];
-			game_text_set(title, nearest->model->name, 2);
+			game_text_set_smooth(title, nearest->model->name);
 		}
 		else {
 			// The next galaxy each time round
@@ -1577,7 +1587,7 @@ void main_loop(void) {
 			else {
 				snprintf(s, sizeof(s), "DATA ON %s", draw_data(frame, _data_text[frame & 1]));
 			}
-			game_text_set(title, s, 2);
+			game_text_set_smooth(title, s);
 		}
 		game_spr_end();
 
@@ -1625,7 +1635,7 @@ int main(void)
 	for (uint32_t i = 0; i < STARS; ++i) new_star(&_stars[i], rand_range(NEAR_Z, 2000.0f));
 
 	for (uint32_t i = 0; i < 2; ++i) {
-		game_text_set(&_title[i], "", 2);
+		game_text_set_smooth(&_title[i], "");
 		game_text_set(&_status[i], "", 1);
 	}
 	for (uint32_t g = 0; g < GAUGES; ++g) game_text_set(&_gauge_labels[g], _gauge_names[g], 1);
