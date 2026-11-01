@@ -117,7 +117,6 @@ static void draw_parader(const Parader_t* o) {
 // Returns the name of the nearest ship
 static const char* draw_parade(uint32_t frame) {
 	dust_move(0.0f, 0.0f, 6.0f);
-	dust_draw();
 
 	// Nearest first, so they cover the ones behind
 	uint32_t order[OBJECTS];
@@ -133,6 +132,7 @@ static const char* draw_parade(uint32_t frame) {
 	const Vec2_t m = project(&_sun);
 	const float rp = FOCAL * SUN_RADIUS / _sun.z;
 	if (draw_style == STYLE_WIRE || !hidden(m, rp * SUN_RAY_REACH + 1.0f)) draw_sun(m, rp, draw_style, frame);
+	dust_draw();
 
 	// The nearest ship, which comes first bar the station
 	return _objects[order[0] == OBJ_STATION ? order[1] : order[0]].model->name;

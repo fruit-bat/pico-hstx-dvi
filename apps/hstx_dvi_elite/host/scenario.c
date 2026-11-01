@@ -8,11 +8,14 @@
 // crash   - as dock, but rolled so the slot is not level, and hits the station
 // hyper   - starts a game, launches, picks Diso on the short range chart and
 //           jumps there, then tries Lave's far neighbours, out of range
+// fight   - starts a game, launches, then a Sidewinder is put ahead, which
+//           we shoot down, and then a Python, at which we fire a missile
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
 
 void game_debug_approach(float roll);
+void game_debug_pirate(const char* name);
 
 // The buttons, as in el_input.h
 #define L 1
@@ -25,9 +28,10 @@ void game_debug_approach(float roll);
 #define START 128
 
 uint32_t host_input(uint32_t f) {
+	if (!strcmp(host_mode, "attract")) return 0;
 	// Into a game, and launch
 	if (f >= 30 && f < 33) return START;
-	if (strcmp(host_mode, "attract") && f >= 60 && f < 63) return A;
+	if (f >= 60 && f < 63) return A;
 	if (!strcmp(host_mode, "fly")) {
 		// Speed up, then roll right and climb
 		if (f >= 200 && f < 300) return B | U;
@@ -51,6 +55,13 @@ uint32_t host_input(uint32_t f) {
 		// Dive
 		if (f >= 1300 && f < 1360) return U;
 	}
+	if (!strcmp(host_mode, "fight")) {
+		// Slow down, then shoot
+		if (f >= 160 && f < 180) return B | D;
+		if (f >= 205 && f < 400) return A;
+		if (f >= 500 && f < 510) return B;
+		if (f >= 510 && f < 513) return B | A;
+	}
 	if (!strcmp(host_mode, "hyper")) {
 		// Diso is 9 steps left of Lave
 		if (f >= 200 && f < 203) return SELECT;
@@ -67,6 +78,8 @@ uint32_t host_input(uint32_t f) {
 void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "dock")) game_debug_approach(0.0f);
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
+	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
+	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
 	if (frame % 600 == 0) {
 		printf("%6u sprites %3u\n", frame, sprites);
 	}

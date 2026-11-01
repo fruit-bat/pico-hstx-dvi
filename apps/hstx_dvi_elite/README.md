@@ -1,7 +1,7 @@
 # Elite
 
 A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
-fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, and dock again.
+fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, fight pirates, and dock again.
 
 ## Between games
 
@@ -24,11 +24,34 @@ up to 7 light years with full tanks, and docking fills them up again for now.
 Each system's planet is as big as its data says and coloured as it is on the charts,
 and where its sun and station are comes from its numbers, so it is the same each time.
 
+## Combat
+
+Fire shoots the pulse laser, which heats up as it fires and stops when too hot until it has cooled.
+B held with fire launches a missile at the ship nearest ahead; there are four, filled up on docking.
+B held with select sets off the ECM, which blows up every missile flying.
+
+The other ships are traders going about their business, pirates that come for you,
+and the police, who come for you if you destroy anyone but a pirate. Anyone shot at shoots back, or runs if it is a trader badly hurt.
+Each type of ship has a character, loosely after the original:
+
+- Light fighters, the Sidewinder, Gecko and Worm, are fast and weave as they come, small and hard to hit, but fragile and weak.
+- The Mamba, Krait, Adder and Cobra Mk I are all-rounders.
+- The Asp Mk II and Fer-de-Lance are heavy fighters: fast, tough and hard hitting, for a big bounty.
+- The Python, Boa and Anaconda are slow and turn badly, but are tough, hit hard from a long way off and keep their distance,
+  and may fire missiles: deadly head on, but easy to get behind.
+- The police fly Vipers, fast and accurate.
+
+Each system has a character from its data. Where the government is weak there are more pirates, and more of them heavy fighters;
+where it is strong, more police. The more people, the busier it is, and industrial systems see the big freighters.
+Hits take your shields down, fore or aft, then your energy, and they build up again slowly. With no energy left the game is over.
+Pirates bring a bounty, and the ships destroyed raise your rating, as in the original.
+
 ## The controls
 
 - Left and right roll, and up and down dive and climb, as with a joystick.
 - B held with up or down speeds up or slows down.
-- A launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
+- A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
+- B held with A launches a missile, and with select sets off the ECM.
 - Select shows the next screen: the front view, the short range chart, the galactic chart, and the data on the system
   the cursor is on. On the charts the pad moves the cursor, faster with B held.
 - Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
@@ -44,6 +67,8 @@ in the order left, right, up, down, A, B, select and start.
 - `el_draw` is the drawing of the wireframe test: each object is a sprite, with a list of the lines and convex shapes that make it up.
   See the wireframe test's README for how it works and what it costs.
 - `el_space` holds where things are and which way they face, the dust that streams past as we fly, and the planets.
+  Each speck of dust is a streak from where it was a few frames before, so the faster we go or turn the longer they are,
+  which shows how fast we are going.
   As in the original game we are always at the middle of things, and everything is seen along our ship's axes.
   A planet's edge is worked out in 3D, as the circle on it where our line of sight just touches it, so it is right however close we are,
   and it has more sides the bigger it looks.
@@ -67,4 +92,5 @@ host/build/elite_host dock 420 20 frames
 `fly` starts a game, launches, flies about, looks at the charts and changes the options.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
+`fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
 See `../common/host` for more on how this works.

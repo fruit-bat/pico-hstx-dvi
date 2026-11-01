@@ -76,31 +76,34 @@ void frame_matrix(const Frame_t* eye, const Frame_t* body, float m[3][3]) {
 // ----------------------------------------------------------------------------
 // The dust
 
-#define DUST 40
+#define DUST 64
 #define DUST_NEAR 60.0f
 #define DUST_FAR 1600.0f
+// Each speck is a streak from where it was this many frames before, so the
+// faster we go or turn the longer they are
+#define DUST_STREAK 1.5f
+// They are added in bands of rows, so each sprite looks at only a few
+#define DUST_BANDS 8
 
 static Vec3_t _dust[DUST];
-// Not const so they live in RAM; the renderer reads them every row
-static hstx_dvi_pixel_t _dust_colours[3];
+// Where each was the frame before
+static Vec3_t _dust_was[DUST];
 
 static float rand_range(float lo, float hi) {
 	return lo + (hi - lo) * (float)(rand() & 0xffff) / 65535.0f;
 }
 
 // Somewhere in the view, at a distance from lo to hi
-static void new_speck(Vec3_t* s, float lo, float hi) {
+static void new_speck(uint32_t i, float lo, float hi) {
 	const float z = rand_range(lo, hi);
 	const float w = z * (float)CENTRE_X / (FOCAL * draw_aspect);
 	const float h = z * (float)(CENTRE_Y - VIEW_TOP) / FOCAL;
-	*s = (Vec3_t){ rand_range(-w, w), rand_range(-h, h), z };
+	_dust[i] = (Vec3_t){ rand_range(-w, w), rand_range(-h, h), z };
+	_dust_was[i] = _dust[i];
 }
 
 void dust_init(void) {
-	_dust_colours[0] = hstx_dvi_pixel_rgb(73, 73, 109);
-	_dust_colours[1] = hstx_dvi_pixel_rgb(146, 146, 182);
-	_dust_colours[2] = hstx_dvi_pixel_rgb(255, 255, 255);
-	for (uint32_t i = 0; i < DUST; ++i) new_speck(&_dust[i], DUST_NEAR, DUST_FAR);
+	for (uint32_t i = 0; i < DUST; ++i) new_speck(i, DUST_NEAR, DUST_FAR);
 }
 
 void dust_move(float roll, float pitch, float speed) {
@@ -108,6 +111,7 @@ void dust_move(float roll, float pitch, float speed) {
 	const float cp = cosf(pitch), sp = sinf(pitch);
 	for (uint32_t i = 0; i < DUST; ++i) {
 		Vec3_t* s = &_dust[i];
+		_dust_was[i] = *s;
 		// As frame_roll and frame_pitch turn us, so the view of a point fixed in space turns
 		const float x = s->x * cr - s->y * sr;
 		const float y = s->x * sr + s->y * cr;
@@ -116,24 +120,39 @@ void dust_move(float roll, float pitch, float speed) {
 		s->z = s->z * cp + y * sp - speed;
 		if (s->z < DUST_NEAR || s->z > DUST_FAR) {
 			// Going forward new specks come from far ahead, and going backward from close by
-			if (speed >= 0.0f) new_speck(s, DUST_FAR * 0.6f, DUST_FAR);
-			else new_speck(s, DUST_NEAR, DUST_NEAR * 3.0f);
+			if (speed >= 0.0f) new_speck(i, DUST_FAR * 0.6f, DUST_FAR);
+			else new_speck(i, DUST_NEAR, DUST_NEAR * 3.0f);
 		}
 	}
 }
 
 void dust_draw(void) {
+	static const uint8_t grey[3] = { 182, 182, 219 };
+	// Static, as they are too big for the stack
+	static Vec2_t a[DUST], b[DUST];
+	static bool seen[DUST];
 	for (uint32_t i = 0; i < DUST; ++i) {
-		Vec3_t* s = &_dust[i];
-		const Vec2_t p = project(s);
-		const int32_t x = (int32_t)p.x, y = (int32_t)p.y;
-		if (x < 0 || x >= GAME_SCREEN_W - 2 || y < VIEW_TOP || y >= VIEW_BOTTOM) {
-			new_speck(s, DUST_FAR * 0.6f, DUST_FAR);
-			continue;
+		a[i] = project(&_dust[i]);
+		const Vec3_t back = vec_add(_dust[i], vec_scale(vec_sub(_dust_was[i], _dust[i]), DUST_STREAK));
+		b[i] = back.z > NEAR_Z ? project(&back) : a[i];
+		seen[i] = a[i].x >= 0.0f && a[i].x < (float)GAME_SCREEN_W && a[i].y >= (float)VIEW_TOP && a[i].y < (float)VIEW_BOTTOM;
+		if (!seen[i]) new_speck(i, DUST_FAR * 0.6f, DUST_FAR);
+	}
+	const float band = (float)(VIEW_BOTTOM - VIEW_TOP) / DUST_BANDS;
+	for (uint32_t k = 0; k < DUST_BANDS; ++k) {
+		const float top = (float)VIEW_TOP + band * (float)k;
+		if (!object_begin()) return;
+		for (uint32_t i = 0; i < DUST; ++i) {
+			if (!seen[i] || a[i].y < top || a[i].y >= top + band) continue;
+			// Brighter the nearer
+			const float near = 1.0f - (_dust[i].z - DUST_NEAR) / (DUST_FAR - DUST_NEAR);
+			const hstx_dvi_pixel_t c = shade(grey, 0.35f + 0.65f * near);
+			Vec2_t end = b[i];
+			// At least a dot, and two pixels across close by
+			if (fabsf(end.x - a[i].x) + fabsf(end.y - a[i].y) < 1.0f) end = (Vec2_t){ a[i].x + (near > 0.6f ? 1.0f : 0.0f), a[i].y };
+			add_line(a[i], end, c);
 		}
-		const uint32_t b = s->z < 300.0f ? 2 : s->z < 800.0f ? 1 : 0;
-		game_spr_hline(x, y, b == 2 ? 2 : 1, &_dust_colours[b]);
-		draw_count_sprite();
+		object_end();
 	}
 }
 

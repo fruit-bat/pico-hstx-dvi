@@ -13,6 +13,7 @@
 // The controls:
 //   left and right roll, and up and down dive and climb, as with a joystick
 //   B held with up or down speeds up or slows down
+//   B held with fire launches a missile, and with select sets off the ECM
 //   A launches us when docked, from the status, and on the charts or data starts the
 //   countdown to hyperspace, to the system the cursor is on, if it is in
 //   range of our fuel
@@ -27,6 +28,7 @@
 #include "el_hud.h"
 #include "el_input.h"
 #include "el_screen.h"
+#include "el_ships.h"
 #include "el_space.h"
 #include "game_pallet.h"
 #include <math.h>
@@ -94,16 +96,22 @@
 #define CURSOR_STEP_GALAXY 0.75f
 #define CURSOR_FAST 3.0f
 
-// The other ships, flying about near the station
-#define SHIPS 4
-#define SHIP_RANGE 30000.0f
 #define SCANNER_RANGE 12000.0f
 
-typedef struct {
-	const WireModel_t* model;
-	Frame_t fr;
-	float speed, roll, pitch;
-} Ship_t;
+// Our shields and energy go from 0 to 1, and build up again by this much a frame
+#define RECHARGE 0.0006f
+// Our pulse laser: how far it reaches, what a pulse does, how often it
+// fires while fire is held, for how long a pulse is seen, and how much a
+// pulse heats it, how fast it cools, and how cool it must be to fire again
+// once too hot
+#define LASER_RANGE 8000.0f
+#define LASER_DAMAGE 1.0f
+#define LASER_PULSE 10
+#define LASER_BEAM 4
+#define LASER_HEAT 0.05f
+#define LASER_COOL 0.0025f
+#define LASER_COOLED 0.6f
+#define MISSILES_MAX 4
 
 // The front view is our status when docked
 typedef enum {
@@ -145,7 +153,15 @@ static uint32_t _hyper_frames;
 static uint32_t _hyper_to;
 static const char* _message;
 static uint32_t _message_frames;
-static Ship_t _ships[SHIPS];
+// Our ship and how we have done
+static float _fore, _aft, _energy;
+static float _laser_temp;
+static bool _overheated;
+static uint32_t _laser_wait, _laser_beam;
+static uint32_t _missiles;
+static uint32_t _kills;
+static uint32_t _cash; // in tenths of a credit
+static bool _offender;
 static View_e _view;
 static State_e _state;
 // Frames into the state, for the tunnel and the end
@@ -155,28 +171,26 @@ static uint32_t _option;
 static uint32_t _frame;
 static GameText_t _option_text[2][OPTIONS + 1];
 
-static float rand_range(float lo, float hi) {
-	return lo + (hi - lo) * (float)(rand() & 0xffff) / 65535.0f;
-}
-
-static Vec3_t rand_unit(void) {
-	return vec_unit((Vec3_t){ rand_range(-1.0f, 1.0f), rand_range(-1.0f, 1.0f), rand_range(-1.0f, 1.0f) });
-}
-
 // Moves a value towards a target by at most step
 static float towards(float v, float target, float step) {
 	if (v < target) return fminf(v + step, target);
 	return fmaxf(v - step, target);
 }
 
-// A ship somewhere round the station, going its own way
-static void new_ship(Ship_t* s) {
-	s->model = model_ships[rand() % MODEL_SHIP_COUNT];
-	const Vec3_t pos = vec_add(_station.pos, vec_scale(rand_unit(), rand_range(3000.0f, 9000.0f)));
-	frame_set(&s->fr, pos, rand_unit(), rand_unit());
-	s->speed = rand_range(3.0f, 10.0f);
-	s->roll = rand_range(-0.01f, 0.01f);
-	s->pitch = rand_range(-0.004f, 0.004f);
+// What the other ships need to know
+static ShipsWorld_t world(void) {
+	const GalaxySystem_t* sys = chart_system(chart_home());
+	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender };
+}
+
+// Full up, as when docked
+static void refit(void) {
+	_fuel = GALAXY_FUEL_MAX;
+	chart_set_fuel(_fuel);
+	_fore = _aft = _energy = 1.0f;
+	_laser_temp = 0.0f;
+	_overheated = false;
+	_missiles = MISSILES_MAX;
 }
 
 // A number from -1 to 1 made from the system's numbers, the k-th of several
@@ -209,18 +223,22 @@ static void enter_system(uint32_t i) {
 		STATION_ORBIT * _planet_radius);
 	// Its slot faces the planet
 	frame_set(&_station, sp, vec_unit(vec_sub(_planet.pos, sp)), (Vec3_t){ 0.0f, 1.0f, 0.0f });
-	for (uint32_t s = 0; s < SHIPS; ++s) new_ship(&_ships[s]);
+	const ShipsWorld_t w = world();
+	ships_enter(&w);
 }
 
 static void start(void) {
+	_offender = false;
 	chart_set_galaxy(0);
 	enter_system(HOME);
 	frame_set(&_me, _station.pos, _station.f, _station.u);
 	_speed = 0.0f;
 	_roll = 0.0f;
 	_pitch = 0.0f;
-	_fuel = GALAXY_FUEL_MAX;
-	chart_set_fuel(_fuel);
+	_kills = 0;
+	_cash = 1000;
+	refit();
+	_laser_wait = _laser_beam = 0;
 	_hyper_frames = 0;
 	_message_frames = 0;
 	_view = VIEW_FRONT;
@@ -266,6 +284,8 @@ static void start_hyperspace(void) {
 static void arrive(void) {
 	_fuel -= galaxy_distance(chart_system(chart_home()), chart_system(_hyper_to));
 	chart_set_fuel(_fuel);
+	// The police of the new system do not know us, for now
+	_offender = false;
 	enter_system(_hyper_to);
 	frame_set(&_me, (Vec3_t){ 0.0f, 0.0f, -ARRIVAL * _planet_radius }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.0f, 1.0f, 0.0f });
 	_speed = MAX_SPEED * 0.25f;
@@ -365,23 +385,81 @@ static void fly(uint8_t held) {
 	frame_pitch(&_me, _pitch);
 	frame_tidy(&_me);
 	_me.pos = vec_add(_me.pos, vec_scale(_me.f, _speed));
-	dust_move(_roll, _pitch, _speed * 0.5f);
+	dust_move(_roll, _pitch, _speed);
 
 	touch_station();
 	if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
 }
 
-static void move_world(void) {
+// The pulse laser while fire is held, and a missile at the ship nearest
+// ahead when fire is pressed with B held
+static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
+	if (_laser_wait) --_laser_wait;
+	if (_laser_beam) --_laser_beam;
+	_laser_temp = fmaxf(0.0f, _laser_temp - LASER_COOL);
+	if (_overheated && _laser_temp < LASER_COOLED) _overheated = false;
+	if (_view != VIEW_FRONT) return;
+	if (held & EL_INP_B) {
+		if (!(pressed & EL_INP_A)) return;
+		const int32_t target = ships_nearest_ahead(&_me);
+		if (!_missiles) message("NO MISSILES");
+		else if (target < 0) message("NO TARGET");
+		else if (ships_fire_missile(&_me, (uint32_t)target)) --_missiles;
+		return;
+	}
+	if (!(held & EL_INP_A) || _laser_wait || _overheated) return;
+	_laser_wait = LASER_PULSE;
+	_laser_beam = LASER_BEAM;
+	_laser_temp += LASER_HEAT;
+	if (_laser_temp >= 1.0f) {
+		_laser_temp = 1.0f;
+		_overheated = true;
+		message("LASER TEMPERATURE");
+	}
+	const int32_t i = ships_in_sights(&_me, LASER_RANGE);
+	if (i >= 0) ships_hit((uint32_t)i, LASER_DAMAGE, ev);
+}
+
+// Hits on our shields, then on our energy once a shield is down, and what we destroyed
+static void take(const ShipsEvents_t* ev) {
+	_fore -= ev->fore;
+	_aft -= ev->aft;
+	if (_fore < 0.0f) {
+		_energy += _fore;
+		_fore = 0.0f;
+	}
+	if (_aft < 0.0f) {
+		_energy += _aft;
+		_aft = 0.0f;
+	}
+	if (ev->missile) message("INCOMING MISSILE");
+	_kills += ev->kills;
+	_cash += ev->bounty;
+	if (ev->innocent && !_offender) {
+		_offender = true;
+		message("OFFENDER");
+	}
+	if (_energy <= 0.0f) {
+		_energy = 0.0f;
+		if (_state != STATE_DEAD) set_state(STATE_DEAD);
+		return;
+	}
+	_energy = fminf(1.0f, _energy + RECHARGE);
+	_fore = fminf(1.0f, _fore + RECHARGE);
+	_aft = fminf(1.0f, _aft + RECHARGE);
+}
+
+static void move_world(ShipsEvents_t* ev) {
 	frame_roll(&_station, STATION_SPIN);
 	frame_tidy(&_station);
-	for (uint32_t i = 0; i < SHIPS; ++i) {
-		Ship_t* s = &_ships[i];
-		frame_roll(&s->fr, s->roll);
-		frame_pitch(&s->fr, s->pitch);
-		frame_tidy(&s->fr);
-		s->fr.pos = vec_add(s->fr.pos, vec_scale(s->fr.f, s->speed));
-		if (vec_length(vec_sub(s->fr.pos, _me.pos)) > SHIP_RANGE) new_ship(s);
-	}
+	const ShipsWorld_t w = world();
+	ships_move(&w, ev);
+}
+
+// For trying a fight on the PC: puts a ship of the named type ahead of us, coming at us
+void game_debug_pirate(const char* name) {
+	const ShipsWorld_t w = world();
+	ships_debug_place(0, name, vec_add(_me.pos, vec_scale(_me.f, 2500.0f)), vec_scale(_me.f, -1.0f), _me.u, &w);
 }
 
 // ----------------------------------------------------------------------------
@@ -405,17 +483,17 @@ static void draw_dashboard(void) {
 	const Vec3_t station = frame_view(&_me, _station.pos);
 	const float altitude = (vec_length(planet) - _planet_radius) / _planet_radius;
 	Hud_t hud = {
-		.fore_shield = 1.0f,
-		.aft_shield = 1.0f,
+		.fore_shield = _fore,
+		.aft_shield = _aft,
 		.fuel = (float)_fuel / GALAXY_FUEL_MAX,
 		.cabin_temp = 0.1f,
-		.laser_temp = 0.0f,
+		.laser_temp = _laser_temp,
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
 		.speed = _speed / MAX_SPEED,
-		.energy = 1.0f,
+		.energy = _energy,
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
-		.missiles = 4,
+		.missiles = _missiles,
 		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
 		.sights = _view == VIEW_FRONT && _state == STATE_FLYING && !_options,
@@ -424,7 +502,7 @@ static void draw_dashboard(void) {
 	uint32_t n = 0;
 	blips[n++] = (Blip_t){ station, model_coriolis.rgb, true };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
-		blips[n++] = (Blip_t){ frame_view(&_me, _ships[i].fr.pos), _ships[i].model->rgb, false };
+		if (ships[i].alive) blips[n++] = (Blip_t){ frame_view(&_me, ships[i].fr.pos), ships[i].model->rgb, false };
 	}
 	hud_draw(&hud, blips, n, draw_style);
 }
@@ -469,7 +547,15 @@ static void draw_front(void) {
 	// The light comes from the sun
 	const Vec3_t sun = frame_view(&_me, _sun_pos);
 	draw_light = vec_unit(sun);
-	dust_draw();
+	// Our laser, from the bottom corners of the view to the sights
+	if (_laser_beam && object_begin()) {
+		const hstx_dvi_pixel_t c = hstx_dvi_pixel_rgb(255, 255, 146);
+		const float w = 220.0f * draw_aspect;
+		add_line((Vec2_t){ CENTRE_X - w, VIEW_BOTTOM - 1 }, (Vec2_t){ CENTRE_X - 3, CENTRE_Y + 2 }, c);
+		add_line((Vec2_t){ CENTRE_X + w, VIEW_BOTTOM - 1 }, (Vec2_t){ CENTRE_X + 3, CENTRE_Y + 2 }, c);
+		object_end();
+	}
+	ships_draw_effects(&_me, draw_style, _frame);
 	// In front of the slot, so nearer than the station
 	draw_guides();
 
@@ -480,7 +566,8 @@ static void draw_front(void) {
 	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
 	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_me, _station.pos)) - model_coriolis.radius };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
-		things[n++] = (Thing_t){ THING_SHIP, i, vec_length(frame_view(&_me, _ships[i].fr.pos)) - _ships[i].model->radius };
+		if (!ships[i].alive) continue;
+		things[n++] = (Thing_t){ THING_SHIP, i, vec_length(frame_view(&_me, ships[i].fr.pos)) - ships[i].model->radius };
 	}
 	for (uint32_t i = 1; i < n; ++i) {
 		const Thing_t t = things[i];
@@ -511,10 +598,12 @@ static void draw_front(void) {
 				draw_body(&model_coriolis, &_station);
 				break;
 			case THING_SHIP:
-				draw_body(_ships[t->i].model, &_ships[t->i].fr);
+				draw_body(ships[t->i].model, &ships[t->i].fr);
 				break;
 		}
 	}
+	// Behind it all
+	dust_draw();
 }
 
 // ----------------------------------------------------------------------------
@@ -593,9 +682,20 @@ static void draw_options(void) {
 // Whether any of the other ships is on the scanner
 static bool ships_near(void) {
 	for (uint32_t i = 0; i < SHIPS; ++i) {
-		if (vec_length(vec_sub(_ships[i].fr.pos, _me.pos)) < SCANNER_RANGE) return true;
+		if (ships[i].alive && vec_length(vec_sub(ships[i].fr.pos, _me.pos)) < SCANNER_RANGE) return true;
 	}
 	return false;
+}
+
+// Our rating from how many ships we have destroyed, as in the original
+static const char* rating(void) {
+	static const uint32_t kills[] = { 8, 16, 32, 64, 128, 512, 2560, 6400 };
+	static const char* const names[] = {
+		"Harmless", "Mostly Harmless", "Poor", "Average", "Above Average", "Competent", "Dangerous", "Deadly", "---- E L I T E ----"
+	};
+	uint32_t i = 0;
+	while (i < sizeof(kills) / sizeof(kills[0]) && _kills >= kills[i]) ++i;
+	return names[i];
 }
 
 // Our status, as in the original game, with a Cobra like ours turning beside it
@@ -605,10 +705,12 @@ static void draw_status(void) {
 	};
 	char fuel[24];
 	snprintf(fuel, sizeof(fuel), "%u.%u Light Years", (unsigned)(_fuel / 10), (unsigned)(_fuel % 10));
+	char cash[24];
+	snprintf(cash, sizeof(cash), "%u.%u Cr", (unsigned)(_cash / 10), (unsigned)(_cash % 10));
 	const char* values[] = {
 		chart_system(chart_home())->name, chart_system(chart_selected())->name,
-		_state == STATE_DOCKED ? "Docked" : ships_near() ? "Yellow" : "Green",
-		fuel, "100.0 Cr", "Clean", "Harmless"
+		_state == STATE_DOCKED ? "Docked" : ships_hostile_near(&_me, SCANNER_RANGE) ? "Red" : ships_near() ? "Yellow" : "Green",
+		fuel, cash, _offender ? "Offender" : "Clean", rating()
 	};
 	int32_t y = STATUS_TOP;
 	for (uint32_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
@@ -667,8 +769,7 @@ static bool next_state(void) {
 				_pitch = 0.0f;
 				_view = VIEW_FRONT;
 				// Filled up, for now
-				_fuel = GALAXY_FUEL_MAX;
-				chart_set_fuel(_fuel);
+				refit();
 				set_state(STATE_DOCKED);
 			}
 			break;
@@ -694,9 +795,21 @@ void game_play(void) {
 			if (options(pressed)) return;
 		}
 		else {
+			ShipsEvents_t ev = { 0 };
 			if (pressed & EL_INP_START) _options = true;
 			const bool can_look = _state == STATE_DOCKED || _state == STATE_FLYING;
-			if (can_look && (pressed & EL_INP_SELECT)) _view = (View_e)((_view + 1) % VIEWS);
+			if (pressed & EL_INP_SELECT) {
+				// With B held, the ECM blows up the missiles flying
+				if (held & EL_INP_B) {
+					if (_state == STATE_FLYING) {
+						ships_ecm();
+						message("ECM");
+					}
+				}
+				else if (can_look) {
+					_view = (View_e)((_view + 1) % VIEWS);
+				}
+			}
 			switch (_state) {
 				case STATE_DOCKED:
 					move_cursor(held);
@@ -707,6 +820,7 @@ void game_play(void) {
 					// Fire on the charts or data jumps to the system the cursor is on
 					if ((pressed & EL_INP_A) && _view != VIEW_FRONT) start_hyperspace();
 					if (_hyper_frames && --_hyper_frames == 0) set_state(STATE_HYPERSPACE);
+					fire(held, pressed, &ev);
 					fly(held);
 					break;
 				case STATE_DEAD:
@@ -717,7 +831,8 @@ void game_play(void) {
 					dust_move(0.0f, 0.0f, 20.0f);
 					break;
 			}
-			move_world();
+			move_world(&ev);
+			if (_state == STATE_FLYING) take(&ev);
 			if (next_state()) return;
 		}
 
