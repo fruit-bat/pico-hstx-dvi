@@ -136,10 +136,14 @@ static const Laser_t _lasers[] = {
 	{ 1.0f, 4, 0.022f },
 };
 
-// The front view is our status when docked
-// The market and equipment are only seen docked
+// The views out, the way each laser points, as Mount_e; the front view is
+// our status when docked, and the others are not seen then. The market and
+// equipment are only seen docked.
 typedef enum {
 	VIEW_FRONT = 0,
+	VIEW_REAR,
+	VIEW_LEFT,
+	VIEW_RIGHT,
 	VIEW_MARKET,
 	VIEW_EQUIPMENT,
 	VIEW_LOCAL,
@@ -149,7 +153,7 @@ typedef enum {
 } View_e;
 
 static const char* const _view_labels[VIEWS] = {
-	"FRONT VIEW", "MARKET PRICES", "EQUIP SHIP", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
+	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
 };
 
 typedef enum {
@@ -170,6 +174,8 @@ typedef enum {
 } Option_e;
 
 static Frame_t _me;
+// Where we look from, the way the view is
+static Frame_t _eye;
 static float _speed, _roll, _pitch;
 static Frame_t _planet, _station;
 static float _planet_radius;
@@ -403,6 +409,67 @@ static void touch_station(void) {
 // ----------------------------------------------------------------------------
 // Moving
 
+// Whether we look out of the ship, rather than at a chart or the market
+static bool looking_out(void) {
+	return _view <= VIEW_RIGHT;
+}
+
+// The view after this one, as select goes round them
+static View_e next_view(void) {
+	View_e v = _view;
+	for (;;) {
+		v = (View_e)((v + 1) % VIEWS);
+		if (_state == STATE_DOCKED && v >= VIEW_REAR && v <= VIEW_RIGHT) continue;
+		if (_state != STATE_DOCKED && (v == VIEW_MARKET || v == VIEW_EQUIPMENT)) continue;
+		return v;
+	}
+}
+
+// Where we look from: our frame turned the way the view is
+static void look(void) {
+	_eye = _me;
+	switch (_view) {
+		case VIEW_REAR:
+			_eye.r = vec_scale(_me.r, -1.0f);
+			_eye.f = vec_scale(_me.f, -1.0f);
+			break;
+		case VIEW_LEFT:
+			_eye.r = _me.f;
+			_eye.f = vec_scale(_me.r, -1.0f);
+			break;
+		case VIEW_RIGHT:
+			_eye.r = vec_scale(_me.f, -1.0f);
+			_eye.f = _me.r;
+			break;
+		default:
+			break;
+	}
+}
+
+// How the dust moves in the view: our roll and pitch, and going forward,
+// turned the way the view is
+static void move_dust(float roll, float pitch, float speed) {
+	Vec3_t turn = { pitch, 0.0f, roll };
+	Vec3_t move = { 0.0f, 0.0f, speed };
+	switch (_view) {
+		case VIEW_REAR:
+			turn = (Vec3_t){ -pitch, 0.0f, -roll };
+			move = (Vec3_t){ 0.0f, 0.0f, -speed };
+			break;
+		case VIEW_LEFT:
+			turn = (Vec3_t){ roll, 0.0f, -pitch };
+			move = (Vec3_t){ speed, 0.0f, 0.0f };
+			break;
+		case VIEW_RIGHT:
+			turn = (Vec3_t){ -roll, 0.0f, pitch };
+			move = (Vec3_t){ -speed, 0.0f, 0.0f };
+			break;
+		default:
+			break;
+	}
+	dust_move(turn, move);
+}
+
 // The pad moves the cursor on the charts, faster with B held
 static void move_cursor(uint8_t held) {
 	if (_view != VIEW_LOCAL && _view != VIEW_GALAXY) return;
@@ -420,7 +487,7 @@ static void move_cursor(uint8_t held) {
 static void fly(uint8_t held) {
 	const bool b = held & EL_INP_B;
 	float roll_in = 0.0f, pitch_in = 0.0f;
-	if (_view == VIEW_FRONT) {
+	if (looking_out()) {
 		if (held & EL_INP_RIGHT) roll_in += 1.0f;
 		if (held & EL_INP_LEFT) roll_in -= 1.0f;
 		if (!b) {
@@ -432,7 +499,7 @@ static void fly(uint8_t held) {
 	else {
 		move_cursor(held);
 	}
-	if (b && _view == VIEW_FRONT) {
+	if (b && looking_out()) {
 		if (held & EL_INP_UP) _speed = fminf(_speed + SPEED_STEP, MAX_SPEED);
 		if (held & EL_INP_DOWN) _speed = fmaxf(_speed - SPEED_STEP, 0.0f);
 	}
@@ -443,30 +510,32 @@ static void fly(uint8_t held) {
 	frame_pitch(&_me, _pitch);
 	frame_tidy(&_me);
 	_me.pos = vec_add(_me.pos, vec_scale(_me.f, _speed));
-	dust_move(_roll, _pitch, _speed);
+	move_dust(_roll, _pitch, _speed);
 
 	touch_station();
 	if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
 }
 
-// The pulse laser while fire is held, and a missile at the ship nearest
-// ahead when fire is pressed with B held
+// The laser the way we look while fire is held, and a missile at the ship
+// nearest the middle of the view when fire is pressed with B held
 static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (_laser_wait) --_laser_wait;
 	if (_laser_beam) --_laser_beam;
 	_laser_temp = fmaxf(0.0f, _laser_temp - LASER_COOL);
 	if (_overheated && _laser_temp < LASER_COOLED) _overheated = false;
-	if (_view != VIEW_FRONT) return;
+	if (!looking_out()) return;
+	look();
 	if (held & EL_INP_B) {
 		if (!(pressed & EL_INP_A)) return;
-		const int32_t target = ships_nearest_ahead(&_me);
+		const int32_t target = ships_nearest_ahead(&_eye);
 		if (!cmdr.missiles) message("NO MISSILES");
 		else if (target < 0) message("NO TARGET");
 		else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
 		return;
 	}
-	if (!(held & EL_INP_A) || _laser_wait || _overheated) return;
-	const Laser_t* l = &_lasers[cmdr.laser];
+	const Laser_e laser = cmdr.laser[_view];
+	if (!(held & EL_INP_A) || _laser_wait || _overheated || laser == LASER_NONE) return;
+	const Laser_t* l = &_lasers[laser];
 	_laser_wait = l->every;
 	_laser_beam = LASER_SEEN;
 	_laser_temp += l->heat;
@@ -475,7 +544,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 		_overheated = true;
 		message("LASER TEMPERATURE");
 	}
-	const int32_t i = ships_in_sights(&_me, LASER_RANGE);
+	const int32_t i = ships_in_sights(&_eye, LASER_RANGE);
 	if (i >= 0) ships_hit((uint32_t)i, l->damage, ev);
 }
 
@@ -521,6 +590,14 @@ void game_debug_pirate(const char* name) {
 	ships_debug_place(0, name, vec_add(_me.pos, vec_scale(_me.f, 2500.0f)), vec_scale(_me.f, -1.0f), _me.u, &w);
 }
 
+// For trying the rear view on the PC: fits a rear laser, and puts a ship of
+// the named type behind us, coming after us
+void game_debug_chaser(const char* name) {
+	const ShipsWorld_t w = world();
+	cmdr.laser[MOUNT_REAR] = LASER_PULSE;
+	ships_debug_place(0, name, vec_sub(_me.pos, vec_scale(_me.f, 2500.0f)), _me.f, _me.u, &w);
+}
+
 // ----------------------------------------------------------------------------
 // Drawing
 
@@ -555,7 +632,7 @@ static void draw_dashboard(void) {
 		.missiles = cmdr.missiles,
 		.compass = vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
-		.sights = _view == VIEW_FRONT && _state == STATE_FLYING && !_options,
+		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !_options,
 	};
 	Blip_t blips[SHIPS + 1];
 	uint32_t n = 0;
@@ -568,8 +645,8 @@ static void draw_dashboard(void) {
 
 static void draw_body(const WireModel_t* model, const Frame_t* fr) {
 	float m[3][3];
-	frame_matrix(&_me, fr, m);
-	draw_object(model, frame_view(&_me, fr->pos), m, model->rgb, draw_style);
+	frame_matrix(&_eye, fr, m);
+	draw_object(model, frame_view(&_eye, fr->pos), m, model->rgb, draw_style);
 }
 
 // Whether we are lined up to dock: pointing at the station with the slot level
@@ -594,7 +671,7 @@ static void draw_guides(void) {
 		for (uint32_t k = 0; k < 4; ++k) {
 			const float x = (k == 0 || k == 3) ? -h : h;
 			const float y = k < 2 ? h : -h;
-			corner[k] = frame_view(&_me, vec_add(mid, vec_add(vec_scale(_station.r, x), vec_scale(_station.u, y))));
+			corner[k] = frame_view(&_eye, vec_add(mid, vec_add(vec_scale(_station.r, x), vec_scale(_station.u, y))));
 		}
 		if (!object_begin()) return;
 		for (uint32_t k = 0; k < 4; ++k) add_edge(corner[k], corner[(k + 1) % 4], c);
@@ -602,9 +679,11 @@ static void draw_guides(void) {
 	}
 }
 
-static void draw_front(void) {
+// The view out of the ship, the way we look
+static void draw_view(void) {
+	look();
 	// The light comes from the sun
-	const Vec3_t sun = frame_view(&_me, _sun_pos);
+	const Vec3_t sun = frame_view(&_eye, _sun_pos);
 	draw_light = vec_unit(sun);
 	// Our laser, from the bottom corners of the view to the sights
 	if (_laser_beam && object_begin()) {
@@ -614,19 +693,19 @@ static void draw_front(void) {
 		add_line((Vec2_t){ CENTRE_X + w, VIEW_BOTTOM - 1 }, (Vec2_t){ CENTRE_X + 3, CENTRE_Y + 2 }, c);
 		object_end();
 	}
-	ships_draw_effects(&_me, draw_style, _frame);
+	ships_draw_effects(&_eye, draw_style, _frame);
 	// In front of the slot, so nearer than the station
 	draw_guides();
 
 	// Nearest first, so they cover the ones behind
 	Thing_t things[SHIPS + 3];
 	uint32_t n = 0;
-	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_me, _planet.pos)) - _planet_radius };
+	things[n++] = (Thing_t){ THING_PLANET, 0, vec_length(frame_view(&_eye, _planet.pos)) - _planet_radius };
 	things[n++] = (Thing_t){ THING_SUN, 0, vec_length(sun) - SUN_RADIUS };
-	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_me, _station.pos)) - model_coriolis.radius };
+	things[n++] = (Thing_t){ THING_STATION, 0, vec_length(frame_view(&_eye, _station.pos)) - model_coriolis.radius };
 	for (uint32_t i = 0; i < SHIPS; ++i) {
 		if (!ships[i].alive) continue;
-		const float d = vec_length(frame_view(&_me, ships[i].fr.pos));
+		const float d = vec_length(frame_view(&_eye, ships[i].fr.pos));
 		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_SHIP, i, d - ships[i].model->radius };
 	}
 	for (uint32_t i = 1; i < n; ++i) {
@@ -642,8 +721,8 @@ static void draw_front(void) {
 		switch (t->kind) {
 			case THING_PLANET: {
 				float m[3][3];
-				frame_matrix(&_me, &_planet, m);
-				draw_planet(frame_view(&_me, _planet.pos), _planet_radius, m, chart_economy_rgb(sys->economy),
+				frame_matrix(&_eye, &_planet, m);
+				draw_planet(frame_view(&_eye, _planet.pos), _planet_radius, m, chart_economy_rgb(sys->economy),
 					!(sys->seed[1] & 2), draw_style);
 				break;
 			}
@@ -780,8 +859,8 @@ static void draw_status(void) {
 	}
 	y += STATUS_LINE;
 	screen_text(STATUS_X, y, "EQUIPMENT:", GAME_CYAN, false);
-	const char* fitted[4];
-	const uint32_t n = trade_equipment_names(fitted, 4);
+	const char* fitted[6];
+	const uint32_t n = trade_equipment_names(fitted, 6);
 	for (uint32_t i = 0; i < n; ++i) screen_text(STATUS_X + 16, y + STATUS_LINE * (int32_t)(i + 1), fitted[i], GAME_WHITE, false);
 	if (_state == STATE_DOCKED && (_frame / 30) & 1) screen_text_centre(VIEW_BOTTOM - 24, "FIRE TO LAUNCH", GAME_CYAN, true);
 
@@ -989,9 +1068,7 @@ void game_play(void) {
 					}
 				}
 				else if (can_look) {
-					_view = (View_e)((_view + 1) % VIEWS);
-					// The market and equipment only when docked
-					if (_state != STATE_DOCKED && (_view == VIEW_MARKET || _view == VIEW_EQUIPMENT)) _view = VIEW_LOCAL;
+					_view = next_view();
 				}
 			}
 			switch (_state) {
@@ -1008,7 +1085,7 @@ void game_play(void) {
 				}
 				case STATE_FLYING:
 					// Fire on the charts or data jumps to the system the cursor is on
-					if ((pressed & EL_INP_A) && _view != VIEW_FRONT) start_hyperspace();
+					if ((pressed & EL_INP_A) && !looking_out()) start_hyperspace();
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
 						if (mass_locked()) message("MASS LOCKED");
@@ -1019,10 +1096,10 @@ void game_play(void) {
 					break;
 				case STATE_DEAD:
 					_speed = 0.0f;
-					dust_move(0.0f, 0.0f, 0.0f);
+					move_dust(0.0f, 0.0f, 0.0f);
 					break;
 				default:
-					dust_move(0.0f, 0.0f, 20.0f);
+					move_dust(0.0f, 0.0f, 20.0f);
 					break;
 			}
 			move_world(&ev);
@@ -1051,12 +1128,14 @@ void game_play(void) {
 				}
 				else {
 					snprintf(title, sizeof(title), "FRONT VIEW");
-					draw_front();
-					if (_state == STATE_DEAD) {
-						label = "GAME OVER";
-						screen_text_centre(CENTRE_Y - 8, "GAME OVER", GAME_RED, true);
-					}
+					draw_view();
 				}
+				break;
+			case VIEW_REAR:
+			case VIEW_LEFT:
+			case VIEW_RIGHT:
+				snprintf(title, sizeof(title), "%s", _view_labels[_view]);
+				draw_view();
 				break;
 			case VIEW_MARKET:
 				snprintf(title, sizeof(title), "%s MARKET PRICES", chart_system(chart_home())->name);
@@ -1077,6 +1156,10 @@ void game_play(void) {
 			default:
 				snprintf(title, sizeof(title), "DATA ON %s", chart_draw_data(chart_selected(), chart_style, _frame));
 				break;
+		}
+		if (_state == STATE_DEAD && looking_out()) {
+			label = "GAME OVER";
+			screen_text_centre(CENTRE_Y - 8, "GAME OVER", GAME_RED, true);
 		}
 		// The countdown to hyperspace, and any message
 		if (_hyper_frames) {

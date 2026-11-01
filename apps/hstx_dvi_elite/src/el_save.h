@@ -16,16 +16,18 @@ extern "C" {
 // The longest name, 8 letters, and the end
 #define SAVE_NAME_MAX 9
 
-// A commander, as saved when docked
+// A commander, as saved when docked. The commander goes last, so as more
+// is fitted it can grow, and a save made before takes the rest from a new
+// commander.
 typedef struct {
 	uint32_t magic;
-	uint32_t size; // of the whole, so a file from an older build is not read
-	Commander_t cmdr;
+	uint32_t size; // of the whole, which tells what it holds
 	uint32_t galaxy;
 	uint32_t home;
 	uint32_t kills;
 	uint32_t offender;
-	char name[SAVE_NAME_MAX]; // last, so saves made before there were names still read
+	char name[SAVE_NAME_MAX];
+	Commander_t cmdr;
 } Save_t;
 
 // Whether saving is built in, and whether the card was there when last tried,

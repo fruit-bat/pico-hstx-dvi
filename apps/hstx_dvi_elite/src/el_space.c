@@ -88,41 +88,52 @@ void frame_matrix(const Frame_t* eye, const Frame_t* body, float m[3][3]) {
 static Vec3_t _dust[DUST];
 // Where each was the frame before
 static Vec3_t _dust_was[DUST];
+// How we moved last, for where new specks come from
+static Vec3_t _dust_move;
 
 static float rand_range(float lo, float hi) {
 	return lo + (hi - lo) * (float)(rand() & 0xffff) / 65535.0f;
 }
 
-// Somewhere in the view, at a distance from lo to hi
-static void new_speck(uint32_t i, float lo, float hi) {
-	const float z = rand_range(lo, hi);
+// Somewhere in the view: going forward, far ahead, going backward, close by,
+// and going sideways, at the side we go towards
+static void new_speck(uint32_t i) {
+	const Vec3_t m = _dust_move;
+	const bool sideways = fabsf(m.x) > fabsf(m.z);
+	const float z = sideways || m.z == 0.0f ? rand_range(DUST_NEAR, DUST_FAR) :
+		m.z > 0.0f ? rand_range(DUST_FAR * 0.6f, DUST_FAR) : rand_range(DUST_NEAR, DUST_NEAR * 3.0f);
 	const float w = z * (float)CENTRE_X / (FOCAL * draw_aspect);
 	const float h = z * (float)(CENTRE_Y - VIEW_TOP) / FOCAL;
-	_dust[i] = (Vec3_t){ rand_range(-w, w), rand_range(-h, h), z };
+	const float x = sideways ? (m.x > 0.0f ? w : -w) * rand_range(0.8f, 1.0f) : rand_range(-w, w);
+	_dust[i] = (Vec3_t){ x, rand_range(-h, h), z };
 	_dust_was[i] = _dust[i];
 }
 
 void dust_init(void) {
-	for (uint32_t i = 0; i < DUST; ++i) new_speck(i, DUST_NEAR, DUST_FAR);
+	_dust_move = (Vec3_t){ 0.0f, 0.0f, 0.0f };
+	for (uint32_t i = 0; i < DUST; ++i) new_speck(i);
 }
 
-void dust_move(float roll, float pitch, float speed) {
-	const float cr = cosf(roll), sr = sinf(roll);
-	const float cp = cosf(pitch), sp = sinf(pitch);
+// Turns the pair a, b by angle t, as a point fixed in space is seen to turn
+static void turn_pair(float* a, float* b, float t) {
+	if (t == 0.0f) return;
+	const float c = cosf(t), s = sinf(t);
+	const float x = *a * c - *b * s;
+	*b = *a * s + *b * c;
+	*a = x;
+}
+
+void dust_move(Vec3_t turn, Vec3_t move) {
+	_dust_move = move;
 	for (uint32_t i = 0; i < DUST; ++i) {
 		Vec3_t* s = &_dust[i];
 		_dust_was[i] = *s;
 		// As frame_roll and frame_pitch turn us, so the view of a point fixed in space turns
-		const float x = s->x * cr - s->y * sr;
-		const float y = s->x * sr + s->y * cr;
-		s->x = x;
-		s->y = y * cp - s->z * sp;
-		s->z = s->z * cp + y * sp - speed;
-		if (s->z < DUST_NEAR || s->z > DUST_FAR) {
-			// Going forward new specks come from far ahead, and going backward from close by
-			if (speed >= 0.0f) new_speck(i, DUST_FAR * 0.6f, DUST_FAR);
-			else new_speck(i, DUST_NEAR, DUST_NEAR * 3.0f);
-		}
+		turn_pair(&s->x, &s->y, turn.z);
+		turn_pair(&s->y, &s->z, turn.x);
+		turn_pair(&s->z, &s->x, turn.y);
+		*s = vec_sub(*s, move);
+		if (s->z < DUST_NEAR || s->z > DUST_FAR) new_speck(i);
 	}
 }
 
@@ -136,7 +147,7 @@ void dust_draw(void) {
 		const Vec3_t back = vec_add(_dust[i], vec_scale(vec_sub(_dust_was[i], _dust[i]), DUST_STREAK));
 		b[i] = back.z > NEAR_Z ? project(&back) : a[i];
 		seen[i] = a[i].x >= 0.0f && a[i].x < (float)GAME_SCREEN_W && a[i].y >= (float)VIEW_TOP && a[i].y < (float)VIEW_BOTTOM;
-		if (!seen[i]) new_speck(i, DUST_FAR * 0.6f, DUST_FAR);
+		if (!seen[i]) new_speck(i);
 	}
 	const float band = (float)(VIEW_BOTTOM - VIEW_TOP) / DUST_BANDS;
 	for (uint32_t k = 0; k < DUST_BANDS; ++k) {

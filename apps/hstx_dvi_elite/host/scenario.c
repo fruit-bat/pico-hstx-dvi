@@ -13,7 +13,11 @@
 // fight   - starts a game, launches, then a Sidewinder is put ahead, which
 //           we shoot down, and then a Python, at which we fire a missile
 // trade   - starts a game, and docked, buys food, holding to buy more, and
-//           computers, then a missile, and sells some food
+//           computers, then a missile, and sells some food, then tries for
+//           a rear pulse laser
+// views   - starts a game, launches and climbs, then a Sidewinder is put
+//           behind and a rear laser fitted, and we look back and shoot at it,
+//           then look left and right
 // save    - built with EL_HOST_SAVE, picks commander slot 2, names it NAMESON,
 //           holding up to go on changing the letter, buys food and launches,
 //           which saves; run again, the slot holds it
@@ -23,6 +27,7 @@
 
 void game_debug_approach(float roll);
 void game_debug_pirate(const char* name);
+void game_debug_chaser(const char* name);
 
 // The buttons, as in el_input.h
 #define L 1
@@ -86,6 +91,12 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 400 && f < 403) return SELECT;
 		if (f >= 420 && f < 423) return D;
 		if (f >= 440 && f < 443) return A;
+		// A pulse laser for the rear, which costs too much
+		if (f >= 460 && f < 463) return D;
+		if (f >= 470 && f < 473) return D;
+		if (f >= 480 && f < 483) return D;
+		if (f >= 490 && f < 493) return R;
+		if (f >= 500 && f < 503) return A;
 		return 0;
 	}
 	if (f >= 60 && f < 63) return A;
@@ -119,6 +130,19 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 500 && f < 510) return B;
 		if (f >= 510 && f < 513) return B | A;
 	}
+	if (!strcmp(host_mode, "views")) {
+		// Climb a quarter turn, so the station is not behind, slow down, look
+		// back and shoot, then left and right, and round to the front
+		if (f >= 100 && f < 175) return D;
+		if (f >= 180 && f < 200) return B | D;
+		if (f >= 245 && f < 248) return SELECT;
+		if (f >= 260 && f < 460) return A;
+		if (f >= 480 && f < 483) return SELECT;
+		if (f >= 500 && f < 530) return R;
+		if (f >= 560 && f < 563) return SELECT;
+		if (f >= 580 && f < 610) return B | U;
+		if (f >= 660 && f < 663) return SELECT;
+	}
 	if (!strcmp(host_mode, "hyper")) {
 		// Climb a quarter turn, away from both the planet and the station,
 		// and speed up, trying to jump too soon on the way, then go to Diso,
@@ -142,6 +166,7 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
+	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");
 	if (frame % 600 == 0) {
 		printf("%6u sprites %3u\n", frame, sprites);
 	}

@@ -16,10 +16,22 @@ extern "C" {
 typedef enum {
 	LASER_PULSE = 0,
 	LASER_BEAM,
-	LASER_MILITARY
+	LASER_MILITARY,
+	LASER_NONE
 } Laser_e;
 
-// Us: what we have, and what our ship carries
+// Where a laser is fitted, which is also the way we look to fire it
+typedef enum {
+	MOUNT_FRONT = 0,
+	MOUNT_REAR,
+	MOUNT_LEFT,
+	MOUNT_RIGHT,
+	MOUNTS
+} Mount_e;
+
+// Us: what we have, and what our ship carries. It is saved as it is, so
+// what is added goes on the end, and saves made before it take what a new
+// commander has.
 typedef struct {
 	uint32_t cash;       // in tenths of a credit
 	uint32_t fuel;       // in tenths of a light year
@@ -27,7 +39,7 @@ typedef struct {
 	uint32_t hold;       // how many tonnes the hold takes
 	uint32_t cargo[GOODS];
 	bool ecm;
-	Laser_e laser;
+	Laser_e laser[MOUNTS]; // the front first, where it was when there was only one
 } Commander_t;
 
 extern Commander_t cmdr;
@@ -36,6 +48,8 @@ extern Commander_t cmdr;
 
 // As Commander Jameson starts
 void trade_new_commander(void);
+// What a new commander has
+void trade_commander_start(Commander_t* c);
 // The market at a system we have just come to, which changes a little each time
 void trade_arrive(const GalaxySystem_t* sys);
 // The market and the equipment for sale, when docked. Up and down pick,

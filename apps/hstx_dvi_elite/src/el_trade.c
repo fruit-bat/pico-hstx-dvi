@@ -12,6 +12,7 @@
 #include "game_pallet.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 Commander_t cmdr;
 
@@ -68,6 +69,7 @@ typedef enum {
 	EQUIP_MISSILE,
 	EQUIP_CARGO_BAY,
 	EQUIP_ECM,
+	EQUIP_PULSE_LASER,
 	EQUIP_BEAM_LASER,
 	EQUIP_MILITARY_LASER,
 	EQUIPMENT
@@ -84,6 +86,7 @@ static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Missile", 300, 1 },
 	{ "Large Cargo Bay", 4000, 2 },
 	{ "E.C.M. System", 6000, 3 },
+	{ "Pulse Laser", 4000, 4 },
 	{ "Beam Laser", 10000, 5 },
 	{ "Military Laser", 60000, 10 },
 };
@@ -91,6 +94,9 @@ static const Equip_t _equipment[EQUIPMENT] = {
 #define CARGO_SMALL 20
 #define CARGO_LARGE 35
 static uint32_t _item = 0;
+// Where a laser bought goes
+static Mount_e _mount = MOUNT_FRONT;
+static const char* const _mount_names[MOUNTS] = { "Front", "Rear", "Left", "Right" };
 
 // The lists are centred across the screen: the market is 46 letters wide, and the equipment 35
 #define MARKET_X ((GAME_SCREEN_W - 46 * 8) / 2)
@@ -98,14 +104,18 @@ static uint32_t _item = 0;
 #define LIST_TOP (VIEW_TOP + 10)
 #define LIST_LINE 12
 
+void trade_commander_start(Commander_t* c) {
+	memset(c, 0, sizeof(*c));
+	c->cash = 1000;
+	c->fuel = GALAXY_FUEL_MAX;
+	c->missiles = 3;
+	c->hold = CARGO_SMALL;
+	c->laser[MOUNT_FRONT] = LASER_PULSE;
+	for (uint32_t i = MOUNT_REAR; i < MOUNTS; ++i) c->laser[i] = LASER_NONE;
+}
+
 void trade_new_commander(void) {
-	cmdr.cash = 1000;
-	cmdr.fuel = GALAXY_FUEL_MAX;
-	cmdr.missiles = 3;
-	cmdr.hold = CARGO_SMALL;
-	for (uint32_t i = 0; i < GOODS; ++i) cmdr.cargo[i] = 0;
-	cmdr.ecm = false;
-	cmdr.laser = LASER_PULSE;
+	trade_commander_start(&cmdr);
 	_good = 0;
 	_item = 0;
 }
@@ -222,12 +232,12 @@ static const char* fit(Equip_e e) {
 		case EQUIP_ECM:
 			if (cmdr.ecm) return "FITTED";
 			break;
-		case EQUIP_BEAM_LASER:
-			if (cmdr.laser >= LASER_BEAM) return "FITTED";
+		default: {
+			// Only a better laser than the one there, if any
+			const Laser_e has = cmdr.laser[_mount];
+			if (has != LASER_NONE && has >= (Laser_e)(e - EQUIP_PULSE_LASER)) return "FITTED";
 			break;
-		default:
-			if (cmdr.laser >= LASER_MILITARY) return "FITTED";
-			break;
+		}
 	}
 	if (cmdr.cash < price) return "NOT ENOUGH CASH";
 	cmdr.cash -= price;
@@ -236,8 +246,7 @@ static const char* fit(Equip_e e) {
 		case EQUIP_MISSILE: ++cmdr.missiles; break;
 		case EQUIP_CARGO_BAY: cmdr.hold = CARGO_LARGE; break;
 		case EQUIP_ECM: cmdr.ecm = true; break;
-		case EQUIP_BEAM_LASER: cmdr.laser = LASER_BEAM; break;
-		default: cmdr.laser = LASER_MILITARY; break;
+		default: cmdr.laser[_mount] = (Laser_e)(e - EQUIP_PULSE_LASER); break;
 	}
 	return NULL;
 }
@@ -247,6 +256,11 @@ const char* trade_equipment_input(uint8_t pressed, const GalaxySystem_t* sys) {
 	if (_item >= n) _item = 0;
 	if (pressed & EL_INP_DOWN) _item = (_item + 1) % n;
 	if (pressed & EL_INP_UP) _item = (_item + n - 1) % n;
+	// Left and right choose where a laser goes
+	if (_item >= EQUIP_PULSE_LASER) {
+		if (pressed & EL_INP_RIGHT) _mount = (Mount_e)((_mount + 1) % MOUNTS);
+		if (pressed & EL_INP_LEFT) _mount = (Mount_e)((_mount + MOUNTS - 1) % MOUNTS);
+	}
 	if (pressed & EL_INP_A) return fit((Equip_e)_item);
 	return NULL;
 }
@@ -261,6 +275,10 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	for (uint32_t i = 0; i < n; ++i) {
 		const uint32_t c = i == _item ? GAME_YELLOW : GAME_WHITE;
 		screen_text(EQUIP_X, y, _equipment[i].name, c, false);
+		if (i == _item && i >= EQUIP_PULSE_LASER) {
+			snprintf(s, sizeof(s), "<%s>", _mount_names[_mount]);
+			screen_text(EQUIP_X + 16 * 8, y, s, c, false);
+		}
 		uint32_t price = _equipment[i].price;
 		if (i == EQUIP_FUEL) price *= GALAXY_FUEL_MAX - cmdr.fuel;
 		snprintf(s, sizeof(s), "%5u.%u", (unsigned)(price / 10), (unsigned)(price % 10));
@@ -269,13 +287,20 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	}
 	y += 8;
 	cash_line(EQUIP_X, y);
-	screen_text_centre(VIEW_BOTTOM - 12, "FIRE BUYS", GAME_GREY, false);
+	screen_text_centre(VIEW_BOTTOM - 12, _item >= EQUIP_PULSE_LASER ? "FIRE BUYS  LEFT AND RIGHT CHOOSE WHERE" : "FIRE BUYS", GAME_GREY, false);
 }
 
 uint32_t trade_equipment_names(const char** names, uint32_t max) {
-	static const char* const lasers[] = { "Front Pulse Laser", "Front Beam Laser", "Front Military Laser" };
+	static const char* const lasers[MOUNTS][LASER_NONE] = {
+		{ "Front Pulse Laser", "Front Beam Laser", "Front Military Laser" },
+		{ "Rear Pulse Laser", "Rear Beam Laser", "Rear Military Laser" },
+		{ "Left Pulse Laser", "Left Beam Laser", "Left Military Laser" },
+		{ "Right Pulse Laser", "Right Beam Laser", "Right Military Laser" },
+	};
 	uint32_t n = 0;
-	if (n < max) names[n++] = lasers[cmdr.laser];
+	for (uint32_t i = 0; i < MOUNTS; ++i) {
+		if (n < max && cmdr.laser[i] != LASER_NONE) names[n++] = lasers[i][cmdr.laser[i]];
+	}
 	if (n < max && cmdr.hold >= CARGO_LARGE) names[n++] = "Large Cargo Bay";
 	if (n < max && cmdr.ecm) names[n++] = "E.C.M. System";
 	return n;

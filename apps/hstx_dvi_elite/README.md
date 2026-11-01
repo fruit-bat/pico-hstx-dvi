@@ -31,13 +31,14 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, and beam and military lasers, which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, and pulse, beam and military lasers, the last two of which fire all the time.
+A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
 ## Combat
 
-Fire shoots the pulse laser, which heats up as it fires and stops when too hot until it has cooled.
-B held with fire launches a missile at the ship nearest ahead, if any are left.
+Fire shoots the laser the way you look, if one is fitted there, which heats up as it fires and stops when too hot until it has cooled.
+B held with fire launches a missile at the ship nearest the middle of the view, if any are left.
 B held with select sets off the ECM, if fitted, which blows up every missile flying.
 
 The other ships are traders going about their business, pirates that come for you,
@@ -62,8 +63,8 @@ Pirates bring a bounty, and the ships destroyed raise your rating, as in the ori
 - B held with up or down speeds up or slows down.
 - A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
 - B held with A launches a missile, and with select sets off the ECM.
-- Select shows the next screen: the front view, the short range chart, the galactic chart, and the data on the system
-  the cursor is on. On the charts the pad moves the cursor, faster with B held.
+- Select shows the next screen: the front, rear, left and right views, the short range chart, the galactic chart,
+  and the data on the system the cursor is on. The controls fly the ship the same whichever way you look. On the charts the pad moves the cursor, faster with B held.
 - Start shows the options: the way of drawing, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the shape of the screen, and ending the game.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
@@ -115,7 +116,8 @@ host/build/elite_host dock 420 20 frames
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
-`trade` buys and sells in the market at Lave, and buys a missile.
+`views` puts a Sidewinder behind with a rear laser fitted, looks back and fires at it, then looks left and right.
+`trade` buys and sells in the market at Lave, buys a missile, and tries for a rear pulse laser.
 Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
 names it NAMESON, buys food and launches, saving it, to show in the slot when run again.
 See `../common/host` for more on how this works.

@@ -8,19 +8,56 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SAVE_MAGIC 0x45544c45u // "ELTE"
+#define SAVE_MAGIC 0x32544c45u // "ELT2"
 
 #if defined(EL_SDCARD) || defined(EL_HOST_SAVE)
 
-// Saves made before there were names are as long as this, and are Jameson
-#define SAVE_UNNAMED offsetof(Save_t, name)
+// The commander when there was one laser, in saves made before
+#define OLD_CMDR (offsetof(Commander_t, laser) + sizeof(Laser_e))
 
-// Whether what was read is a save, of this build or one before names
+// Saves made before, with the commander first, and then with a name after
+#define OLD_MAGIC 0x45544c45u // "ELTE"
+typedef struct {
+	uint32_t magic;
+	uint32_t size;
+	uint8_t cmdr[OLD_CMDR];
+	uint32_t galaxy;
+	uint32_t home;
+	uint32_t kills;
+	uint32_t offender;
+	char name[SAVE_NAME_MAX];
+} OldSave_t;
+
+// Big enough for any save, and static, as too big for the stack
+static union {
+	Save_t now;
+	OldSave_t old;
+} _read;
+
+// Makes a save from what was read, which may be from an older build
 static bool save_good(Save_t* s, size_t n) {
-	if (n < SAVE_UNNAMED || s->magic != SAVE_MAGIC || s->size != n) return false;
-	if (n == SAVE_UNNAMED) strcpy(s->name, "JAMESON");
+	if (n < sizeof(uint32_t) * 2 || _read.now.size != n) return false;
+	trade_commander_start(&s->cmdr);
+	strcpy(s->name, "JAMESON");
+	if (_read.now.magic == SAVE_MAGIC) {
+		// The commander, as far as it was saved
+		if (n < offsetof(Save_t, cmdr) + OLD_CMDR || n > sizeof(Save_t)) return false;
+		memcpy(s, &_read.now, n);
+	}
+	else if (_read.old.magic == OLD_MAGIC) {
+		if (n != offsetof(OldSave_t, name) && n != sizeof(OldSave_t)) return false;
+		memcpy(&s->cmdr, _read.old.cmdr, OLD_CMDR);
+		s->galaxy = _read.old.galaxy;
+		s->home = _read.old.home;
+		s->kills = _read.old.kills;
+		s->offender = _read.old.offender;
+		if (n == sizeof(OldSave_t)) memcpy(s->name, _read.old.name, SAVE_NAME_MAX);
+	}
+	else {
+		return false;
+	}
 	s->name[SAVE_NAME_MAX - 1] = 0;
-	return n == SAVE_UNNAMED || n == sizeof(*s);
+	return true;
 }
 
 #endif
@@ -81,7 +118,7 @@ bool save_read(uint32_t slot, Save_t* s) {
 	printf("SD card: open %s %d\n", path, (int)o);
 	if (o != FR_OK) return false;
 	UINT n = 0;
-	const FRESULT r = f_read(&f, s, sizeof(*s), &n);
+	const FRESULT r = f_read(&f, &_read, sizeof(_read), &n);
 	f_close(&f);
 	return r == FR_OK && save_good(s, n);
 }
@@ -129,7 +166,7 @@ bool save_read(uint32_t slot, Save_t* s) {
 	slot_path(path, sizeof(path), slot);
 	FILE* f = fopen(path, "rb");
 	if (!f) return false;
-	const size_t n = fread(s, 1, sizeof(*s), f);
+	const size_t n = fread(&_read, 1, sizeof(_read), f);
 	fclose(f);
 	return save_good(s, n);
 }

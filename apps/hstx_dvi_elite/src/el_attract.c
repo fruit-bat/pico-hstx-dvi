@@ -117,7 +117,7 @@ static void draw_parader(const Parader_t* o) {
 
 // Returns the name of the nearest ship
 static const char* draw_parade(uint32_t frame) {
-	dust_move(0.0f, 0.0f, 6.0f);
+	dust_move((Vec3_t){ 0.0f, 0.0f, 0.0f }, (Vec3_t){ 0.0f, 0.0f, 6.0f });
 
 	// Nearest first, so they cover the ones behind
 	uint32_t order[OBJECTS];

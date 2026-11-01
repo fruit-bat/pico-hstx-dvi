@@ -36,10 +36,12 @@ Vec3_t frame_view(const Frame_t* eye, Vec3_t p);
 void frame_matrix(const Frame_t* eye, const Frame_t* body, float m[3][3]);
 
 // The dust: specks close by that stream past as we fly, and turn as we turn,
-// as streaks, longer the faster we go. The specks are fixed in space, so roll
-// and pitch turn them the other way.
+// as streaks, longer the faster we go. The specks are fixed in space, so as
+// we turn and move they go the other way. Both are in the view: turn by the
+// angles about x, y and z (as a roll is about z, and a pitch about x), and
+// move as far as we go along each.
 void dust_init(void);
-void dust_move(float roll, float pitch, float speed);
+void dust_move(Vec3_t turn, Vec3_t move);
 // Adds them, after everything else so they are behind it all
 void dust_draw(void);
 
