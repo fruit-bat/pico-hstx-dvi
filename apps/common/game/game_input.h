@@ -18,6 +18,9 @@ extern "C" {
 #define GAME_PAD_RIGHT  0x0080
 #define GAME_PAD_L      0x0400 // SNES shoulders
 #define GAME_PAD_R      0x0800
+// A SNES pad's A and X alone, to give them uses of their own
+#define GAME_PAD_SNES_A 0x0100
+#define GAME_PAD_SNES_X 0x0200
 
 // Buttons on count consecutive GPIOs from first, each connecting the GPIO to
 // ground, when built with GAME_BUTTONS. The first button is bit 0, and there
