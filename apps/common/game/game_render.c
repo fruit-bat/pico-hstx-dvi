@@ -155,6 +155,44 @@ static void make_double_bits(void) {
 	}
 	_double_bits_made = true;
 }
+
+// The font at twice the size, smoothed with Scale2x: each pixel becomes 4,
+// and a corner of the 4 takes the colour of the two pixels beside it if they
+// match each other and not the other two. Rows of 16 bits, leftmost highest.
+#define FONT_CHARS (TEXT_GRID8_LAST_CHAR - TEXT_GRID8_FIRST_CHAR + 1)
+static uint16_t _smooth_font[FONT_CHARS][16];
+static bool _smooth_font_made = false;
+
+static uint32_t font_pixel(const uint8_t* g, int32_t x, int32_t y) {
+	if (x < 0 || x > 7 || y < 0 || y > 7) return 0;
+	return (g[y] >> (7 - x)) & 1;
+}
+
+static void make_smooth_font(void) {
+	for (uint32_t c = 0; c < FONT_CHARS; ++c) {
+		const uint8_t* g = (const uint8_t*)&font_8x8[c << 3];
+		for (int32_t y = 0; y < 8; ++y) {
+			uint32_t top = 0, bottom = 0;
+			for (int32_t x = 0; x < 8; ++x) {
+				const uint32_t e = font_pixel(g, x, y);
+				const uint32_t b = font_pixel(g, x, y - 1), h = font_pixel(g, x, y + 1);
+				const uint32_t d = font_pixel(g, x - 1, y), f = font_pixel(g, x + 1, y);
+				uint32_t e0 = e, e1 = e, e2 = e, e3 = e;
+				if (b != h && d != f) {
+					e0 = d == b ? d : e;
+					e1 = b == f ? f : e;
+					e2 = d == h ? d : e;
+					e3 = h == f ? f : e;
+				}
+				top |= (e0 << 1 | e1) << (14 - 2 * x);
+				bottom |= (e2 << 1 | e3) << (14 - 2 * x);
+			}
+			_smooth_font[c][2 * y] = (uint16_t)top;
+			_smooth_font[c][2 * y + 1] = (uint16_t)bottom;
+		}
+	}
+	_smooth_font_made = true;
+}
 #endif
 
 static void __not_in_flash_func(text_scaled_renderer)(
@@ -185,7 +223,7 @@ static void __not_in_flash_func(text_scaled_renderer)(
 			int32_t n = 8 * s;
 			uint32_t e;
 			if (s == 2) {
-				e = _double_bits[d];
+				e = t->smooth ? _smooth_font[c - TEXT_GRID8_FIRST_CHAR][row & 15] : _double_bits[d];
 			}
 			else {
 				e = 0;
@@ -258,6 +296,15 @@ void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale) {
 	t->grid.s = t->s;
 	t->grid.font = (uint8_t*)font_8x8;
 	t->scale = scale ? scale : 1;
+	t->smooth = false;
+}
+
+void game_text_set_smooth(GameText_t* t, const char* s) {
+	game_text_set(t, s, 2);
+#if MODE_BYTES_PER_PIXEL == 1
+	if (!_smooth_font_made) make_smooth_font();
+	t->smooth = true;
+#endif
 }
 
 void game_text_set(GameText_t* t, const char* s, uint32_t scale) {

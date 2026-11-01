@@ -16,6 +16,7 @@ extern "C" {
 typedef struct {
 	TextGrid8_t grid;
 	uint32_t scale;
+	bool smooth;
 	uint8_t s[GAME_TEXT_MAX];
 } GameText_t;
 
@@ -50,6 +51,9 @@ void game_spr_pixels(int32_t x, int32_t y, uint32_t w, uint32_t h, const GamePix
 void game_text_set(GameText_t* t, const char* s, uint32_t scale);
 // Only shows the first n characters, for typing text out
 void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale);
+// At twice the size of the font, with the steps in its diagonals smoothed
+// rather than every pixel doubled
+void game_text_set_smooth(GameText_t* t, const char* s);
 int32_t game_text_width(const GameText_t* t);
 void game_spr_text(GameText_t* t, int32_t x, int32_t y, hstx_dvi_pixel_t* p);
 void game_spr_text_centre(GameText_t* t, int32_t y, hstx_dvi_pixel_t* p);
