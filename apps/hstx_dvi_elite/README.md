@@ -41,6 +41,12 @@ It cannot start, or end, too close to anything, the planet, the sun, the station
 Each system's planet is as big as its data says and coloured as it is on the charts,
 and where its sun and station are comes from its numbers, so it is the same each time.
 
+## The galactic hyperdrive
+
+Sold from tech level 10, it takes you to the next of the eight galaxies, and after the eighth back to the first.
+On the galactic chart, B held with fire (Y with B on a SNES pad) starts a countdown of 10 seconds, as for a jump; it needs no fuel,
+and you arrive at the system nearest where you were on the chart. It is used up, and can be bought again.
+
 ## Witchspace and the Thargoids
 
 About one jump in 40 goes wrong, as in the original, and leaves you in witchspace, halfway to where you were going,
@@ -58,7 +64,7 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a docking computer, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a docking computer, a galactic hyperdrive, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
@@ -77,7 +83,7 @@ With fuel scoops fitted, flying close enough to the sun fills the tanks as you g
 A destroyed trader or pirate may leave a cargo canister drifting. With fuel scoops, fly into it, aiming at or a little below the sights,
 to pick it up, which puts a tonne, kilo or gram of something at random in the hold, if there is room, and shows its name;
 otherwise it breaks against the ship, taking a little off the shields, with CARGO LOST, or NO FUEL SCOOPS if none are fitted.
-The inventory, one of the screens select shows, lists the cargo in the hold, with the fuel and cash.
+The inventory, one of the screens select shows, lists the cargo in the hold and the equipment fitted, with the fuel, cash and missiles.
 
 ## Combat
 
@@ -103,10 +109,12 @@ Pirates and Thargoids bring a bounty, and the ships destroyed raise your rating,
 
 ## The controls
 
+A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B; X and A have uses of their own, below.
+
 - Left and right roll, and up and down dive and climb, as with a joystick.
 - B held with up or down speeds up or slows down. Held on at full speed for half a second, it goes into the overdrive.
 - A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
-- B held with A launches a missile, and with select sets off the ECM.
+- B held with A launches a missile, and with select sets off the ECM. On the galactic chart B held with A starts the galactic hyperdrive.
 - Select shows the next screen: the front, rear, left and right views, the inventory, the short range chart, the galactic chart,
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
@@ -166,6 +174,7 @@ host/build/elite_host dock 420 20 frames
 `fly` starts a game, launches, flies about, looks at the charts, changes the options and fits everything.
 `dodo` is moved to the nearest system with a dodecahedron station, behind it, and the docking computer flies it in.
 `autodock` is put behind the station, facing away, and the docking computer, turned on in the options, flies it in.
+`galactic` has a galactic hyperdrive fitted and jumps from Lave into galaxy 2.
 `witch` has a jump go wrong into witchspace, among Thargoids, fires at them, and looks at the charts, centred halfway.
 `bomb` has an energy bomb fitted and three pirates put round it, arms the bomb, then sets it off.
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.

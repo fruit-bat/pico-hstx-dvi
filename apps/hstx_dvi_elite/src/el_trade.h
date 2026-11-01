@@ -44,6 +44,7 @@ typedef struct {
 	bool docking;        // whether we have a docking computer
 	bool pod;            // whether we have an escape pod
 	bool bomb;           // whether we have an energy bomb
+	bool galactic;       // whether we have a galactic hyperdrive
 } Commander_t;
 
 extern Commander_t cmdr;

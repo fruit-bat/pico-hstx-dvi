@@ -255,6 +255,8 @@ static Vec3_t _sun_pos;
 // Frames left counting down to hyperspace, and where to
 static uint32_t _hyper_frames;
 static uint32_t _hyper_to;
+// Whether the jump counting down is to the next galaxy
+static bool _hyper_galactic;
 static const char* _message;
 static uint32_t _message_frames;
 // Our ship and how we have done
@@ -409,10 +411,22 @@ static bool mass_locked(float planet) {
 }
 
 // Starts the countdown to the system the cursor is on, if we can reach it
-static void start_hyperspace(void) {
+// To the system on the charts, or with the galactic hyperdrive, from the
+// galactic chart, to the next galaxy
+static void start_hyperspace(bool galactic) {
 	if (_hyper_frames) return;
+	if (galactic && !cmdr.galactic) {
+		message("NO GALACTIC HYPERDRIVE");
+		return;
+	}
 	if (mass_locked(LOCK_PLANET)) {
 		message("MASS LOCKED");
+		return;
+	}
+	_hyper_galactic = galactic;
+	if (galactic) {
+		_hyper_frames = HYPER_COUNT * 60;
+		message("GALACTIC HYPERSPACE");
 		return;
 	}
 	const uint32_t to = chart_selected();
@@ -451,10 +465,26 @@ static void enter_witchspace(void) {
 	message("WITCHSPACE");
 }
 
+// Into the next galaxy, after the last the first, at the system nearest
+// where we were on the chart, with the hyperdrive used up
+static void galactic_jump(void) {
+	const GalaxySystem_t* h = chart_system(chart_home());
+	const float x = h->x, y = h->y;
+	chart_set_galaxy((chart_galaxy() + 1) % GALAXIES);
+	chart_cursor_set(x, y);
+	_hyper_to = chart_selected();
+	cmdr.galactic = false;
+}
+
 static void arrive(void) {
-	cmdr.fuel -= chart_distance(_hyper_to);
-	chart_set_fuel(cmdr.fuel);
-	if (!_witch && (options_witch() || rand() % WITCH_CHANCE == 0)) {
+	if (_hyper_galactic) {
+		galactic_jump();
+	}
+	else {
+		cmdr.fuel -= chart_distance(_hyper_to);
+		chart_set_fuel(cmdr.fuel);
+	}
+	if (!_witch && !_hyper_galactic && (options_witch() || rand() % WITCH_CHANCE == 0)) {
 		enter_witchspace();
 		return;
 	}
@@ -994,6 +1024,11 @@ void game_debug_bomb(void) {
 	ships_debug_place(2, "KRAIT", vec_sub(_me.pos, vec_scale(_me.r, 3000.0f)), _me.f, _me.u, &w);
 }
 
+// For trying the galactic hyperdrive on the PC: fits one
+void game_debug_galactic(void) {
+	cmdr.galactic = true;
+}
+
 // For trying witchspace on the PC: a jump to the nearest system goes wrong,
 // with the first Thargoid ahead of us, coming at us
 void game_debug_witch(void) {
@@ -1204,7 +1239,7 @@ static void draw_view(void) {
 #define STATUS_TOP (VIEW_TOP + 14)
 #define STATUS_LINE 16
 // The equipment fitted, in two columns
-#define STATUS_FITTED_ROWS 5
+#define STATUS_FITTED_ROWS 6
 #define STATUS_FITTED_W (22 * 8)
 #define TUNNEL_RINGS 8
 #define TUNNEL_SIDES 32
@@ -1530,7 +1565,8 @@ void game_play(void) {
 				}
 				case STATE_FLYING:
 					// Fire on the charts or data jumps to the system the cursor is on
-					if ((pressed & EL_INP_A) && !looking_out()) start_hyperspace();
+					// and with B held on the galactic chart, the galactic hyperdrive to the next galaxy
+					if ((pressed & EL_INP_A) && !looking_out()) start_hyperspace((held & EL_INP_B) && _view == VIEW_GALAXY);
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
 						if (mass_locked(LOCK_PLANET)) message("MASS LOCKED");
@@ -1572,7 +1608,7 @@ void game_play(void) {
 				}
 				else if (_state == STATE_LAUNCHING || _state == STATE_DOCKING || _state == STATE_HYPERSPACE) {
 					snprintf(title, sizeof(title), _state == STATE_LAUNCHING ? "LAUNCHING" :
-						_state == STATE_DOCKING ? "DOCKING" : "HYPERSPACE");
+						_state == STATE_DOCKING ? "DOCKING" : _hyper_galactic ? "GALACTIC HYPERSPACE" : "HYPERSPACE");
 					label = "TUNNEL";
 					draw_tunnel(_state == STATE_HYPERSPACE);
 				}

@@ -18,6 +18,8 @@
 // bomb    - starts a game, launches, climbs away, then has an energy bomb
 //           fitted and three pirates put round us, presses its button once,
 //           which only arms it, then three times quickly, which sets it off
+// galactic - starts a game, launches, climbs away, has a galactic hyperdrive
+//           fitted, and jumps from the galactic chart into galaxy 2
 // witch   - starts a game, launches, climbs away, then a jump to the nearest
 //           system goes wrong, into witchspace, among Thargoids, firing at
 //           them, then looks at the short range and galactic charts
@@ -63,6 +65,7 @@ void game_debug_pod(void);
 void game_debug_bomb(void);
 void game_debug_witch(void);
 void game_debug_dodo(void);
+void game_debug_galactic(void);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -96,6 +99,15 @@ uint32_t host_input(uint32_t f) {
 	}
 	if (!strcmp(host_mode, "pod") && f >= 100 && f < 175) return D;
 	if (!strcmp(host_mode, "bomb") && f >= 100 && f < 175) return D;
+	if (!strcmp(host_mode, "galactic")) {
+		// Climb away and speed up, as in hyper, then the galactic chart
+		if (f >= 160 && f < 235) return D;
+		if (f >= 240 && f < 310) return B | U;
+		if (f >= 320 && f < 356 && (f - 320) % 6 < 3) return SELECT;
+		if (f >= 700 && f < 703) return B | A;
+		// Arrived, the galactic chart again
+		if (f >= 1500 && f < 1536 && (f - 1500) % 6 < 3) return SELECT;
+	}
 	if (!strcmp(host_mode, "witch")) {
 		if (f >= 100 && f < 175) return D;
 		if (f >= 400 && f < 800) return A;
@@ -237,8 +249,9 @@ uint32_t host_input(uint32_t f) {
 		// 9 steps left of Lave, once clear
 		if (f >= 160 && f < 235) return D;
 		if (f >= 240 && f < 310) return B | U;
-		if (f >= 320 && f < 323) return SELECT;
-		if (f >= 330 && f < 370) return L;
+		// Round the views and the inventory to the short range chart
+		if (f >= 320 && f < 350 && (f - 320) % 6 < 3) return SELECT;
+		if (f >= 352 && f < 375) return L;
 		if (f >= 380 && f < 383) return A;
 		if (f >= 700 && f < 703) return A;
 		// Then too far
@@ -253,6 +266,7 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "dock")) game_debug_approach(0.0f);
 	if (frame == 200 && !strcmp(host_mode, "autodock")) game_debug_behind();
 	if (frame == 200 && !strcmp(host_mode, "dodo")) game_debug_dodo();
+	if (frame == 200 && !strcmp(host_mode, "galactic")) game_debug_galactic();
 	if (!strcmp(host_mode, "bomb")) {
 		// The bomb's button is a SNES pad's A, which the PC does not have
 		if (frame == 500) game_debug_bomb();

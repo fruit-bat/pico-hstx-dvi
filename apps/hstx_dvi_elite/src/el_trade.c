@@ -76,6 +76,7 @@ typedef enum {
 	EQUIP_ESCAPE_POD,
 	EQUIP_ENERGY_BOMB,
 	EQUIP_DOCKING,
+	EQUIP_GALACTIC,
 	EQUIP_MILITARY_LASER,
 	EQUIPMENT
 } Equip_e;
@@ -98,6 +99,7 @@ static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Escape Pod", 10000, 6, LASER_NONE },
 	{ "Energy Bomb", 9000, 7, LASER_NONE },
 	{ "Docking Computer", 15000, 9, LASER_NONE },
+	{ "Galactic Hyperdrive", 50000, 10, LASER_NONE },
 	{ "Military Laser", 60000, 10, LASER_MILITARY },
 };
 
@@ -113,6 +115,9 @@ static const char* const _mount_names[MOUNTS] = { "Front", "Rear", "Left", "Righ
 #define EQUIP_X ((GAME_SCREEN_W - 35 * 8) / 2)
 #define LIST_TOP (VIEW_TOP + 10)
 #define LIST_LINE 12
+// The inventory's list of equipment, beside the cargo
+#define INVENTORY_EQUIP_X (MARKET_X + 26 * 8)
+#define INVENTORY_EQUIP 12
 
 void trade_commander_start(Commander_t* c) {
 	memset(c, 0, sizeof(*c));
@@ -145,6 +150,7 @@ void trade_max_equipment(void) {
 	cmdr.docking = true;
 	cmdr.pod = true;
 	cmdr.bomb = true;
+	cmdr.galactic = true;
 	for (uint32_t i = 0; i < MOUNTS; ++i) cmdr.laser[i] = LASER_MILITARY;
 }
 
@@ -260,8 +266,19 @@ void trade_draw_inventory(void) {
 	y += LIST_LINE;
 	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)cmdr.hold);
 	screen_text(MARKET_X, y, s, GAME_CYAN, false);
+	y += LIST_LINE;
+	snprintf(s, sizeof(s), "Missiles: %u of %u", (unsigned)cmdr.missiles, (unsigned)MISSILES_MAX);
+	screen_text(MARKET_X, y, s, GAME_CYAN, false);
 	y += LIST_LINE + 8;
 	screen_text(MARKET_X, y, "CARGO:", GAME_CYAN, false);
+	// The equipment fitted, beside the cargo
+	screen_text(INVENTORY_EQUIP_X, y, "EQUIPMENT:", GAME_CYAN, false);
+	const char* fitted[INVENTORY_EQUIP];
+	const uint32_t n = trade_equipment_names(fitted, INVENTORY_EQUIP);
+	for (uint32_t i = 0; i < n; ++i) {
+		screen_text(INVENTORY_EQUIP_X + 16, y + LIST_LINE + 4 + LIST_LINE * (int32_t)i, fitted[i], GAME_WHITE, false);
+	}
+	if (!n) screen_text(INVENTORY_EQUIP_X + 16, y + LIST_LINE + 4, "None", GAME_GREY, false);
 	y += LIST_LINE + 4;
 	bool any = false;
 	for (uint32_t i = 0; i < GOODS; ++i) {
@@ -309,6 +326,9 @@ static const char* fit(Equip_e e) {
 		case EQUIP_DOCKING:
 			if (cmdr.docking) return "FITTED";
 			break;
+		case EQUIP_GALACTIC:
+			if (cmdr.galactic) return "FITTED";
+			break;
 		default: {
 			// Only a better laser than the one there, if any
 			const Laser_e has = cmdr.laser[_mount];
@@ -327,6 +347,7 @@ static const char* fit(Equip_e e) {
 		case EQUIP_ESCAPE_POD: cmdr.pod = true; break;
 		case EQUIP_ENERGY_BOMB: cmdr.bomb = true; break;
 		case EQUIP_DOCKING: cmdr.docking = true; break;
+		case EQUIP_GALACTIC: cmdr.galactic = true; break;
 		default: cmdr.laser[_mount] = _equipment[e].laser; break;
 	}
 	return NULL;
@@ -388,5 +409,6 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	if (n < max && cmdr.pod) names[n++] = "Escape Pod";
 	if (n < max && cmdr.bomb) names[n++] = "Energy Bomb";
 	if (n < max && cmdr.docking) names[n++] = "Docking Computer";
+	if (n < max && cmdr.galactic) names[n++] = "Galactic Hyperdrive";
 	return n;
 }
