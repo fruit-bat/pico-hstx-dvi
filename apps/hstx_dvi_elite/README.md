@@ -131,6 +131,36 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 A NES or SNES pad works when built with `GAME_NESPAD`, and buttons on GPIOs 4 to 11, each to ground,
 in the order left, right, up, down, A, B, select and start, unless built with `GAME_BUTTONS` off.
 
+## A PS/2 keyboard
+
+Not yet working on hardware, so off by default. Built with `GAME_PS2KBD` (`cmake -DGAME_PS2KBD=ON ..`), a PS/2 keyboard on GPIO 0 (data) and 1 (clock) works
+alongside the pad, using [pico-ps2-keyboard](../../../pico-ps2-keyboard), with the keys of BBC Elite:
+
+| Key | |
+|---|---|
+| S, X | dive, climb |
+| < >  | roll left, right |
+| Arrows | as the pad |
+| Space, ? | faster, slower; Space held at full speed goes into the overdrive |
+| A, Enter | fire, and choose in the menus |
+| M | missile |
+| E | ECM |
+| J | overdrive, on and off |
+| H | hyperspace to the system on the charts; Ctrl-H the galactic hyperdrive |
+| C | docking computer |
+| Tab | energy bomb, at once |
+| F10 (f0) | front view, or launch when docked |
+| F1, F2, F3 | rear, left and right views |
+| F4 | equip ship, docked |
+| F5, F6 | galactic and short range charts |
+| F7 | market prices, docked |
+| F8 | status, docked |
+| F9 | inventory |
+| D | data on the system |
+| Escape | options |
+
+A new commander's name is typed, with Backspace and Enter. Caps Lock, Num Lock and Scroll Lock light as they should.
+
 ## Saving
 
 Built with `-DELITE_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIOs 2 to 5 as for `hstx_dvi_cpm`,

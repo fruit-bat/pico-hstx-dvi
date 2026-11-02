@@ -36,6 +36,7 @@
 #include "el_space.h"
 #include "el_trade.h"
 #include "game_pallet.h"
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,6 +125,14 @@
 #define BOMB_WINDOW 30
 #define BOMB_RANGE SCANNER_RANGE
 #define BOMB_FLASH 20
+// The keys of a PS/2 keyboard, which do nothing without one
+#ifdef GAME_PS2KBD
+#define KEY_HELD(k) game_key_held(k)
+#define KEY_PRESSED(k) game_key_pressed(k)
+#else
+#define KEY_HELD(k) false
+#define KEY_PRESSED(k) false
+#endif
 // Where we start in the galaxy: Lave
 #define HOME 7
 
@@ -234,6 +243,8 @@ static float _speed, _roll, _pitch;
 static bool _overdrive;
 static float _over;
 static uint32_t _over_hold, _over_fuel;
+// Whether the overdrive was asked for at once, from the keyboard
+static bool _over_ask;
 // Whether the docking computer is flying us, and whether it is on the run in
 static bool _docking, _dock_final;
 // Our ship, left behind when we escape in the pod, and how it is going
@@ -376,6 +387,7 @@ static void start(void) {
 // Back to full speed at once
 static void overdrive_off(void) {
 	_overdrive = false;
+	_over_ask = false;
 	_over = 0.0f;
 	_over_hold = 0;
 }
@@ -694,8 +706,9 @@ static void move_cursor(uint8_t held) {
 // Into the overdrive, having held on at full speed, if we can, and out of it
 // when near something or out of fuel, burning fuel while in it
 static void overdrive(void) {
-	if (!_overdrive && _over_hold >= OVERDRIVE_WAIT) {
+	if (!_overdrive && (_over_hold >= OVERDRIVE_WAIT || _over_ask)) {
 		_over_hold = 0;
+		_over_ask = false;
 		if (mass_locked(OVERDRIVE_LOCK_PLANET)) message("MASS LOCKED");
 		else if (!cmdr.fuel) message("NO FUEL");
 		else {
@@ -819,14 +832,17 @@ static void fly(uint8_t held) {
 	else {
 		move_cursor(held);
 	}
-	if (b && looking_out() && (held & EL_INP_UP)) {
+	// Space and ? as in the original, which leave the pitch alone
+	const bool faster = (b && looking_out() && (held & EL_INP_UP)) || KEY_HELD(HID_KEY_SPACE);
+	const bool slower = (b && looking_out() && (held & EL_INP_DOWN)) || KEY_HELD(HID_KEY_SLASH);
+	if (faster) {
 		_speed = fminf(_speed + SPEED_STEP, MAX_SPEED);
 		_over_hold = _speed >= MAX_SPEED ? _over_hold + 1 : 0;
 	}
 	else {
 		_over_hold = 0;
 	}
-	if (b && looking_out() && (held & EL_INP_DOWN)) {
+	if (slower) {
 		// Slowing drops out of the overdrive first
 		if (_overdrive) overdrive_off();
 		else _speed = fmaxf(_speed - SPEED_STEP, 0.0f);
@@ -846,6 +862,26 @@ static void fly(uint8_t held) {
 	if (vec_length(vec_sub(_me.pos, _planet.pos)) < _planet_radius) set_state(STATE_DEAD);
 }
 
+// A missile at the ship nearest the middle of the view, or ahead from a chart
+static void fire_missile(void) {
+	look();
+	const int32_t target = ships_nearest_ahead(looking_out() ? &_eye : &_me);
+	if (!cmdr.missiles) message("NO MISSILES");
+	else if (target < 0) message("NO TARGET");
+	else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
+}
+
+// The ECM, which blows up the missiles flying
+static void ecm(void) {
+	if (cmdr.ecm) {
+		ships_ecm();
+		message("E.C.M.");
+	}
+	else {
+		message("NO E.C.M.");
+	}
+}
+
 // The laser the way we look while fire is held, and a missile at the ship
 // nearest the middle of the view when fire is pressed with B held
 static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
@@ -856,11 +892,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (!looking_out()) return;
 	look();
 	if (held & EL_INP_B) {
-		if (!(pressed & EL_INP_A)) return;
-		const int32_t target = ships_nearest_ahead(&_eye);
-		if (!cmdr.missiles) message("NO MISSILES");
-		else if (target < 0) message("NO TARGET");
-		else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
+		if (pressed & EL_INP_A) fire_missile();
 		return;
 	}
 	const Laser_e laser = cmdr.laser[_view];
@@ -882,13 +914,15 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	if (_bomb_flash) --_bomb_flash;
 	if (_bomb_frames && --_bomb_frames == 0) _bomb_presses = 0;
-	if (!(pressed & EL_INP_BOMB)) return;
+	// Tab on a keyboard, as in the original, at once, as a key is not pressed by mistake
+	const bool now = KEY_PRESSED(HID_KEY_TAB);
+	if (!(pressed & EL_INP_BOMB) && !now) return;
 	if (!cmdr.bomb) {
 		message("NO ENERGY BOMB");
 		return;
 	}
 	if (!_bomb_frames) _bomb_frames = BOMB_WINDOW;
-	if (++_bomb_presses < BOMB_PRESSES) {
+	if (++_bomb_presses < BOMB_PRESSES && !now) {
 		message("ENERGY BOMB");
 		return;
 	}
@@ -1405,9 +1439,13 @@ static void enter_name(void) {
 	name[SAVE_NAME_MAX - 1] = 0;
 	uint32_t at = 0;
 	uint32_t held_frames = 0;
-	for (;;) {
-		uint8_t pressed = game_input_pressed();
-		const uint8_t held = game_input_get() & (EL_INP_UP | EL_INP_DOWN);
+	// Anything typed before
+	while (game_key_char()) {}
+	bool done = false;
+	while (!done) {
+		// On a keyboard the name is typed, so its keys are not the pad's
+		uint8_t pressed = game_input_pressed() & ~game_input_keys();
+		const uint8_t held = game_input_get() & ~game_input_keys() & (EL_INP_UP | EL_INP_DOWN);
 		held_frames = held ? held_frames + 1 : 0;
 		if (held_frames >= NAME_REPEAT_WAIT && (held_frames - NAME_REPEAT_WAIT) % NAME_REPEAT_EVERY == 0) pressed |= held;
 		const uint32_t l = (uint32_t)(strchr(_letters, name[at]) - _letters);
@@ -1416,6 +1454,20 @@ static void enter_name(void) {
 		if ((pressed & EL_INP_RIGHT) && at < SAVE_NAME_MAX - 2) ++at;
 		if ((pressed & EL_INP_LEFT) && at > 0) --at;
 		if (pressed & EL_INP_A) break;
+		// Typed: letters and spaces go in, Backspace goes back, and Enter takes it
+		for (char c = game_key_char(); c && !done; c = game_key_char()) {
+			if (c == '\r') {
+				done = true;
+			}
+			else if (c == '\b') {
+				if (at > 0) --at;
+				name[at] = ' ';
+			}
+			else if (strchr(_letters, toupper((unsigned char)c))) {
+				name[at] = (char)toupper((unsigned char)c);
+				if (at < SAVE_NAME_MAX - 2) ++at;
+			}
+		}
 		screen_begin();
 		draw_dashboard();
 		// The name with the letter we are on in yellow, and spaces as dots
@@ -1425,8 +1477,8 @@ static void enter_name(void) {
 		shown[at] = ' ';
 		screen_text(NAME_X, CENTRE_Y - 16, shown, GAME_WHITE, true);
 		screen_text(NAME_X + 16 * (int32_t)at, CENTRE_Y - 16, letter, GAME_YELLOW, true);
-		screen_text_centre(VIEW_BOTTOM - 40, "UP AND DOWN CHANGE THE LETTER", GAME_CYAN, false);
-		screen_text_centre(VIEW_BOTTOM - 24, "FIRE TAKES THE NAME", GAME_CYAN, false);
+		screen_text_centre(VIEW_BOTTOM - 40, game_keyboard() ? "TYPE IT, OR UP AND DOWN CHANGE THE LETTER" : "UP AND DOWN CHANGE THE LETTER", GAME_CYAN, false);
+		screen_text_centre(VIEW_BOTTOM - 24, game_keyboard() ? "FIRE OR ENTER TAKES THE NAME" : "FIRE TAKES THE NAME", GAME_CYAN, false);
 		screen_end("NEW COMMANDER", "NAME");
 		++_frame;
 	}
@@ -1514,6 +1566,44 @@ static bool choose_commander(void) {
 	}
 }
 
+#ifdef GAME_PS2KBD
+// The keys of BBC Elite that are not the pad's: f0 to f9 as F10 and F1 to F9,
+// the views and screens, M missile, E ECM, J overdrive, H hyperspace and
+// Ctrl-H galactic hyperspace, C docking computer, D data on the system
+static void keyboard(void) {
+	const bool docked = _state == STATE_DOCKED;
+	if (_state != STATE_FLYING && !docked) return;
+	if (KEY_PRESSED(HID_KEY_F5)) _view = VIEW_GALAXY;
+	if (KEY_PRESSED(HID_KEY_F6)) _view = VIEW_LOCAL;
+	if (KEY_PRESSED(HID_KEY_F9)) _view = VIEW_INVENTORY;
+	if (KEY_PRESSED(HID_KEY_D)) _view = VIEW_DATA;
+	if (docked) {
+		if (KEY_PRESSED(HID_KEY_F10)) launch();
+		if (KEY_PRESSED(HID_KEY_F4)) _view = VIEW_EQUIPMENT;
+		if (KEY_PRESSED(HID_KEY_F7)) _view = VIEW_MARKET;
+		if (KEY_PRESSED(HID_KEY_F8)) _view = VIEW_FRONT;
+		return;
+	}
+	if (KEY_PRESSED(HID_KEY_F10)) _view = VIEW_FRONT;
+	if (KEY_PRESSED(HID_KEY_F1)) _view = VIEW_REAR;
+	if (KEY_PRESSED(HID_KEY_F2)) _view = VIEW_LEFT;
+	if (KEY_PRESSED(HID_KEY_F3)) _view = VIEW_RIGHT;
+	if (KEY_PRESSED(HID_KEY_M)) fire_missile();
+	if (KEY_PRESSED(HID_KEY_E)) ecm();
+	if (KEY_PRESSED(HID_KEY_C)) docking_computer(!_docking);
+	if (KEY_PRESSED(HID_KEY_H)) start_hyperspace(game_key_modifiers() & (KEYBOARD_MODIFIER_LEFTCTRL | KEYBOARD_MODIFIER_RIGHTCTRL));
+	if (KEY_PRESSED(HID_KEY_J)) {
+		if (_overdrive) {
+			overdrive_off();
+		}
+		else {
+			_speed = MAX_SPEED;
+			_over_ask = true;
+		}
+	}
+}
+#endif
+
 void game_play(void) {
 	start();
 	if (!choose_commander()) return;
@@ -1535,20 +1625,15 @@ void game_play(void) {
 			if (pressed & EL_INP_SELECT) {
 				// With B held, the ECM blows up the missiles flying
 				if (held & EL_INP_B) {
-					if (_state == STATE_FLYING) {
-						if (cmdr.ecm) {
-							ships_ecm();
-							message("E.C.M.");
-						}
-						else {
-							message("NO E.C.M.");
-						}
-					}
+					if (_state == STATE_FLYING) ecm();
 				}
 				else if (can_look) {
 					_view = next_view();
 				}
 			}
+#ifdef GAME_PS2KBD
+			keyboard();
+#endif
 			// A SNES pad's shoulders look round the ship, in flight
 			if (_state == STATE_FLYING && (pressed & EL_INP_R)) _view = look_round(1);
 			if (_state == STATE_FLYING && (pressed & EL_INP_L)) _view = look_round(-1);
