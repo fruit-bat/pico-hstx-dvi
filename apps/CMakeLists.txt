@@ -62,6 +62,14 @@ if (GAME_PS2KBD)
   add_subdirectory(${PICO_FOLDER}/pico-ps2-keyboard "${CMAKE_CURRENT_BINARY_DIR}/pico-ps2-keyboard")
 endif()
 
+# A USB keyboard for the games, on the Pico's USB port as a host, using tinyusb
+# and pico-hid-host, e.g. cmake -DGAME_USBKBD=ON .. The port can't then be the
+# serial port, so stdio goes to the UART on GPIOs 0 and 1 instead.
+option(GAME_USBKBD "Read a USB keyboard in the games, using pico-hid-host" OFF)
+if (GAME_USBKBD)
+  add_subdirectory(${PICO_FOLDER}/pico-hid-host "${CMAKE_CURRENT_BINARY_DIR}/pico-hid-host")
+endif()
+
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
 
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")
@@ -78,3 +86,12 @@ add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
 add_subdirectory(hstx_dvi_android_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_android_test")
 add_subdirectory(hstx_dvi_wireframe_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wireframe_test")
 add_subdirectory(hstx_dvi_elite  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_elite")
+
+# The games' serial port, moved off the USB port when it is a keyboard's host
+if (GAME_USBKBD)
+  foreach(game hstx_dvi_sprite_test hstx_dvi_defender hstx_dvi_wildwood hstx_dvi_manor
+      hstx_dvi_android_test hstx_dvi_wireframe_test hstx_dvi_elite)
+    pico_enable_stdio_usb(${game} 0)
+    pico_enable_stdio_uart(${game} 1)
+  endforeach()
+endif()

@@ -1,6 +1,11 @@
 #pragma once
 
 #include "pico/stdlib.h"
+#ifdef GAME_USBKBD
+#include "tusb.h"
+#elif defined(GAME_PS2KBD)
+#include "ps2kbd_hid.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,9 +43,10 @@ uint16_t game_input_get(void);
 // it also takes what a keyboard has sent.
 uint16_t game_input_pressed(void);
 
-// A PS/2 keyboard, when built with GAME_PS2KBD, on GPIO 0 for data and 1 for
-// the clock. Keys are HID codes, as in ps2kbd_hid.h. Without one, no key is
-// ever held or typed.
+// A keyboard, built with GAME_KEYBOARD: a PS/2 keyboard with GAME_PS2KBD, on
+// GPIO 0 for data and 1 for the clock, a USB keyboard with GAME_USBKBD, on the
+// Pico's USB port, or both. Keys are HID codes, as in ps2kbd_hid.h or
+// tinyusb's hid.h. Without one, no key is ever held or typed.
 typedef struct {
 	uint8_t key;   // HID_KEY_...
 	uint16_t bits; // the input bits it presses, as the buttons do

@@ -45,3 +45,14 @@ if (GAME_PS2KBD)
   endif()
   target_link_libraries(game_common INTERFACE pico_ps2_keyboard)
 endif()
+
+if (GAME_USBKBD)
+  target_sources(game_common INTERFACE ${CMAKE_CURRENT_LIST_DIR}/game_usbkbd.c)
+  target_compile_definitions(game_common INTERFACE GAME_USBKBD=1)
+  target_link_libraries(game_common INTERFACE pico_hid_host tinyusb_host tinyusb_board)
+endif()
+
+# Either keyboard
+if (GAME_PS2KBD OR GAME_USBKBD)
+  target_compile_definitions(game_common INTERFACE GAME_KEYBOARD=1)
+endif()
