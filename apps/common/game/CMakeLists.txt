@@ -46,10 +46,14 @@ if (GAME_PS2KBD)
   target_link_libraries(game_common INTERFACE pico_ps2_keyboard)
 endif()
 
+# The USB keyboard on its own, for apps that aren't games, such as hstx_dvi_cpm
 if (GAME_USBKBD)
-  target_sources(game_common INTERFACE ${CMAKE_CURRENT_LIST_DIR}/game_usbkbd.c)
-  target_compile_definitions(game_common INTERFACE GAME_USBKBD=1)
-  target_link_libraries(game_common INTERFACE pico_hid_host tinyusb_host tinyusb_board)
+  add_library(game_usbkbd INTERFACE)
+  target_sources(game_usbkbd INTERFACE ${CMAKE_CURRENT_LIST_DIR}/game_usbkbd.c)
+  target_include_directories(game_usbkbd INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+  target_compile_definitions(game_usbkbd INTERFACE GAME_USBKBD=1)
+  target_link_libraries(game_usbkbd INTERFACE pico_hid_host tinyusb_host tinyusb_board)
+  target_link_libraries(game_common INTERFACE game_usbkbd)
 endif()
 
 # Either keyboard
