@@ -190,6 +190,10 @@
 #define TRACK_CONE 0.12f
 // How long the name of the ship it follows stays up once it lets go, so it can be read
 #define TRACK_NAME_FRAMES 120
+// How far below the middle of the sights the name goes, clear of them, or
+// above if it would go off the bottom of the view, and how tall it is
+#define TRACK_NAME_GAP 24
+#define TRACK_NAME_H 16
 #define LASER_COOL 0.0025f
 #define LASER_COOLED 0.6f
 
@@ -1791,11 +1795,15 @@ void game_play(void) {
 			snprintf(count, sizeof(count), "%u", (unsigned)((_hyper_frames + 59) / 60));
 			screen_text(16, VIEW_TOP + 6, count, GAME_YELLOW, true);
 		}
-		// The ship the targeting computer follows, at the top of the view
+		// The ship the targeting computer follows, under the sights, where the eye is
 		if (_tracked_name_frames) {
 			--_tracked_name_frames;
 			if (_state == STATE_FLYING && looking_out() && !options_shown()) {
-				screen_text_centre(VIEW_TOP + 8, _tracked_name, _tracked >= 0 ? GAME_GREEN : GAME_GREY, true);
+				const int32_t x = (int32_t)(CENTRE_X + _sights_off.x);
+				const int32_t sy = (int32_t)(CENTRE_Y + _sights_off.y);
+				int32_t y = sy + TRACK_NAME_GAP;
+				if (y + TRACK_NAME_H > VIEW_BOTTOM) y = sy - TRACK_NAME_GAP - TRACK_NAME_H;
+				screen_text_centre_on(x, y, _tracked_name, _tracked >= 0 ? GAME_GREEN : GAME_GREY, true);
 			}
 		}
 		if (_message_frames) {

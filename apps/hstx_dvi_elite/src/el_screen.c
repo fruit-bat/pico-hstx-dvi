@@ -67,6 +67,17 @@ int32_t screen_text_centre(int32_t y, const char* s, uint32_t colour, bool big) 
 	return game_text_width(t);
 }
 
+int32_t screen_text_centre_on(int32_t x, int32_t y, const char* s, uint32_t colour, bool big) {
+	GameText_t* t = next_text(s, big);
+	if (!t) return 0;
+	const int32_t w = (int32_t)game_text_width(t);
+	int32_t left = x - w / 2;
+	if (left > GAME_SCREEN_W - w) left = GAME_SCREEN_W - w;
+	if (left < 0) left = 0;
+	game_spr_text(t, left, y, game_pallet(colour));
+	return w;
+}
+
 void screen_select(int32_t x, int32_t y, int32_t w) {
 	if (!object_begin()) return;
 	const float x0 = (float)x, x1 = (float)(x + w), y0 = (float)y;

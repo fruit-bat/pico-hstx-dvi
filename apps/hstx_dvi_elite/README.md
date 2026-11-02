@@ -34,7 +34,7 @@ within half a second; one press only arms it. On a SNES pad A is not fire: B is.
 
 A targeting computer, sold from tech level 8 and not in the original, moves the sights onto a ship within about
 7 degrees of the middle of the view and in laser range, green while it follows it, and the laser hits that ship.
-It keeps to the same ship while it can, and shows its name at the top of the view, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
+It keeps to the same ship while it can, and shows its name under the sights, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
 
 ## Hyperspace
 
