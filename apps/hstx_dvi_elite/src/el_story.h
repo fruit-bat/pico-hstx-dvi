@@ -114,6 +114,13 @@ void story_reset(StorySave_t* s);
 // Something has happened
 void story_event(StoryEvent_e ev, uint32_t arg);
 
+// What the story going waits for, in words, for the log: those that can
+// happen now, without the jumps it gives up after. Returns how many lines.
+#define STORY_HINT_MAX 40
+uint32_t story_hints(char (*line)[STORY_HINT_MAX], uint32_t max);
+// How many stories have been told
+uint32_t story_told(void);
+
 // The page waiting to be read, if any, and the choice made on it, which
 // does what it says
 bool story_page(StoryPage_t* page);
@@ -123,6 +130,8 @@ void story_choose(uint32_t choice);
 bool story_has_item(uint32_t item);
 const char* story_item_name(uint32_t item);
 uint32_t story_item_names(const char** names, uint32_t max);
+// The tonnes the named items aboard take in the hold, such as a whale tank
+uint32_t story_item_tonnes(void);
 bool story_flag(uint32_t flag);
 
 // The stories, for the harness: how many, their names, and starting one
@@ -156,6 +165,16 @@ bool story_host_has_cabin(void);
 uint32_t story_host_cash(void);       // in tenths of a credit
 void story_host_add_cash(int32_t tenths);
 void story_host_offender(bool on);
+// The tonnes free in the hold
+uint32_t story_host_room(void);
+// Equipment a story may look for
+typedef enum {
+	KIT_TARGETING = 0,
+	KIT_DOCKING,
+	KIT_SCOOPS,
+	KIT_ECM
+} StoryKit_e;
+bool story_host_fitted(uint32_t kit);
 // A story ship: its id, what it is called and what it is, how it goes, and what it leaves
 typedef enum {
 	GOAL_FIGHT = 0, // comes for us
@@ -178,6 +197,7 @@ void story_host_canister(uint32_t item);
 void story_host_calm(void);
 void story_host_witch(void);
 void story_host_laser(uint32_t laser);
+void story_host_drain(void);          // the shields go down
 void story_host_say(Speaker_e who, const char* name, const char* text);
 
 #ifdef __cplusplus

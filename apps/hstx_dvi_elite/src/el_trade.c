@@ -181,9 +181,10 @@ void trade_arrive(const GalaxySystem_t* sys) {
 	_quantity[ALIEN_ITEMS] = 0;
 }
 
-// The tonnes the hold takes, less any cabin
+// The tonnes the hold takes, less any cabin and what the stories put there
 static uint32_t hold(void) {
-	return cmdr.hold - (cmdr.cabin ? CABIN_TONNES : 0);
+	const uint32_t taken = (cmdr.cabin ? CABIN_TONNES : 0) + story_item_tonnes();
+	return cmdr.hold > taken ? cmdr.hold - taken : 0;
 }
 
 // Tonnes in the hold; goods sold by the kg or g take no room
@@ -193,6 +194,10 @@ static uint32_t cargo_tonnes(void) {
 		if (_goods[i].unit == UNIT_T) t += cmdr.cargo[i];
 	}
 	return t;
+}
+
+uint32_t trade_room(void) {
+	return cargo_tonnes() < hold() ? hold() - cargo_tonnes() : 0;
 }
 
 static const char* buy(uint32_t i) {

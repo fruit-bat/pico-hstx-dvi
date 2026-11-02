@@ -5,6 +5,7 @@
 #include "el_story_data.h"
 #include "el_companion.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 // One jump reaches this far, and a far system is up to this far, in tenths
@@ -71,6 +72,8 @@ static bool holds(const StoryIf_t* w, const StoryProgress_t* p) {
 		case IF_NO_FLAG: return (_s->flags & (uint32_t)w->a) == 0;
 		case IF_ENDED: return _s->story[w->a].status == STORY_TOLD && _s->story[w->a].ending == w->b;
 		case IF_TOLD: return _s->story[w->a].status == STORY_TOLD;
+		case IF_ROOM: return story_host_room() >= (uint32_t)w->a;
+		case IF_FITTED: return story_host_fitted((uint32_t)w->a);
 		default: return true;
 	}
 }
@@ -209,6 +212,7 @@ static void run(const StoryOp_t* op, StoryProgress_t* p) {
 			case OP_LOYAL: companion_loyalty(op->a, (uint32_t)op->b); break;
 			case OP_PET: companion_pet((uint32_t)op->a); break;
 			case OP_ENDING: p->ending = (uint8_t)op->a; break;
+			case OP_DRAIN: story_host_drain(); break;
 			default: break;
 		}
 	}
@@ -415,6 +419,92 @@ uint32_t story_item_names(const char** names, uint32_t max) {
 	return n;
 }
 
+// Story i's ship with an id, from where the story spawns it
+static const StoryShip_t* ship_of(uint32_t i, uint32_t id) {
+	for (uint32_t s = 0; s < story_data[i].n; ++s) {
+		const StoryStep_t* st = &story_data[i].steps[s];
+		for (uint32_t x = 0; x < st->n; ++x) {
+			for (uint32_t c = 0; c < 2; ++c) {
+				for (const StoryOp_t* op = st->exits[x].choice[c].ops; op && op->op != OP_END; ++op) {
+					if (op->op == OP_SPAWN && (uint32_t)op->b == id) return &story_ships[op->a];
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
+static const char* ship_label(uint32_t i, uint32_t id) {
+	const StoryShip_t* ship = ship_of(i, id);
+	return ship ? ship->label : "A SHIP";
+}
+
+// Whether destroying a ship is worth a hint: not one to be disabled, nor
+// one that is not out to fight, which it would be a shame to
+static bool hint_destroy(uint32_t i, const StoryStep_t* s, uint32_t id) {
+	const StoryShip_t* ship = ship_of(i, id);
+	if (!ship || ship->goal != GOAL_FIGHT) return false;
+	for (uint32_t k = 0; k < s->n; ++k) {
+		if (s->exits[k].ev == STORY_DISABLED && s->exits[k].arg == id) return false;
+	}
+	return true;
+}
+
+uint32_t story_hints(char (*line)[STORY_HINT_MAX], uint32_t max) {
+	if (!_s || !_s->active) return 0;
+	const uint32_t i = _s->active - 1u;
+	const StoryProgress_t* p = &_s->story[i];
+	const StoryStep_t* s = &story_data[i].steps[p->step];
+	uint32_t n = 0;
+	for (uint32_t k = 0; k < s->n && n < max; ++k) {
+		const StoryExit_t* x = &s->exits[k];
+		if (!holds(&x->when, p)) continue;
+		char* l = line[n];
+		const char* place = x->place == PLACE_ANY ? NULL : story_host_system(p->place[x->place])->name;
+		switch (x->ev) {
+			case STORY_DOCK:
+				if (place) snprintf(l, STORY_HINT_MAX, "DOCK AT %s", place);
+				else snprintf(l, STORY_HINT_MAX, "DOCK ANYWHERE");
+				break;
+			case STORY_ARRIVE:
+				if (place) snprintf(l, STORY_HINT_MAX, "GO TO %s", place);
+				else continue;
+				break;
+			case STORY_SCOOP: snprintf(l, STORY_HINT_MAX, "SCOOP %s", x->arg ? story_items[x->arg].name : "SOMETHING"); break;
+			case STORY_DISABLED: snprintf(l, STORY_HINT_MAX, "DISABLE %s", ship_label(i, x->arg)); break;
+			case STORY_DESTROYED:
+				if (!hint_destroy(i, s, x->arg)) continue;
+				snprintf(l, STORY_HINT_MAX, "DESTROY %s", ship_label(i, x->arg));
+				break;
+			case STORY_NEAR: snprintf(l, STORY_HINT_MAX, "MEET %s", ship_label(i, x->arg)); break;
+			case STORY_SUN: snprintf(l, STORY_HINT_MAX, "FLY CLOSE TO THE SUN"); break;
+			case STORY_WITCH: snprintf(l, STORY_HINT_MAX, "GO INTO WITCHSPACE"); break;
+			case STORY_HULL_HIT: snprintf(l, STORY_HINT_MAX, "TAKE A HIT"); break;
+			default: continue;
+		}
+		for (char* c = l; *c; ++c) *c = (char)toupper((unsigned char)*c);
+		// Once each, as exits for the same thing differ only in what comes of it
+		bool again = false;
+		for (uint32_t j = 0; j < n; ++j) again |= !strcmp(line[j], l);
+		if (!again) ++n;
+	}
+	return n;
+}
+
+uint32_t story_told(void) {
+	uint32_t n = 0;
+	for (uint32_t i = 0; _s && i < story_data_count; ++i) n += _s->story[i].status == STORY_TOLD;
+	return n;
+}
+
+uint32_t story_item_tonnes(void) {
+	uint32_t t = 0;
+	for (uint32_t i = 0; _s && i < STORY_ITEMS; ++i) {
+		if (_s->item[i] && _s->item[i] < story_items_count) t += story_items[_s->item[i]].tonnes;
+	}
+	return t;
+}
+
 bool story_flag(uint32_t flag) {
 	return _s && (_s->flags & flag) != 0;
 }
@@ -433,6 +523,10 @@ int32_t story_active(void) {
 
 const StoryProgress_t* story_progress(uint32_t i) {
 	return &_s->story[i];
+}
+
+bool story_holds(uint32_t i, const StoryIf_t* w) {
+	return holds(w, &_s->story[i]);
 }
 
 uint32_t story_waits(uint32_t i, StoryEvent_e* ev, uint32_t* arg, uint32_t max) {

@@ -117,16 +117,16 @@ uint32_t host_input(uint32_t f) {
 		// Climb away and speed up, as in hyper, then the galactic chart
 		if (f >= 160 && f < 235) return D;
 		if (f >= 240 && f < 310) return B | U;
-		if (f >= 320 && f < 356 && (f - 320) % 6 < 3) return SELECT;
+		if (f >= 320 && f < 362 && (f - 320) % 6 < 3) return SELECT;
 		if (f >= 700 && f < 703) return B | A;
 		// Arrived, the galactic chart again
-		if (f >= 1500 && f < 1536 && (f - 1500) % 6 < 3) return SELECT;
+		if (f >= 1500 && f < 1542 && (f - 1500) % 6 < 3) return SELECT;
 	}
 	if (!strcmp(host_mode, "witch")) {
 		if (f >= 100 && f < 175) return D;
 		if (f >= 400 && f < 800) return A;
 		// Round to the short range chart, then the galactic one
-		if (f >= 900 && f < 950 && (f - 900) % 10 < 3) return SELECT;
+		if (f >= 900 && f < 960 && (f - 900) % 10 < 3) return SELECT;
 		if (f >= 1000 && f < 1003) return SELECT;
 	}
 	if (!strcmp(host_mode, "save")) {
@@ -240,8 +240,9 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 270 && f < 273) return A;
 	}
 	if (!strcmp(host_mode, "story")) {
-		// Read the page, then go on
+		// Read the page, then go on, and round to the ship's log
 		if (f >= 700 && f < 703) return A;
+		if (f >= 760 && f < 810 && (f - 760) % 10 < 3) return SELECT;
 	}
 	if (!strcmp(host_mode, "station")) {
 		if (f >= 210 && f < 225) return A;
@@ -272,7 +273,7 @@ uint32_t host_input(uint32_t f) {
 	}
 	if (!strcmp(host_mode, "scoop")) {
 		// Look at the inventory, then round the charts back to the front
-		if (f >= 450 && f < 508 && (f < 458 || f >= 500) && !(f & 1)) return SELECT;
+		if (f >= 450 && f < 510 && (f < 458 || f >= 500) && !(f & 1)) return SELECT;
 		// Dive into the sun, below us
 		if (f >= 600 && f < 700) return U;
 		if (f >= 700 && f < 900) return B | U;
@@ -283,8 +284,8 @@ uint32_t host_input(uint32_t f) {
 		// 9 steps left of Lave, once clear
 		if (f >= 160 && f < 235) return D;
 		if (f >= 240 && f < 310) return B | U;
-		// Round the views and the inventory to the short range chart
-		if (f >= 320 && f < 350 && (f - 320) % 6 < 3) return SELECT;
+		// Round the views, the inventory and the log to the short range chart
+		if (f >= 320 && f < 356 && (f - 320) % 6 < 3) return SELECT;
 		if (f >= 352 && f < 375) return L;
 		if (f >= 380 && f < 383) return A;
 		if (f >= 700 && f < 703) return A;

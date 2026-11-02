@@ -32,7 +32,8 @@ typedef enum {
 	OP_BACK,      // and comes back
 	OP_LOYAL,     // the companion's loyalty, by a; if b, only companion b's
 	OP_PET,       // pet a joins us, or goes if 0
-	OP_ENDING     // the story ends as ending a
+	OP_ENDING,    // the story ends as ending a
+	OP_DRAIN      // our shields go down
 } StoryOpCode_e;
 
 typedef struct {
@@ -54,7 +55,9 @@ typedef enum {
 	IF_FLAG,
 	IF_NO_FLAG,
 	IF_ENDED,       // story a ended as ending b
-	IF_TOLD         // story a has been told
+	IF_TOLD,        // story a has been told
+	IF_ROOM,        // a tonnes free in the hold
+	IF_FITTED       // StoryKit_e a fitted
 } StoryIf_e;
 
 typedef struct {
@@ -119,6 +122,7 @@ typedef struct {
 // The named items
 typedef struct {
 	const char* name;
+	uint8_t tonnes;  // the room it takes in the hold, if any
 } StoryItem_t;
 
 extern const Story_t story_data[];
@@ -130,6 +134,8 @@ extern const uint32_t story_ships_count;
 
 // The save the engine is on, for the companions
 StorySave_t* story_save(void);
+// Whether a condition holds now for story i, for the harness
+bool story_holds(uint32_t i, const StoryIf_t* w);
 
 #ifdef __cplusplus
 }

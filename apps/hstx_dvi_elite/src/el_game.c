@@ -239,6 +239,7 @@ typedef enum {
 	VIEW_MARKET,
 	VIEW_EQUIPMENT,
 	VIEW_INVENTORY,
+	VIEW_LOG,
 	VIEW_LOCAL,
 	VIEW_GALAXY,
 	VIEW_DATA,
@@ -246,7 +247,7 @@ typedef enum {
 } View_e;
 
 static const char* const _view_labels[VIEWS] = {
-	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "INVENTORY", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
+	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "INVENTORY", "SHIP'S LOG", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
 };
 
 typedef enum {
@@ -300,11 +301,13 @@ static uint32_t _message_frames;
 static char _say[GAME_TEXT_MAX + 1];
 static uint32_t _say_frames, _say_colour;
 // The page a story shows, with the choice picked, and how long it has shown,
-// so a press meant for flying doesn't choose
+// so a press meant for flying doesn't choose, and so it goes if left: the
+// world goes on while it shows
 static StoryPage_t _page;
 static bool _page_shown;
 static uint32_t _page_pick, _page_frames;
 #define PAGE_WAIT 30
+#define PAGE_TIMEOUT (20 * 60)
 // The next jump goes into witchspace, for a story; Marge has patched the
 // shields this fight; there were pirates about, and the shields were low,
 // last time we looked; and the docking computer docked us
@@ -339,6 +342,10 @@ static bool _station_angry;
 static uint32_t _station_police, _station_police_wait;
 static uint32_t _station_gun, _station_beam;
 static View_e _view;
+// The way we last looked out, to go back to from a chart; and whether the
+// shoulders have been used, when select leaves the views to them
+static View_e _look;
+static bool _shoulders;
 static State_e _state;
 // Frames into the state, for the tunnel and the end
 static uint32_t _state_frames;
@@ -715,22 +722,25 @@ static bool looking_out(void) {
 	return _view <= VIEW_RIGHT;
 }
 
-// The view after this one, as select goes round them
+// The view after this one, as select goes round them: in flight, once the
+// shoulders look round, only the charts and data
 static View_e next_view(void) {
 	View_e v = _view;
 	for (;;) {
 		v = (View_e)((v + 1) % VIEWS);
 		if (_state == STATE_DOCKED && v >= VIEW_REAR && v <= VIEW_RIGHT) continue;
+		if (_state != STATE_DOCKED && _shoulders && v <= VIEW_RIGHT) continue;
 		if (_state != STATE_DOCKED && (v == VIEW_MARKET || v == VIEW_EQUIPMENT)) continue;
 		return v;
 	}
 }
 
 // The view turned round the ship, clockwise for step 1 and the other way
-// for -1, as the shoulders turn it; from a chart, back to the front
+// for -1, as the shoulders turn it; from a chart, back the way we looked
 static View_e look_round(int32_t step) {
 	static const View_e round[4] = { VIEW_FRONT, VIEW_RIGHT, VIEW_REAR, VIEW_LEFT };
-	if (!looking_out()) return VIEW_FRONT;
+	_shoulders = true;
+	if (!looking_out()) return _look <= VIEW_RIGHT ? _look : VIEW_FRONT;
 	uint32_t i = 0;
 	while (round[i] != _view) ++i;
 	return round[(uint32_t)((int32_t)i + 4 + step) % 4];
@@ -1866,6 +1876,7 @@ static void keyboard(void) {
 	if (KEY_PRESSED(HID_KEY_F6)) _view = VIEW_LOCAL;
 	if (KEY_PRESSED(HID_KEY_F9)) _view = VIEW_INVENTORY;
 	if (KEY_PRESSED(HID_KEY_D)) _view = VIEW_DATA;
+	if (KEY_PRESSED(HID_KEY_L)) _view = VIEW_LOG;
 	if (docked) {
 		if (KEY_PRESSED(HID_KEY_F10)) launch();
 		if (KEY_PRESSED(HID_KEY_F4)) _view = VIEW_EQUIPMENT;
@@ -1906,6 +1917,18 @@ void story_host_add_cash(int32_t tenths) {
 	cmdr.cash = (int32_t)cmdr.cash + tenths < 0 ? 0u : (uint32_t)((int32_t)cmdr.cash + tenths);
 }
 
+uint32_t story_host_room(void) { return trade_room(); }
+
+bool story_host_fitted(uint32_t kit) {
+	switch (kit) {
+		case KIT_TARGETING: return cmdr.targeting;
+		case KIT_DOCKING: return cmdr.docking;
+		case KIT_SCOOPS: return cmdr.scoops;
+		case KIT_ECM: return cmdr.ecm;
+		default: return false;
+	}
+}
+
 void story_host_offender(bool on) {
 	if (on && !_offender) message("OFFENDER");
 	_offender = on;
@@ -1938,6 +1961,7 @@ void story_host_canister(uint32_t item) {
 
 void story_host_calm(void) { ships_story_calm(); }
 void story_host_witch(void) { _story_witch = true; }
+void story_host_drain(void) { _fore = _aft = 0.0f; }
 
 void story_host_laser(uint32_t laser) {
 	if (cmdr.laser[MOUNT_FRONT] == LASER_NONE || cmdr.laser[MOUNT_FRONT] < (Laser_e)laser) cmdr.laser[MOUNT_FRONT] = (Laser_e)laser;
@@ -1950,9 +1974,15 @@ void story_host_say(Speaker_e who, const char* name, const char* text) {
 }
 
 // A page: up and down pick a choice, fire takes it, or goes on when there
-// are none; but not straight away, so a press meant for flying doesn't
+// are none; but not straight away, so a press meant for flying doesn't.
+// Left too long, it goes, with the second choice, which leaves things be.
 static void page_input(uint16_t pressed) {
-	if (++_page_frames < PAGE_WAIT) return;
+	if (++_page_frames >= PAGE_TIMEOUT) {
+		story_choose(_page.choices > 1 && _page.can[1] ? 1 : 0);
+		_page_frames = 0;
+		return;
+	}
+	if (_page_frames < PAGE_WAIT) return;
 	if (_page.choices) {
 		if (pressed & (EL_INP_UP | EL_INP_DOWN)) _page_pick = (_page_pick + 1) % _page.choices;
 		if ((pressed & EL_INP_A) && _page.can[_page_pick]) {
@@ -2003,17 +2033,92 @@ static void page_draw(void) {
 		screen_text(x, choices_y + i * PAGE_CHOICE, _page.choice[i], colour, false);
 	}
 	const bool ready = _page_frames >= PAGE_WAIT;
-	screen_text_centre(top + h - 14, !ready ? "" : c ? "UP AND DOWN PICK, FIRE CHOOSES" : "FIRE TO GO ON", GAME_CYAN, false);
+	char hint[48];
+	const unsigned left = (unsigned)((PAGE_TIMEOUT - _page_frames + 59) / 60);
+	snprintf(hint, sizeof(hint), c ? "UP AND DOWN PICK, FIRE CHOOSES  %u" : "FIRE TO GO ON  %u", left);
+	screen_text_centre(top + h - 14, ready ? hint : "", GAME_CYAN, false);
+}
+
+// The ship's log: the story going, what it waits for, and who and what is
+// aboard; and beside them the stories told
+#define LOG_X ((GAME_SCREEN_W - 46 * 8) / 2)
+#define LOG_TOLD_X (LOG_X + 30 * 8)
+#define LOG_LINE 12
+#define LOG_HINTS 6
+
+static void draw_log(void) {
+	static const char* const skills[COMPANIONS] = {
+		NULL, "Spots pirates sooner", "Patches the shields", "Sells for more", "Talks to Thargoids"
+	};
+	int32_t y = VIEW_TOP + 10;
+	screen_text(LOG_X, y, "STORY:", GAME_CYAN, false);
+	y += LOG_LINE + 4;
+	const int32_t going = story_active();
+	if (going < 0) {
+		screen_text(LOG_X + 16, y, "None. They find you", GAME_GREY, false);
+		screen_text(LOG_X + 16, y + LOG_LINE, "as you go.", GAME_GREY, false);
+		y += LOG_LINE * 2;
+	}
+	else {
+		screen_text(LOG_X + 16, y, story_name((uint32_t)going), GAME_YELLOW, false);
+		y += LOG_LINE + 4;
+		static char hints[LOG_HINTS][STORY_HINT_MAX];
+		const uint32_t n = story_hints(hints, LOG_HINTS);
+		for (uint32_t i = 0; i < n; ++i) {
+			screen_text(LOG_X + 16, y, hints[i], GAME_WHITE, false);
+			y += LOG_LINE;
+		}
+	}
+	y += 8;
+	screen_text(LOG_X, y, "ABOARD:", GAME_CYAN, false);
+	y += LOG_LINE + 4;
+	char s[GAME_TEXT_MAX + 1];
+	bool any = false;
+	if (cmdr.story.companion && cmdr.story.companion < COMPANIONS) {
+		const uint32_t c = cmdr.story.companion;
+		if (cmdr.story.away) snprintf(s, sizeof(s), "%s (Taken!)", companion_name_of(c));
+		else snprintf(s, sizeof(s), "%s (%s)", companion_name_of(c), companion_mood_name());
+		screen_text(LOG_X + 16, y, s, cmdr.story.away ? GAME_RED : GAME_GREEN, false);
+		y += LOG_LINE;
+		screen_text(LOG_X + 32, y, skills[c], GAME_GREY, false);
+		y += LOG_LINE;
+		any = true;
+	}
+	if (pet_name()) {
+		snprintf(s, sizeof(s), "A %s", pet_name());
+		screen_text(LOG_X + 16, y, s, GAME_GREEN, false);
+		y += LOG_LINE;
+		any = true;
+	}
+	const char* items[STORY_ITEMS];
+	const uint32_t k = story_item_names(items, STORY_ITEMS);
+	for (uint32_t i = 0; i < k && y < VIEW_BOTTOM - 12; ++i) {
+		screen_text(LOG_X + 16, y, items[i], GAME_YELLOW, false);
+		y += LOG_LINE;
+		any = true;
+	}
+	if (!any) screen_text(LOG_X + 16, y, cmdr.cabin ? "Nobody yet" : "Nobody: no cabin", GAME_GREY, false);
+	// The stories told
+	y = VIEW_TOP + 10;
+	snprintf(s, sizeof(s), "TOLD: %u OF %u", (unsigned)story_told(), (unsigned)story_count());
+	screen_text(LOG_TOLD_X, y, s, GAME_CYAN, false);
+	y += LOG_LINE + 4;
+	for (uint32_t i = 0; i < story_count() && y < VIEW_BOTTOM - 12; ++i) {
+		if (story_progress(i)->status != STORY_TOLD) continue;
+		screen_text(LOG_TOLD_X + 16, y, story_name(i), GAME_GREY, false);
+		y += LOG_LINE;
+	}
 }
 
 void game_play(void) {
 	start();
 	if (!choose_commander()) return;
 	for (;;) {
-		const uint16_t pressed = game_input_pressed() | _debug_pressed;
+		uint16_t pressed = game_input_pressed() | _debug_pressed;
 		_debug_pressed = 0;
-		const uint16_t held = game_input_get();
-		// A story's page, when there is one, stops the world, as the options do
+		uint16_t held = game_input_get();
+		// A story's page, when there is one, goes over the world, which goes on;
+		// it takes up, down and fire, and docked, all but the options
 		const bool was_page = _page_shown;
 		_page_shown = !options_shown() && story_page(&_page);
 		if (_page_shown && !was_page) {
@@ -2024,10 +2129,14 @@ void game_play(void) {
 		if (options_shown()) {
 			if (options_input(pressed)) return;
 		}
-		else if (_page_shown) {
-			page_input(pressed);
-		}
 		else {
+			if (_page_shown) {
+				page_input(pressed);
+				const uint16_t taken = _state == STATE_DOCKED ? (uint16_t)~EL_INP_START : (uint16_t)(EL_INP_UP | EL_INP_DOWN | EL_INP_A);
+				pressed &= (uint16_t)~taken;
+				held &= (uint16_t)~taken;
+			}
+			if (looking_out()) _look = _view;
 			companion_tick(_state == STATE_FLYING, ships_hostile_near(&_me, SCANNER_RANGE));
 			ShipsEvents_t ev = { 0 };
 			if (pressed & EL_INP_START) options_open(true);
@@ -2136,6 +2245,10 @@ void game_play(void) {
 			case VIEW_INVENTORY:
 				snprintf(title, sizeof(title), "INVENTORY");
 				trade_draw_inventory();
+				break;
+			case VIEW_LOG:
+				snprintf(title, sizeof(title), "SHIP'S LOG");
+				draw_log();
 				break;
 			case VIEW_LOCAL:
 				snprintf(title, sizeof(title), "SHORT RANGE CHART");

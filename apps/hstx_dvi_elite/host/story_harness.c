@@ -19,7 +19,7 @@ static GalaxySystem_t _gal[GALAXY_SYSTEMS];
 static uint32_t _here;
 static bool _cabin;
 static uint32_t _cash;
-static bool _offender, _witch;
+static bool _offender, _witch, _targeting;
 static int _depth;
 static int _problems;
 static StorySave_t _save;
@@ -40,6 +40,9 @@ uint32_t story_host_galaxy(void) { return 0; }
 uint32_t story_host_here(void) { return _here; }
 bool story_host_has_cabin(void) { return _cabin; }
 uint32_t story_host_cash(void) { return _cash; }
+// A Cobra's hold, less the cabin and what the stories put there
+uint32_t story_host_room(void) { return 20 - (_cabin ? 5 : 0) - story_item_tonnes(); }
+bool story_host_fitted(uint32_t kit) { return kit == KIT_TARGETING && _targeting; }
 
 void story_host_add_cash(int32_t tenths) {
 	_cash = (int32_t)_cash + tenths < 0 ? 0 : (uint32_t)((int32_t)_cash + tenths);
@@ -74,6 +77,11 @@ void story_host_witch(void) {
 	_witch = true;
 	indent();
 	printf("[next jump goes into witchspace]\n");
+}
+
+void story_host_drain(void) {
+	indent();
+	printf("[shields down]\n");
 }
 
 void story_host_laser(uint32_t laser) {
@@ -249,13 +257,14 @@ static void walk_story(uint32_t i, bool cabin, uint32_t comp) {
 	_cash = 1000 * 10;
 	_offender = _witch = false;
 	_cabin = cabin;
+	_targeting = cabin;
 	// What was seen without a cabin may go differently with one
 	_seen_n = 0;
 	if (comp) {
 		_save.companion = (uint8_t)comp;
 		_save.loyalty = 4;
 	}
-	printf("\n==== %s (%s, %s) ====\n", story_name(i), cabin ? "cabin" : "no cabin",
+	printf("\n==== %s (%s, %s) ====\n", story_name(i), cabin ? "cabin, targeting" : "no cabin",
 		comp ? companion_name_of(comp) : "nobody aboard");
 	// The first system it can start from
 	uint32_t here = 0;

@@ -123,9 +123,15 @@ Pirates and Thargoids bring a bounty, shown when you destroy one, some wanted mo
 
 Now and then, docking or coming into a system, a story finds you: a basket of lost kittens in space, a princess
 held by the Black Baron, a race between a tortoise and a hare, a Thargoid that wants to go home, a pirate's parrot
-who knows where the gold is, a wedding cake to deliver in one piece, and a trader whose captain has turned into a Thargon.
-Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages that
-pause the game: up and down pick a choice, and fire takes it. Only one goes at a time, and none needs signing up for.
+who knows where the gold is, a wedding cake to deliver in one piece, a trader whose captain has turned into a Thargon,
+an old admiral with two singing whales, and a farm boy who flies with his eyes shut.
+Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages over
+the view, while the game goes on: up and down pick a choice, and fire takes it, and in flight the other controls still
+fly. Left for 20 seconds, a page goes, taking the second choice, which leaves things be. Only one goes at a time, and
+none needs signing up for.
+
+The ship's log, one of the screens select shows, has the story going and what it waits for next, who and what is
+aboard, and the stories told.
 
 Stories put named items aboard, shown on the inventory, and may leave a ship to disable rather than destroy:
 hit hard, it goes dark and drifts, and leaves what it carried in a canister. A story's canister is taken aboard
@@ -141,6 +147,9 @@ stories, their loyalty. With too little of it they leave a note and go. A kitten
 The stories are data, in `src/el_story_data.c`, run by `src/el_story.c`, with the companions in `src/el_companion.c`.
 `host/story_harness.sh` builds a harness on the PC that walks every story through every choice, printing every page,
 line and effect, and checks the text fits; then prints what each companion says, and has Pip leave after rough trips.
+`host/story_play.sh` builds a player for trying them by hand: pick a story by number, then at each step it lists what
+the story waits for, with each condition and whether it holds; pick one by number to make it happen, and choose on the
+pages. `?` lists the other keys: jump, fit the cabin, change companion, add cash, undo.
 
 ## The controls
 
@@ -150,11 +159,12 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 - B held with up or down speeds up or slows down. Held on at full speed for half a second, it goes into the overdrive.
 - A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
 - B held with A launches a missile, and with select sets off the ECM. On the galactic chart B held with A starts the galactic hyperdrive.
-- Select shows the next screen: the front, rear, left and right views, the inventory, the short range chart, the galactic chart,
+- Select shows the next screen: the front, rear, left and right views, the inventory, the ship's log, the short range chart, the galactic chart,
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
 - On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
-  and the left one the other way. From a chart either goes back to the front view. X turns the docking computer on and off,
+  and the left one the other way. From a chart either goes back to the view you were looking through. Once the
+  shoulders have been used, select leaves the views to them, and in flight shows only the charts and data. X turns the docking computer on and off,
   and three quick presses of A set off the energy bomb; fire is B alone.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
@@ -200,6 +210,7 @@ Both are off by default.
 | F8 | status, docked |
 | F9 | inventory |
 | D | data on the system |
+| L | ship's log |
 | Escape | options |
 
 A new commander's name is typed, with Backspace and Enter. Caps Lock, Num Lock and Scroll Lock light as they should.

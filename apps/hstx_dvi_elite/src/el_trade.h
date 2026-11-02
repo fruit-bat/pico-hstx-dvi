@@ -78,6 +78,8 @@ void trade_escape(void);
 // Everything fitted, the best lasers all round, and full of fuel and
 // missiles, for trying things out
 void trade_max_equipment(void);
+// The tonnes free in the hold
+uint32_t trade_room(void);
 // What our ship has fitted, for the status
 uint32_t trade_equipment_names(const char** names, uint32_t max);
 
