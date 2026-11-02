@@ -11,6 +11,7 @@
 #include "el_trade.h"
 #include "game_pallet.h"
 #include <stdio.h>
+#include <string.h>
 
 typedef enum {
 	OPTION_STYLE = 0,
@@ -26,8 +27,12 @@ typedef enum {
 	OPTIONS
 } Option_e;
 
-// How wide the mark on the chosen option is, as wide as the widest
-#define SELECT_W (26 * 8)
+// Each line: its name, then its value centred in a column of its own, so
+// that all are as wide, and line up when centred
+#define NAME_W 10
+#define VALUE_W 19
+// How wide the mark on the chosen option is, a little wider than a line
+#define SELECT_W ((NAME_W + VALUE_W + 2) * 8)
 // And the panel they are on, with room for the arrows
 #define PANEL_W (SELECT_W + 64)
 
@@ -133,6 +138,14 @@ bool options_input(uint16_t pressed) {
 	return false;
 }
 
+// A line, with the value in arrows when it is changed with left and right
+static void line(char* s, size_t n, const char* name, const char* value, bool arrows) {
+	char v[VALUE_W + 1];
+	snprintf(v, sizeof(v), arrows ? "< %s >" : "%s", value);
+	const int len = (int)strlen(v), left = (VALUE_W - len) / 2;
+	snprintf(s, n, "%-*s%*s%s%*s", NAME_W, name, left, "", v, VALUE_W - len - left, "");
+}
+
 void options_draw(void) {
 	GameText_t* t = _text[draw_set()];
 	char s[GAME_TEXT_MAX + 1];
@@ -151,33 +164,15 @@ void options_draw(void) {
 	}
 	for (uint32_t i = 0; i < n; ++i) {
 		switch (i) {
-			case OPTION_STYLE:
-				snprintf(s, sizeof(s), "VIEW      < %s >", style_names[draw_style]);
-				break;
-			case OPTION_DITHER:
-				snprintf(s, sizeof(s), "DITHERED  < %s >", draw_dither ? "ON" : "OFF");
-				break;
-			case OPTION_HUD:
-				snprintf(s, sizeof(s), "DASHBOARD < %s >", draw_hud_filled ? "FILLED" : "LINES");
-				break;
-			case OPTION_SCREEN:
-				snprintf(s, sizeof(s), "SCREEN    < %s >", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3");
-				break;
-			case OPTION_LENS:
-				snprintf(s, sizeof(s), "LENS      < %s >", lens_names[draw_lens]);
-				break;
-			case OPTION_DOCK:
-				snprintf(s, sizeof(s), "DOCKING    (FIRE)");
-				break;
-			case OPTION_WITCH:
-				snprintf(s, sizeof(s), _witch ? "WITCHSPACE NEXT JUMP" : "WITCHSPACE (FIRE)");
-				break;
-			case OPTION_MAX_EQUIP:
-				snprintf(s, sizeof(s), _fitted ? "MAX EQUIP  FITTED" : "MAX EQUIP  (FIRE)");
-				break;
-			default:
-				snprintf(s, sizeof(s), "END GAME   (FIRE)");
-				break;
+			case OPTION_STYLE: line(s, sizeof(s), "VIEW", style_names[draw_style], true); break;
+			case OPTION_DITHER: line(s, sizeof(s), "DITHERED", draw_dither ? "ON" : "OFF", true); break;
+			case OPTION_HUD: line(s, sizeof(s), "DASHBOARD", draw_hud_filled ? "FILLED" : "LINES", true); break;
+			case OPTION_SCREEN: line(s, sizeof(s), "SCREEN", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3", true); break;
+			case OPTION_LENS: line(s, sizeof(s), "LENS", lens_names[draw_lens], true); break;
+			case OPTION_DOCK: line(s, sizeof(s), "DOCKING", "(FIRE)", false); break;
+			case OPTION_WITCH: line(s, sizeof(s), "WITCHSPACE", _witch ? "NEXT JUMP" : "(FIRE)", false); break;
+			case OPTION_MAX_EQUIP: line(s, sizeof(s), "MAX EQUIP", _fitted ? "FITTED" : "(FIRE)", false); break;
+			default: line(s, sizeof(s), "END GAME", "(FIRE)", false); break;
 		}
 		game_text_set(&t[i], s, 1);
 		game_spr_text_centre(&t[i], top + 24 * (int32_t)i, game_pallet(i == _option ? GAME_YELLOW : GAME_WHITE));

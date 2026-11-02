@@ -301,13 +301,14 @@ static uint32_t _message_frames;
 static char _say[GAME_TEXT_MAX + 1];
 static uint32_t _say_frames, _say_colour;
 // The page a story shows, with the choice picked, and how long it has shown,
-// so a press meant for flying doesn't choose, and so it goes if left: the
-// world goes on while it shows
+// so a press meant for flying doesn't choose, and so it goes if left in
+// flight: the world goes on while it shows. Fire chooses, so the lasers wait
+// for it to be let go after.
 static StoryPage_t _page;
-static bool _page_shown;
+static bool _page_shown, _page_fire;
 static uint32_t _page_pick, _page_frames;
 #define PAGE_WAIT 30
-#define PAGE_TIMEOUT (20 * 60)
+#define PAGE_TIMEOUT (45 * 60)
 // The next jump goes into witchspace, for a story; Marge has patched the
 // shields this fight; there were pirates about, and the shields were low,
 // last time we looked; and the docking computer docked us
@@ -1975,9 +1976,10 @@ void story_host_say(Speaker_e who, const char* name, const char* text) {
 
 // A page: up and down pick a choice, fire takes it, or goes on when there
 // are none; but not straight away, so a press meant for flying doesn't.
-// Left too long, it goes, with the second choice, which leaves things be.
+// Left too long in flight, it goes, with the second choice, which leaves
+// things be; docked, there is no hurry.
 static void page_input(uint16_t pressed) {
-	if (++_page_frames >= PAGE_TIMEOUT) {
+	if (++_page_frames >= PAGE_TIMEOUT && _state != STATE_DOCKED) {
 		story_choose(_page.choices > 1 && _page.can[1] ? 1 : 0);
 		_page_frames = 0;
 		return;
@@ -1988,11 +1990,13 @@ static void page_input(uint16_t pressed) {
 		if ((pressed & EL_INP_A) && _page.can[_page_pick]) {
 			story_choose(_page_pick);
 			_page_frames = 0;
+			_page_fire = true;
 		}
 	}
 	else if (pressed & EL_INP_A) {
 		story_choose(0);
 		_page_frames = 0;
+		_page_fire = true;
 	}
 }
 
@@ -2034,8 +2038,9 @@ static void page_draw(void) {
 	}
 	const bool ready = _page_frames >= PAGE_WAIT;
 	char hint[48];
-	const unsigned left = (unsigned)((PAGE_TIMEOUT - _page_frames + 59) / 60);
-	snprintf(hint, sizeof(hint), c ? "UP AND DOWN PICK, FIRE CHOOSES  %u" : "FIRE TO GO ON  %u", left);
+	const char* what = c ? "UP AND DOWN PICK, FIRE CHOOSES" : "FIRE TO GO ON";
+	if (_state == STATE_DOCKED) snprintf(hint, sizeof(hint), "%s", what);
+	else snprintf(hint, sizeof(hint), "%s  %u", what, (unsigned)((PAGE_TIMEOUT - _page_frames + 59) / 60));
 	screen_text_centre(top + h - 14, ready ? hint : "", GAME_CYAN, false);
 }
 
@@ -2136,6 +2141,14 @@ void game_play(void) {
 				pressed &= (uint16_t)~taken;
 				held &= (uint16_t)~taken;
 			}
+			// Fire that chose waits to be let go before it fires
+			if (_page_fire && (held & EL_INP_A)) {
+				pressed &= (uint16_t)~EL_INP_A;
+				held &= (uint16_t)~EL_INP_A;
+			}
+			else {
+				_page_fire = false;
+			}
 			if (looking_out()) _look = _view;
 			companion_tick(_state == STATE_FLYING, ships_hostile_near(&_me, SCANNER_RANGE));
 			ShipsEvents_t ev = { 0 };
@@ -2210,7 +2223,16 @@ void game_play(void) {
 		const Style_e chart_style = draw_style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
 		char title[GAME_TEXT_MAX + 1];
 		const char* label = _view_labels[_view];
-		switch (_view) {
+		// Under the options, nothing but the dashboard, as they are drawn
+		// last; under a page, which is drawn first, the view out, but none of
+		// the screens, as their text would show through it
+		const bool covered = options_shown() || (_page_shown && (!looking_out() || _state == STATE_DOCKED));
+		if (covered && _state == STATE_DOCKED && _view == VIEW_FRONT) {
+			snprintf(title, sizeof(title), "COMMANDER %s", _name);
+			label = "STATUS";
+		}
+		else if (covered) snprintf(title, sizeof(title), "%s", _view_labels[_view]);
+		else switch (_view) {
 			case VIEW_FRONT:
 				if (_state == STATE_DOCKED) {
 					snprintf(title, sizeof(title), "COMMANDER %s", _name);
@@ -2276,7 +2298,7 @@ void game_play(void) {
 		// The ship the targeting computer follows, under the sights, where the eye is
 		if (_tracked_name_frames) {
 			--_tracked_name_frames;
-			if (_state == STATE_FLYING && looking_out() && !options_shown()) {
+			if (_state == STATE_FLYING && looking_out() && !options_shown() && !_page_shown) {
 				const int32_t x = (int32_t)(CENTRE_X + _sights_off.x);
 				const int32_t sy = (int32_t)(CENTRE_Y + _sights_off.y);
 				int32_t y = sy + TRACK_NAME_GAP;

@@ -127,7 +127,7 @@ who knows where the gold is, a wedding cake to deliver in one piece, a trader wh
 an old admiral with two singing whales, and a farm boy who flies with his eyes shut.
 Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages over
 the view, while the game goes on: up and down pick a choice, and fire takes it, and in flight the other controls still
-fly. Left for 20 seconds, a page goes, taking the second choice, which leaves things be. Only one goes at a time, and
+fly. Left for 45 seconds in flight, a page goes, taking the second choice, which leaves things be; docked, it waits. Only one goes at a time, and
 none needs signing up for.
 
 The ship's log, one of the screens select shows, has the story going and what it waits for next, who and what is
