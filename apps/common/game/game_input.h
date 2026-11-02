@@ -34,8 +34,31 @@ void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map
 
 uint16_t game_input_get(void);
 
-// Buttons that have gone down since the last call
+// Buttons that have gone down since the last call. Call it once a frame, as
+// it also takes what a keyboard has sent.
 uint16_t game_input_pressed(void);
+
+// A PS/2 keyboard, when built with GAME_PS2KBD, on GPIO 0 for data and 1 for
+// the clock. Keys are HID codes, as in ps2kbd_hid.h. Without one, no key is
+// ever held or typed.
+typedef struct {
+	uint8_t key;   // HID_KEY_...
+	uint16_t bits; // the input bits it presses, as the buttons do
+} GameKey_t;
+// Keys that press input bits, as buttons or a pad do; keys is kept
+void game_input_set_keys(const GameKey_t *keys, uint32_t count);
+// Whether there is a keyboard to use
+bool game_keyboard(void);
+// The input bits the keyboard presses now, or pressed in the frame
+uint16_t game_input_keys(void);
+// Whether a key is held, and whether it went down in the frame, as taken by
+// game_input_pressed
+bool game_key_held(uint8_t key);
+bool game_key_pressed(uint8_t key);
+// The modifiers held, KEYBOARD_MODIFIER_...
+uint8_t game_key_modifiers(void);
+// The next character typed, or 0 if none
+char game_key_char(void);
 
 #ifdef __cplusplus
 }

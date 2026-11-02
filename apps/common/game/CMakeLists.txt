@@ -31,3 +31,17 @@ if (GAME_NESPAD)
   )
   target_link_libraries(game_common INTERFACE pico_nespad)
 endif()
+
+if (GAME_PS2KBD)
+  target_compile_definitions(game_common INTERFACE
+    GAME_PS2KBD=1
+    # Beside the pads
+    PS2KBD_PIO=pio1
+    # DATA on GPIO 0 and CLOCK on 1, free in every game
+    PS2KBD_DATA_GPIO=0
+  )
+  if (GAME_PS2KBD_DEBUG)
+    target_compile_definitions(game_common INTERFACE PS2KBD_DEBUG=1)
+  endif()
+  target_link_libraries(game_common INTERFACE pico_ps2_keyboard)
+endif()

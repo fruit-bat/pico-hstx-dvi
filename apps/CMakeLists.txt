@@ -53,6 +53,15 @@ if (GAME_NESPAD)
   add_subdirectory(${PICO_FOLDER}/pico-nespad "${CMAKE_CURRENT_BINARY_DIR}/pico-nespad")
 endif()
 
+# A PS/2 keyboard for the games, on GPIOs 0 and 1, e.g. cmake -DGAME_PS2KBD=ON ..
+# Not yet working on hardware, so off for now
+option(GAME_PS2KBD "Read a PS/2 keyboard in the games, using pico-ps2-keyboard" OFF)
+# Prints what goes to and from the keyboard, over USB serial
+option(GAME_PS2KBD_DEBUG "Print the PS/2 keyboard's traffic" OFF)
+if (GAME_PS2KBD)
+  add_subdirectory(${PICO_FOLDER}/pico-ps2-keyboard "${CMAKE_CURRENT_BINARY_DIR}/pico-ps2-keyboard")
+endif()
+
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
 
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")
