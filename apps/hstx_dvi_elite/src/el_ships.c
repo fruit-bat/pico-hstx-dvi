@@ -572,6 +572,31 @@ int32_t ships_in_sights(const Frame_t* me, float range) {
 	return best;
 }
 
+// How far a ship is off the middle of the view, as across for each ahead, or
+// -1 if it is out of range or the cone
+static float off_middle(const Frame_t* me, uint32_t i, float range, float cone) {
+	const Ship_t* s = &ships[i];
+	if (!s->alive) return -1.0f;
+	const Vec3_t v = frame_view(me, s->fr.pos);
+	if (v.z <= 0.0f || v.z > range) return -1.0f;
+	const float off = sqrtf(v.x * v.x + v.y * v.y) / v.z;
+	return off < cone ? off : -1.0f;
+}
+
+int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep) {
+	if (keep >= 0 && off_middle(me, (uint32_t)keep, range, cone) >= 0.0f) return keep;
+	int32_t best = -1;
+	float best_off = cone;
+	for (uint32_t i = 0; i < SHIPS; ++i) {
+		const float off = off_middle(me, i, range, cone);
+		if (off >= 0.0f && off < best_off) {
+			best = (int32_t)i;
+			best_off = off;
+		}
+	}
+	return best;
+}
+
 int32_t ships_nearest_ahead(const Frame_t* me) {
 	int32_t best = -1;
 	float best_c = 0.95f;

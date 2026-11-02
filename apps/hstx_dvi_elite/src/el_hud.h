@@ -24,6 +24,9 @@ typedef struct {
 	// How far the scanner sees
 	float scanner_range;
 	bool sights;
+	// How far the sights are off the middle, following a ship, when locked
+	Vec2_t sights_off;
+	bool locked;
 } Hud_t;
 
 // Something on the scanner, where it is in the view

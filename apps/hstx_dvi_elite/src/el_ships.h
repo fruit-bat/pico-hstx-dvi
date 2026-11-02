@@ -105,6 +105,11 @@ void ships_enter(const ShipsWorld_t* w);
 void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev);
 // The ship in our sights within range, or -1
 int32_t ships_in_sights(const Frame_t* me, float range);
+// The ship a targeting computer follows: the one nearest the middle of the
+// view, within range and cone of it (as far off as across for each ahead),
+// keeping to the one it followed, keep, while it can; or -1. The station is
+// never one, as it isn't a ship here.
+int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep);
 // The ship nearest the way we point, for a missile, or -1
 int32_t ships_nearest_ahead(const Frame_t* me);
 // Damages a ship we have hit, destroying it if it has no energy left

@@ -32,6 +32,10 @@ An energy bomb, sold from tech level 7, destroys every ship within range of the 
 with a white flash. It is used up, and can be bought again. It goes off with three quick presses of A on a SNES pad,
 within half a second; one press only arms it. On a SNES pad A is not fire: B is.
 
+A targeting computer, sold from tech level 8 and not in the original, moves the sights onto a ship within about
+7 degrees of the middle of the view and in laser range, green while it follows it, and the laser hits that ship.
+It keeps to the same ship while it can, and shows its name at the top of the view, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
+
 ## Hyperspace
 
 On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
@@ -64,7 +68,7 @@ Docked, select also shows the market and the equipment for sale. In the market, 
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
 moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a docking computer, a galactic hyperdrive, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a targeting computer, a docking computer, a galactic hyperdrive, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
 
@@ -219,6 +223,7 @@ host/build/elite_host dock 420 20 frames
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
+`target` fits everything, puts a Sidewinder ahead a little off the middle, which the sights follow, shoots it, and looks at the inventory.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
 `views` puts a Sidewinder behind with a rear laser fitted, looks back and fires at it, then looks left and right.
 `overdrive` launches, climbs away, faces the sun and holds B and up, going into the overdrive once clear of the station, until near the sun.

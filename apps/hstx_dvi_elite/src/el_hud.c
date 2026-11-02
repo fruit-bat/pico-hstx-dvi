@@ -121,12 +121,15 @@ void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, bool filled) {
 	draw_clip_screen();
 
 	// The sights in the middle of the view
+	// The sights in the middle of the view, or green on the ship a targeting
+	// computer follows
 	if (hud->sights && object_begin()) {
-		const hstx_dvi_pixel_t c = hud_rgb(255, 255, 255);
-		add_line((Vec2_t){ CENTRE_X - 26, CENTRE_Y }, (Vec2_t){ CENTRE_X - 8, CENTRE_Y }, c);
-		add_line((Vec2_t){ CENTRE_X + 8, CENTRE_Y }, (Vec2_t){ CENTRE_X + 26, CENTRE_Y }, c);
-		add_line((Vec2_t){ CENTRE_X, CENTRE_Y - 18 }, (Vec2_t){ CENTRE_X, CENTRE_Y - 6 }, c);
-		add_line((Vec2_t){ CENTRE_X, CENTRE_Y + 6 }, (Vec2_t){ CENTRE_X, CENTRE_Y + 18 }, c);
+		const hstx_dvi_pixel_t c = hud->locked ? hud_rgb(0, 255, 0) : hud_rgb(255, 255, 255);
+		const float x = CENTRE_X + hud->sights_off.x, y = CENTRE_Y + hud->sights_off.y;
+		add_line((Vec2_t){ x - 26, y }, (Vec2_t){ x - 8, y }, c);
+		add_line((Vec2_t){ x + 8, y }, (Vec2_t){ x + 26, y }, c);
+		add_line((Vec2_t){ x, y - 18 }, (Vec2_t){ x, y - 6 }, c);
+		add_line((Vec2_t){ x, y + 6 }, (Vec2_t){ x, y + 18 }, c);
 		object_end();
 	}
 

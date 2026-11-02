@@ -75,6 +75,7 @@ typedef enum {
 	EQUIP_FUEL_SCOOPS,
 	EQUIP_ESCAPE_POD,
 	EQUIP_ENERGY_BOMB,
+	EQUIP_TARGETING,
 	EQUIP_DOCKING,
 	EQUIP_GALACTIC,
 	EQUIP_MILITARY_LASER,
@@ -98,6 +99,8 @@ static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Fuel Scoops", 5250, 6, LASER_NONE },
 	{ "Escape Pod", 10000, 6, LASER_NONE },
 	{ "Energy Bomb", 9000, 7, LASER_NONE },
+	// Not in the original
+	{ "Targeting Computer", 20000, 8, LASER_NONE },
 	{ "Docking Computer", 15000, 9, LASER_NONE },
 	{ "Galactic Hyperdrive", 50000, 10, LASER_NONE },
 	{ "Military Laser", 60000, 10, LASER_MILITARY },
@@ -117,7 +120,7 @@ static const char* const _mount_names[MOUNTS] = { "Front", "Rear", "Left", "Righ
 #define LIST_LINE 12
 // The inventory's list of equipment, beside the cargo
 #define INVENTORY_EQUIP_X (MARKET_X + 26 * 8)
-#define INVENTORY_EQUIP 12
+#define INVENTORY_EQUIP 13
 
 void trade_commander_start(Commander_t* c) {
 	memset(c, 0, sizeof(*c));
@@ -151,6 +154,7 @@ void trade_max_equipment(void) {
 	cmdr.pod = true;
 	cmdr.bomb = true;
 	cmdr.galactic = true;
+	cmdr.targeting = true;
 	for (uint32_t i = 0; i < MOUNTS; ++i) cmdr.laser[i] = LASER_MILITARY;
 }
 
@@ -327,6 +331,9 @@ static const char* fit(Equip_e e) {
 		case EQUIP_DOCKING:
 			if (cmdr.docking) return "FITTED";
 			break;
+		case EQUIP_TARGETING:
+			if (cmdr.targeting) return "FITTED";
+			break;
 		case EQUIP_GALACTIC:
 			if (cmdr.galactic) return "FITTED";
 			break;
@@ -348,6 +355,7 @@ static const char* fit(Equip_e e) {
 		case EQUIP_ESCAPE_POD: cmdr.pod = true; break;
 		case EQUIP_ENERGY_BOMB: cmdr.bomb = true; break;
 		case EQUIP_DOCKING: cmdr.docking = true; break;
+		case EQUIP_TARGETING: cmdr.targeting = true; break;
 		case EQUIP_GALACTIC: cmdr.galactic = true; break;
 		default: cmdr.laser[_mount] = _equipment[e].laser; break;
 	}
@@ -410,6 +418,7 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	if (n < max && cmdr.scoops) names[n++] = "Fuel Scoops";
 	if (n < max && cmdr.pod) names[n++] = "Escape Pod";
 	if (n < max && cmdr.bomb) names[n++] = "Energy Bomb";
+	if (n < max && cmdr.targeting) names[n++] = "Targeting Computer";
 	if (n < max && cmdr.docking) names[n++] = "Docking Computer";
 	if (n < max && cmdr.galactic) names[n++] = "Galactic Hyperdrive";
 	return n;

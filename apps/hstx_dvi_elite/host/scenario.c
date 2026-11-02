@@ -32,6 +32,10 @@
 //           neighbours, out of range
 // fight   - starts a game, launches, then a Sidewinder is put ahead, which
 //           we shoot down, and then a Python, at which we fire a missile
+// target  - starts a game, launches, then has a targeting computer fitted and
+//           a Sidewinder put ahead, a little off the middle, which the sights
+//           follow and we shoot down, with everything else fitted, then
+//           looks at the inventory
 // trade   - starts a game, and docked, buys food, holding to buy more, and
 //           computers, then a missile, and sells some food, then tries for
 //           a rear pulse laser
@@ -66,6 +70,7 @@ void game_debug_bomb(void);
 void game_debug_witch(void);
 void game_debug_dodo(void);
 void game_debug_galactic(void);
+void game_debug_target(void);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -219,6 +224,12 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 500 && f < 510) return B;
 		if (f >= 510 && f < 513) return B | A;
 	}
+	if (!strcmp(host_mode, "target")) {
+		// Slow down, then shoot
+		if (f >= 160 && f < 180) return B | D;
+		if (f >= 202 && f < 260) return A;
+		if (f >= 300 && f < 308 && !(f & 1)) return SELECT;
+	}
 	if (!strcmp(host_mode, "views")) {
 		// Climb a quarter turn, so the station is not behind, slow down, look
 		// back and shoot, then left and right, and round to the front
@@ -278,6 +289,7 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "crash")) game_debug_approach(0.9f);
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
+	if (frame == 200 && !strcmp(host_mode, "target")) game_debug_target();
 	if (frame == 120 && !strcmp(host_mode, "scoop")) game_debug_scoop();
 	if (frame == 180 && !strcmp(host_mode, "overdrive")) game_debug_face_sun();
 	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");

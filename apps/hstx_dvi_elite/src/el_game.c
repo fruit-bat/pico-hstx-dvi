@@ -185,6 +185,11 @@
 // cools, and how cool it must be to fire again once too hot
 #define LASER_RANGE 8000.0f
 #define LASER_SEEN 4
+// How far off the middle of the view a targeting computer follows a ship, as
+// across for each ahead, about 7 degrees
+#define TRACK_CONE 0.12f
+// How long the name of the ship it follows stays up once it lets go, so it can be read
+#define TRACK_NAME_FRAMES 120
 #define LASER_COOL 0.0025f
 #define LASER_COOLED 0.6f
 
@@ -277,6 +282,13 @@ static float _cabin_temp;
 static uint32_t _scoop_frames;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
+// The ship the targeting computer follows, or -1, and how far off the
+// middle of the view it is, where the sights and the laser go
+static int32_t _tracked = -1;
+static Vec2_t _sights_off;
+// The name of the ship it follows, or last followed, and how long it shows for
+static const char* _tracked_name;
+static uint32_t _tracked_name_frames;
 static uint32_t _kills;
 // The slot we save to, or -1 if there is nowhere to save
 static int32_t _slot = -1;
@@ -374,6 +386,8 @@ static void start(void) {
 	chart_set_fuel(cmdr.fuel);
 	refit();
 	_laser_wait = _laser_beam = 0;
+	_tracked = -1;
+	_tracked_name_frames = 0;
 	_hyper_frames = 0;
 	_message_frames = 0;
 	_view = VIEW_FRONT;
@@ -889,8 +903,16 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (_laser_beam) --_laser_beam;
 	_laser_temp = fmaxf(0.0f, _laser_temp - LASER_COOL);
 	if (_overheated && _laser_temp < LASER_COOLED) _overheated = false;
+	// Following the same ship while it can
+	const int32_t keep = _tracked;
+	_tracked = -1;
 	if (!looking_out()) return;
 	look();
+	if (cmdr.targeting && cmdr.laser[_view] != LASER_NONE) _tracked = ships_tracked(&_eye, LASER_RANGE, TRACK_CONE, keep);
+	if (_tracked >= 0) {
+		_tracked_name = ships[_tracked].cls->name;
+		_tracked_name_frames = TRACK_NAME_FRAMES;
+	}
 	if (held & EL_INP_B) {
 		if (pressed & EL_INP_A) fire_missile();
 		return;
@@ -906,7 +928,8 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 		_overheated = true;
 		message("LASER TEMPERATURE");
 	}
-	const int32_t i = ships_in_sights(&_eye, LASER_RANGE);
+	// The ship the targeting computer follows, else the one in the middle
+	const int32_t i = _tracked >= 0 ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
 	if (i >= 0) ships_hit((uint32_t)i, l->damage, ev);
 }
 
@@ -1058,6 +1081,15 @@ void game_debug_bomb(void) {
 	ships_debug_place(2, "KRAIT", vec_sub(_me.pos, vec_scale(_me.r, 3000.0f)), _me.f, _me.u, &w);
 }
 
+// For trying the targeting computer on the PC: fits everything, it among it,
+// and puts a pirate ahead, a little off to the right and above, coming at us
+void game_debug_target(void) {
+	const ShipsWorld_t w = world();
+	trade_max_equipment();
+	const Vec3_t off = vec_add(vec_scale(_me.r, 220.0f), vec_scale(_me.u, 120.0f));
+	ships_debug_place(0, "SIDEWINDER", vec_add(_me.pos, vec_add(vec_scale(_me.f, 3000.0f), off)), vec_scale(_me.f, -1.0f), _me.u, &w);
+}
+
 // For trying the galactic hyperdrive on the PC: fits one
 void game_debug_galactic(void) {
 	cmdr.galactic = true;
@@ -1104,7 +1136,19 @@ typedef struct {
 	float near; // how far its nearest point is
 } Thing_t;
 
+// Where the ship the targeting computer follows is now, off the middle of the
+// view, or the middle if none
+static Vec2_t sights_off(void) {
+	if (_tracked < 0 || !ships[_tracked].alive || !looking_out()) return (Vec2_t){ 0.0f, 0.0f };
+	look();
+	const Vec3_t v = frame_view(&_eye, ships[_tracked].fr.pos);
+	if (v.z <= 0.0f) return (Vec2_t){ 0.0f, 0.0f };
+	const Vec2_t p = project(&v);
+	return (Vec2_t){ p.x - CENTRE_X, p.y - CENTRE_Y };
+}
+
 static void draw_dashboard(void) {
+	_sights_off = sights_off();
 	const Vec3_t planet = frame_view(&_me, _planet.pos);
 	const Vec3_t station = frame_view(&_me, _station.pos);
 	const float altitude = (vec_length(planet) - _planet_radius) / _planet_radius;
@@ -1124,6 +1168,8 @@ static void draw_dashboard(void) {
 		.compass = _witch ? (Vec3_t){ 0.0f, 0.0f, 0.0f } : vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
 		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
+		.sights_off = _sights_off,
+		.locked = _tracked >= 0,
 	};
 	Blip_t blips[SHIPS + CANISTERS + 1];
 	uint32_t n = 0;
@@ -1183,8 +1229,9 @@ static void draw_view(void) {
 	if (_laser_beam && object_begin()) {
 		const hstx_dvi_pixel_t c = hstx_dvi_pixel_rgb(255, 255, 146);
 		const float w = 220.0f * draw_aspect;
-		add_line((Vec2_t){ CENTRE_X - w, VIEW_BOTTOM - 1 }, (Vec2_t){ CENTRE_X - 3, CENTRE_Y + 2 }, c);
-		add_line((Vec2_t){ CENTRE_X + w, VIEW_BOTTOM - 1 }, (Vec2_t){ CENTRE_X + 3, CENTRE_Y + 2 }, c);
+		const float x = CENTRE_X + _sights_off.x, y = CENTRE_Y + _sights_off.y;
+		add_line((Vec2_t){ CENTRE_X - w, VIEW_BOTTOM - 1 }, (Vec2_t){ x - 3, y + 2 }, c);
+		add_line((Vec2_t){ CENTRE_X + w, VIEW_BOTTOM - 1 }, (Vec2_t){ x + 3, y + 2 }, c);
 		object_end();
 	}
 	ships_draw_effects(&_eye, draw_style, _frame);
@@ -1273,7 +1320,7 @@ static void draw_view(void) {
 #define STATUS_TOP (VIEW_TOP + 14)
 #define STATUS_LINE 16
 // The equipment fitted, in two columns
-#define STATUS_FITTED_ROWS 6
+#define STATUS_FITTED_ROWS 7
 #define STATUS_FITTED_W (22 * 8)
 #define TUNNEL_RINGS 8
 #define TUNNEL_SIDES 32
@@ -1743,6 +1790,13 @@ void game_play(void) {
 			char count[12];
 			snprintf(count, sizeof(count), "%u", (unsigned)((_hyper_frames + 59) / 60));
 			screen_text(16, VIEW_TOP + 6, count, GAME_YELLOW, true);
+		}
+		// The ship the targeting computer follows, at the top of the view
+		if (_tracked_name_frames) {
+			--_tracked_name_frames;
+			if (_state == STATE_FLYING && looking_out() && !options_shown()) {
+				screen_text_centre(VIEW_TOP + 8, _tracked_name, _tracked >= 0 ? GAME_GREEN : GAME_GREY, true);
+			}
 		}
 		if (_message_frames) {
 			--_message_frames;
