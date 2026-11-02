@@ -131,6 +131,70 @@ static void __not_in_flash_func(pixels_renderer)(
 }
 
 // d1 points to a GameText_t, drawn scale times the size of the font
+#if MODE_BYTES_PER_PIXEL == 1
+// Byte masks for 4 pixels in a row word; nibble bit 3 is the leftmost (lowest address) pixel.
+// Placed in RAM to avoid flash cache misses while rendering.
+static const uint32_t __attribute__((section(".data._game_nibble_mask"))) _nibble_mask[16] = {
+	0x00000000, 0xff000000, 0x00ff0000, 0xffff0000,
+	0x0000ff00, 0xff00ff00, 0x00ffff00, 0xffffff00,
+	0x000000ff, 0xff0000ff, 0x00ff00ff, 0xffff00ff,
+	0x0000ffff, 0xff00ffff, 0x00ffffff, 0xffffffff
+};
+
+// Each bit of a byte doubled, for text at twice the size; made by game_text_set
+static uint16_t _double_bits[256];
+static bool _double_bits_made = false;
+
+static void make_double_bits(void) {
+	for (uint32_t d = 0; d < 256; ++d) {
+		uint32_t e = 0;
+		for (uint32_t b = 0; b < 8; ++b) {
+			if (d & (0x80 >> b)) e |= 0xc000u >> (b << 1);
+		}
+		_double_bits[d] = (uint16_t)e;
+	}
+	_double_bits_made = true;
+}
+
+// The font at twice the size, smoothed with Scale2x: each pixel becomes 4,
+// and a corner of the 4 takes the colour of the two pixels beside it if they
+// match each other and not the other two. Rows of 16 bits, leftmost highest.
+#define FONT_CHARS (TEXT_GRID8_LAST_CHAR - TEXT_GRID8_FIRST_CHAR + 1)
+static uint16_t _smooth_font[FONT_CHARS][16];
+static bool _smooth_font_made = false;
+
+static uint32_t font_pixel(const uint8_t* g, int32_t x, int32_t y) {
+	if (x < 0 || x > 7 || y < 0 || y > 7) return 0;
+	return (g[y] >> (7 - x)) & 1;
+}
+
+static void make_smooth_font(void) {
+	for (uint32_t c = 0; c < FONT_CHARS; ++c) {
+		const uint8_t* g = (const uint8_t*)&font_8x8[c << 3];
+		for (int32_t y = 0; y < 8; ++y) {
+			uint32_t top = 0, bottom = 0;
+			for (int32_t x = 0; x < 8; ++x) {
+				const uint32_t e = font_pixel(g, x, y);
+				const uint32_t b = font_pixel(g, x, y - 1), h = font_pixel(g, x, y + 1);
+				const uint32_t d = font_pixel(g, x - 1, y), f = font_pixel(g, x + 1, y);
+				uint32_t e0 = e, e1 = e, e2 = e, e3 = e;
+				if (b != h && d != f) {
+					e0 = d == b ? d : e;
+					e1 = b == f ? f : e;
+					e2 = d == h ? d : e;
+					e3 = h == f ? f : e;
+				}
+				top |= (e0 << 1 | e1) << (14 - 2 * x);
+				bottom |= (e2 << 1 | e3) << (14 - 2 * x);
+			}
+			_smooth_font[c][2 * y] = (uint16_t)top;
+			_smooth_font[c][2 * y + 1] = (uint16_t)bottom;
+		}
+	}
+	_smooth_font_made = true;
+}
+#endif
+
 static void __not_in_flash_func(text_scaled_renderer)(
 	const void* d1,
 	const void* d2,
@@ -144,12 +208,50 @@ static void __not_in_flash_func(text_scaled_renderer)(
 	const uint8_t* font = t->grid.font;
 	const uint32_t k = (row / s) & 7;
 	const hstx_dvi_pixel_t p = ((const hstx_dvi_pixel_t*)d2)[0];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t pq = p * 0x01010101u;
+#endif
 	for (uint32_t i = 0; i < t->grid.w; ++i) {
 		const uint32_t c = t->s[i];
 		if (c < TEXT_GRID8_FIRST_CHAR || c > TEXT_GRID8_LAST_CHAR) continue;
 		const uint32_t d = font[((c - TEXT_GRID8_FIRST_CHAR) << 3) + k];
 		if (!d) continue;
-		const int32_t cx = x + (int32_t)(i << 3) * s;
+		int32_t cx = x + (int32_t)(i << 3) * s;
+#if MODE_BYTES_PER_PIXEL == 1
+		if (s <= 4) {
+			// The character's pixels as bits, leftmost highest, written 4 pixels at a time
+			int32_t n = 8 * s;
+			uint32_t e;
+			if (s == 2) {
+				e = t->smooth ? _smooth_font[c - TEXT_GRID8_FIRST_CHAR][row & 15] : _double_bits[d];
+			}
+			else {
+				e = 0;
+				const uint32_t run = (1u << s) - 1;
+				for (uint32_t b = 0; b < 8; ++b) {
+					if (d & (0x80 >> b)) e |= run << ((7 - b) * s);
+				}
+			}
+			// Cut off what is off the screen
+			if (cx < 0) {
+				if (-cx >= n) continue;
+				n += cx;
+				e &= n == 32 ? 0xffffffffu : (1u << n) - 1;
+				cx = 0;
+			}
+			if (cx + n > GAME_SCREEN_W) {
+				if (cx >= GAME_SCREEN_W) continue;
+				e >>= cx + n - GAME_SCREEN_W;
+				n = GAME_SCREEN_W - cx;
+			}
+			uint64_t v = (uint64_t)e << (64 - n - (cx & 3));
+			for (uint32_t wi = (uint32_t)cx >> 2; v; ++wi, v <<= 4) {
+				const uint32_t m = _nibble_mask[v >> 60];
+				if (m) r->w[wi] = (r->w[wi] & ~m) | (pq & m);
+			}
+			continue;
+		}
+#endif
 		for (uint32_t b = 0; b < 8; ++b) {
 			if (!(d & (0x80 >> b))) continue;
 			int32_t i0, i1;
@@ -182,6 +284,9 @@ void game_spr_pixels(int32_t x, int32_t y, uint32_t w, uint32_t h, const GamePix
 }
 
 void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale) {
+#if MODE_BYTES_PER_PIXEL == 1
+	if (!_double_bits_made) make_double_bits();
+#endif
 	uint32_t len = strlen(s);
 	if (len > GAME_TEXT_MAX) len = GAME_TEXT_MAX;
 	for (uint32_t i = 0; i < len; ++i) {
@@ -191,6 +296,15 @@ void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale) {
 	t->grid.s = t->s;
 	t->grid.font = (uint8_t*)font_8x8;
 	t->scale = scale ? scale : 1;
+	t->smooth = false;
+}
+
+void game_text_set_smooth(GameText_t* t, const char* s) {
+	game_text_set(t, s, 2);
+#if MODE_BYTES_PER_PIXEL == 1
+	if (!_smooth_font_made) make_smooth_font();
+	t->smooth = true;
+#endif
 }
 
 void game_text_set(GameText_t* t, const char* s, uint32_t scale) {

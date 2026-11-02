@@ -22,6 +22,39 @@ static uint8_t _nextStart[MAX_SPRITES];
 // The line after the last one each listed sprite appears on
 static uint16_t _lineEnd[MAX_SPRITES];
 // Released by the application core when it has finished updating the sprites
+// How long the rows take to render, see hstx_dvi_sprite_timing
+#if defined(HSTX_DVI_SPRITE_TIMING) && defined(__ARM_ARCH)
+#include "hardware/structs/systick.h"
+// SysTick counts the processor clock down from 2^24 - 1, and each core has its own
+static void timing_init(void) {
+	systick_hw->rvr = 0x00ffffff;
+	systick_hw->cvr = 0;
+	systick_hw->csr = 0x5;
+}
+static __force_inline uint32_t timing_now(void) {
+	return systick_hw->cvr;
+}
+#define TIMING_ELAPSED(start, end) (((start) - (end)) & 0x00ffffff)
+#else
+static void timing_init(void) {}
+static __force_inline uint32_t timing_now(void) { return 0; }
+#define TIMING_ELAPSED(start, end) ((void)(start), (void)(end), 0u)
+#endif
+// The row FIFO lets a slow row borrow time from the rows around it
+#define TIMING_WINDOW HSTX_DVI_ROW_FIFO_SIZE
+// The system clock runs at the HSTX clock, 10 times the pixel clock
+#define TIMING_LINE_CYCLES ((MODE_H_FRONT_PORCH + MODE_H_SYNC_WIDTH + MODE_H_BACK_PORCH + MODE_H_ACTIVE_PIXELS) * 10)
+volatile HstxDviSpriteTiming_t hstx_dvi_sprite_timing;
+#if defined(HSTX_DVI_SPRITE_TIMING)
+#define TIMING_COUNT(v) (v)
+#else
+#define TIMING_COUNT(v) 0u
+#endif
+
+// Whether any sprite has a collision mask this frame. If none do, the
+// renderers can skip keeping track of which sprites overlap.
+static bool _anyCollisionMasks = false;
+
 static struct semaphore _update_sem;
 // Released by the render core once the updates have been taken
 static struct semaphore _frame_sem;
@@ -50,6 +83,7 @@ static void __not_in_flash_func(build_sprite_lines)() {
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
     hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
+    timing_init();
 
     while(true) {
         hstx_dvi_sprite_render_frame();
@@ -58,6 +92,9 @@ void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 		if(sem_try_acquire(&_update_sem)) {
 			memcpy(_sprites_rdy, _sprites, sizeof(_sprites));
 			memcpy(_spriteCollisionMasksRdy, _spriteCollisionMasks, sizeof(_spriteCollisionMasks));
+			SpriteCollisionMask any = 0;
+			for (uint32_t i = 0; i < MAX_SPRITES; ++i) any |= _spriteCollisionMasksRdy[i];
+			_anyCollisionMasks = any != 0;
 			memcpy(&_spriteCollisions, &_spriteCollisionsFrame, sizeof(_spriteCollisionsFrame));
 			clear_sprite_collisions(&_spriteCollisionsFrame);
 			sem_release(&_frame_sem);
@@ -105,7 +142,14 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 }
 
 void __not_in_flash_func(clear_sprite_id_row)() {
-	for(uint32_t i = 0; i < SPRITE_ID_ROW_WORDS; ++i) _spriteIdRow.word[i] = 0;
+	// 8 words at a time, which the compiler can store together
+	uint32_t i = 0;
+	for (; i + 8 <= SPRITE_ID_ROW_WORDS; i += 8) {
+		uint32_t* w = &_spriteIdRow.word[i];
+		w[0] = 0; w[1] = 0; w[2] = 0; w[3] = 0;
+		w[4] = 0; w[5] = 0; w[6] = 0; w[7] = 0;
+	}
+	for (; i < SPRITE_ID_ROW_WORDS; ++i) _spriteIdRow.word[i] = 0;
 }
 
 void __not_in_flash_func(render_row_mono)(
@@ -492,6 +536,225 @@ void __not_in_flash_func(sprite_renderer_sprite_32xn_p1)(
 	);
 }
 
+#if MODE_BYTES_PER_PIXEL == 1
+// 0xff in each byte of a row word of sprite ids that holds an id
+static __force_inline uint32_t taken_bytes(uint32_t ids) {
+	ids |= (ids >> 4) & 0x0f0f0f0fu;
+	ids |= (ids >> 2) & 0x03030303u;
+	ids |= (ids >> 1) & 0x01010101u;
+	return (ids & 0x01010101u) * 0xffu;
+}
+
+// Fills the pixels of one row word in bm that no other sprite has taken
+static __force_inline void render_span_word(
+	hstx_dvi_row_t* r,
+	const uint32_t wi,
+	const uint32_t bm,
+	const uint32_t pq,
+	const uint32_t idq,
+	const SpriteCollisionMask spriteCollisionMask,
+	SpriteCollisionMask* const spriteCollisionsPtr
+) {
+	const uint32_t ids = _spriteIdRow.word[wi];
+	if (!(ids & bm)) {
+		if (bm == 0xffffffffu) {
+			// The whole word, and nothing there yet
+			r->w[wi] = pq;
+			_spriteIdRow.word[wi] = idq;
+		}
+		else {
+			r->w[wi] = (r->w[wi] & ~bm) | (pq & bm);
+			_spriteIdRow.word[wi] = ids | (idq & bm);
+		}
+		return;
+	}
+	// Only the free pixels, all at once
+	const uint32_t taken = taken_bytes(ids) & bm;
+	// All taken, as behind something nearer, so there is nothing to draw
+	if (taken == bm && !_anyCollisionMasks) return;
+	const uint32_t free = bm & ~taken;
+	r->w[wi] = (r->w[wi] & ~free) | (pq & free);
+	_spriteIdRow.word[wi] = ids | (idq & free);
+	if (_anyCollisionMasks) {
+		// The lowest byte is the leftmost pixel
+		for (uint32_t t = taken; t; ) {
+			const uint32_t k = __builtin_ctz(t) >> 3;
+			t &= ~(0xffu << (k << 3));
+			const SpriteId cid = (SpriteId)(((ids >> (k << 3)) & 0xffu) - 1);
+			_spriteCollisionsFrame.m[cid] |= spriteCollisionMask;
+			*spriteCollisionsPtr |= _spriteCollisionMasksRdy[cid];
+		}
+	}
+}
+#endif
+
+#if MODE_BYTES_PER_PIXEL == 1
+// The pixels of a row word from the first to the last, each 0 to 3, as bytes, lowest leftmost
+static const uint32_t __attribute__((section(".data._word_span_mask"))) _word_span_mask[4][4] = {
+	{ 0x000000ff, 0x0000ffff, 0x00ffffff, 0xffffffff },
+	{ 0x00000000, 0x0000ff00, 0x00ffff00, 0xffffff00 },
+	{ 0x00000000, 0x00000000, 0x00ff0000, 0xffff0000 },
+	{ 0x00000000, 0x00000000, 0x00000000, 0xff000000 },
+};
+#endif
+
+// Fills from x0 up to but not including x1 with a word of pixels repeated along the row
+static __force_inline void render_span(
+	hstx_dvi_row_t* r,
+	int32_t x0,
+	int32_t x1,
+	const uint32_t pq,
+	const SpriteId spriteId,
+	const SpriteCollisionMask spriteCollisionMask,
+	SpriteCollisionMask* const spriteCollisionsPtr
+) {
+	if (x0 < 0) x0 = 0;
+	if (x1 > MODE_H_ACTIVE_PIXELS) x1 = MODE_H_ACTIVE_PIXELS;
+	if (x0 >= x1) return;
+#if MODE_BYTES_PER_PIXEL == 1
+	// 4 pixels at a time; the lowest byte of a word is the leftmost pixel
+	const uint32_t idq = (spriteId + 1) * 0x01010101u;
+	const uint32_t w0 = (uint32_t)x0 >> 2;
+	const uint32_t w1 = (uint32_t)(x1 - 1) >> 2;
+	const uint32_t first = 0xffffffffu << ((x0 & 3) << 3);
+	const uint32_t last = 0xffffffffu >> ((3 - ((x1 - 1) & 3)) << 3);
+	if (w0 == w1) {
+		render_span_word(r, w0, first & last, pq, idq, spriteCollisionMask, spriteCollisionsPtr);
+		return;
+	}
+	render_span_word(r, w0, first, pq, idq, spriteCollisionMask, spriteCollisionsPtr);
+	for (uint32_t wi = w0 + 1; wi < w1; ++wi) {
+		render_span_word(r, wi, 0xffffffffu, pq, idq, spriteCollisionMask, spriteCollisionsPtr);
+	}
+	render_span_word(r, w1, last, pq, idq, spriteCollisionMask, spriteCollisionsPtr);
+#else
+	for (int32_t i = x0; i < x1; ++i) {
+		render_sprite_pixel(r, (hstx_dvi_pixel_t)(pq >> ((i & 1) << 4)), spriteId, spriteCollisionMask, spriteCollisionsPtr, (uint32_t)i);
+	}
+#endif
+}
+
+// The order the pixels of a pattern 2 by 2 take the brighter colour in,
+// for the pixels of a word on the even rows and on the odd
+#if MODE_BYTES_PER_PIXEL == 1
+#define DITHER_PIXELS 4
+static const uint8_t _dither_order[2][DITHER_PIXELS] = { { 0, 2, 0, 2 }, { 3, 1, 3, 1 } };
+#define DITHER_R 7
+#define DITHER_G 7
+#define DITHER_B 3
+#else
+#define DITHER_PIXELS 2
+static const uint8_t _dither_order[2][DITHER_PIXELS] = { { 0, 2 }, { 3, 1 } };
+#define DITHER_R 31
+#define DITHER_G 63
+#define DITHER_B 31
+#endif
+
+SpriteColour_t sprite_colour_dither(const uint8_t r, const uint8_t g, const uint8_t b) {
+	// In quarters of a step between the shades the screen can show
+	const uint32_t rq = (r * (DITHER_R * 4) + 127) / 255;
+	const uint32_t gq = (g * (DITHER_G * 4) + 127) / 255;
+	const uint32_t bq = (b * (DITHER_B * 4) + 127) / 255;
+	SpriteColour_t c;
+	for (uint32_t y = 0; y < 2; ++y) {
+		uint32_t w = 0;
+		for (uint32_t i = 0; i < DITHER_PIXELS; ++i) {
+			// The step above if the shade is more than this many quarters past the one below
+			const uint32_t k = 3 - _dither_order[y][i];
+			const uint32_t rv = (rq + k) >> 2, gv = (gq + k) >> 2, bv = (bq + k) >> 2;
+#if MODE_BYTES_PER_PIXEL == 1
+			w |= ((rv << 5) | (gv << 2) | bv) << (i << 3);
+#else
+			w |= ((rv << 11) | (gv << 5) | bv) << (i << 4);
+#endif
+		}
+		c.w[y] = w;
+	}
+	return c;
+}
+
+void __not_in_flash_func(sprite_render_span)(
+	hstx_dvi_row_t* r,
+	int32_t x0,
+	int32_t x1,
+	const hstx_dvi_pixel_t p,
+	const SpriteId spriteId
+) {
+	render_span(r, x0, x1, sprite_colour(p).w[0], spriteId, _spriteCollisionMasksRdy[spriteId], &_spriteCollisionsFrame.m[spriteId]);
+}
+
+void __not_in_flash_func(sprite_render_spans)(
+	hstx_dvi_row_t* r,
+	const SpriteSpan_t* spans,
+	uint32_t n,
+	const SpriteId spriteId
+) {
+	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
+	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
+	for (uint32_t i = 0; i < n; ++i) {
+		render_span(r, spans[i].x0, spans[i].x1, sprite_colour(spans[i].p).w[0], spriteId, spriteCollisionMask, spriteCollisionsPtr);
+	}
+}
+
+void __not_in_flash_func(sprite_renderer_parts)(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+) {
+	const SpriteParts_t* o = (const SpriteParts_t*)d1;
+	const int32_t y = o->top + row;
+	const SpriteCollisionMask spriteCollisionMask = _spriteCollisionMasksRdy[spriteId];
+	SpriteCollisionMask* const spriteCollisionsPtr = &_spriteCollisionsFrame.m[spriteId];
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t idq = (spriteId + 1) * 0x01010101u;
+#endif
+	SpritePart_t* const end = o->part + o->count;
+	const uint32_t odd = (uint32_t)y & 1;
+	for (SpritePart_t* p = o->part; p < end; ++p) {
+		const int32_t pr = y - p->top;
+		if ((uint32_t)pr >= (uint32_t)p->rows) continue;
+		const uint32_t pq = p->colour.w[odd];
+		int32_t i0, i1;
+		if (!p->is_shape) {
+			const int32_t xm = p->line.x0 + p->line.dxdy * pr;
+			int32_t xa = pr == 0 ? p->line.x0 : xm - p->line.half;
+			int32_t xb = pr == p->rows - 1 ? p->line.x1 : xm + p->line.half;
+			if (xa > xb) {
+				const int32_t t = xa;
+				xa = xb;
+				xb = t;
+			}
+			i0 = (xa + (1 << (SPRITE_PARTS_FX - 1))) >> SPRITE_PARTS_FX;
+			i1 = ((xb + (1 << (SPRITE_PARTS_FX - 1))) >> SPRITE_PARTS_FX) + 1;
+#if MODE_BYTES_PER_PIXEL == 1
+			// Most lines are steep, so the run is in one row word: draw it straight
+			const uint32_t last = (uint32_t)(i1 - 1);
+			if ((uint32_t)i0 < MODE_H_ACTIVE_PIXELS && last < MODE_H_ACTIVE_PIXELS && ((uint32_t)i0 >> 2) == (last >> 2)) {
+				render_span_word(r, last >> 2, _word_span_mask[i0 & 3][last & 3], pq, idq,
+					spriteCollisionMask, spriteCollisionsPtr);
+				continue;
+			}
+#endif
+		}
+		else {
+			uint32_t b = p->shape.cur;
+			// Back to the top for the next frame
+			if (pr < p->shape.band[b].start) b = 0;
+			while (b + 1 < p->shape.count && pr >= p->shape.band[b + 1].start) ++b;
+			p->shape.cur = (uint16_t)b;
+			const SpriteBand_t* k = &p->shape.band[b];
+			const int32_t j = pr - k->start;
+			// Rounding up gives the first pixel whose middle is inside
+			i0 = (k->xl + k->dxl * j + (1 << SPRITE_PARTS_FX) - 1) >> SPRITE_PARTS_FX;
+			i1 = (k->xr + k->dxr * j + (1 << SPRITE_PARTS_FX) - 1) >> SPRITE_PARTS_FX;
+		}
+		render_span(r, i0, i1, pq, spriteId, spriteCollisionMask, spriteCollisionsPtr);
+	}
+}
+
 void __not_in_flash_func(text_renderer_8x8_p1)(
 	const void* d1,
 	const void* d2,
@@ -528,9 +791,19 @@ void __not_in_flash_func(render_Tile16x16p2)(
 void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 	// Sprites on the current line, one bit per sprite id
 	uint32_t active[ACTIVE_SPRITE_WORDS] = {0};
+	uint32_t window[TIMING_WINDOW] = {0};
+	uint32_t window_sum = 0, line_max = 0, window_max = 0, frame = 0;
+	uint32_t calls_window[TIMING_WINDOW] = {0};
+	uint32_t calls_sum = 0, calls_max = 0;
+	// How far ahead of the display the rows are, starting with the FIFO full
+	// after the vertical blank
+	const int32_t ahead_full = TIMING_WINDOW * TIMING_LINE_CYCLES;
+	int32_t ahead = ahead_full, ahead_min = ahead_full;
 
 	for (uint32_t y = 0; y < MODE_V_ACTIVE_LINES; ++y) {
 		hstx_dvi_row_t *r = hstx_dvi_row_buf_get();
+		const uint32_t start = timing_now();
+		uint32_t calls = 0;
 		clear_sprite_id_row();
 
 		// Render a blank row
@@ -560,9 +833,30 @@ void __not_in_flash_func(hstx_dvi_sprite_render_frame)() {
 					sprite->x,
 					y - sprite->y,
 					i);
+				++calls;
 			}
 		}
+		const uint32_t t = TIMING_ELAPSED(start, timing_now());
+		if (t > line_max) line_max = t;
+		frame += t;
+		window_sum += t - window[y % TIMING_WINDOW];
+		window[y % TIMING_WINDOW] = t;
+		if (window_sum > window_max) window_max = window_sum;
+		ahead -= (int32_t)t;
+		if (ahead < ahead_min) ahead_min = ahead;
+		ahead += TIMING_LINE_CYCLES;
+		if (ahead > ahead_full) ahead = ahead_full;
+		const uint32_t w = y % TIMING_WINDOW;
+		calls_sum += TIMING_COUNT(calls) - calls_window[w];
+		calls_window[w] = TIMING_COUNT(calls);
+		if (calls_sum > calls_max) calls_max = calls_sum;
+
 		hstx_dvi_row_fifo_put_blocking(r);
 	}
+	hstx_dvi_sprite_timing.line_max = line_max;
+	hstx_dvi_sprite_timing.window_max = window_max;
+	hstx_dvi_sprite_timing.frame = frame;
+	hstx_dvi_sprite_timing.ahead_min = ahead_min;
+	hstx_dvi_sprite_timing.calls_max = calls_max;
 }
 

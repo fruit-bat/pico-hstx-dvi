@@ -167,6 +167,110 @@ void sprite_renderer_sprite_32xn_p1(
 	const SpriteId spriteId
 );
 
+// For renderers of your own: fills the pixels from x0 up to but not including x1
+// in one colour, clipped to the row, taking part in sprite priority and collisions
+// as the sprite spriteId
+void sprite_render_span(
+	hstx_dvi_row_t* r,
+	int32_t x0,
+	int32_t x1,
+	const hstx_dvi_pixel_t p,
+	const SpriteId spriteId
+);
+
+// A run of pixels in one colour, for sprite_render_spans
+typedef struct {
+	int16_t x0, x1; // x1 is not included
+	hstx_dvi_pixel_t p;
+} SpriteSpan_t;
+
+// As sprite_render_span for n spans, in order, so the earlier ones keep
+// priority over the later ones. A sprite that draws many small runs on a row
+// can draw them all with one call.
+void sprite_render_spans(
+	hstx_dvi_row_t* r,
+	const SpriteSpan_t* spans,
+	uint32_t n,
+	const SpriteId spriteId
+);
+
+// ----------------------------------------------------------------------------
+// Parts: a sprite made of lines and convex shapes, such as a ship in 3D
+//
+// The parts are drawn in order, so the earlier ones keep priority over the
+// later ones, as a pixel can only be drawn once. Each part works out where it
+// is on a row from the row alone, so nothing has to be kept between rows.
+// The x of the lines and shapes is fixed point, with SPRITE_PARTS_FX bits
+// after the point, and absolute on the screen.
+
+#define SPRITE_PARTS_FX 16
+
+// A band of a shape, filling the pixels whose middles are between its sides.
+// The sides are half a pixel to the left, for the middle of the band's first row.
+typedef struct {
+	int32_t xl, dxl;
+	int32_t xr, dxr;
+	int32_t start; // the band's first row, from the top of the shape
+} SpriteBand_t;
+
+// The colour of a part, as a word of pixels for the even rows of the screen
+// and one for the odd rows, repeated along the row from the left of the
+// screen. A plain colour has the same pixel all through, and a dithered one
+// mixes the two nearest colours in a pattern 2 pixels by 2.
+typedef struct {
+	uint32_t w[2];
+} SpriteColour_t;
+
+static inline SpriteColour_t sprite_colour(const hstx_dvi_pixel_t p) {
+#if MODE_BYTES_PER_PIXEL == 1
+	const uint32_t q = p * 0x01010101u;
+#else
+	const uint32_t q = p * 0x00010001u;
+#endif
+	return (SpriteColour_t){ { q, q } };
+}
+
+// The colour nearest r, g, b in 8 bits each, dithered for the shades
+// between those the screen can show
+SpriteColour_t sprite_colour_dither(const uint8_t r, const uint8_t g, const uint8_t b);
+
+typedef struct {
+	int16_t top, rows; // the rows of the screen it is on
+	uint8_t is_shape;  // a shape rather than a line
+	SpriteColour_t colour;
+	union {
+		// A line's run on a row covers it from half a row above the middle of
+		// the row to half a row below, so shallow lines join up, and stops at its ends
+		struct {
+			int32_t x0;   // where it starts, on its first row
+			int32_t x1;   // where it ends, on its last row
+			int32_t dxdy; // how far x moves for each row
+			int32_t half; // half of dxdy
+		} line;
+		struct {
+			SpriteBand_t* band;
+			uint16_t count;
+			uint16_t cur; // the band drawn last; the renderer keeps this up to date
+		} shape;
+	};
+} SpritePart_t;
+
+typedef struct {
+	SpritePart_t* part;
+	uint32_t count;
+	int32_t top; // the y of the sprite
+} SpriteParts_t;
+
+// d1 points at a SpriteParts_t, and d2 is not used
+void sprite_renderer_parts(
+	const void* d1,
+	const void* d2,
+	hstx_dvi_row_t* r,
+	const int32_t x,
+	const int32_t row,
+	const SpriteId spriteId
+);
+
 void text_renderer_8x8_p1(
 	const void* d1,
 	const void* d2,
@@ -198,6 +302,22 @@ void hstx_dvi_sprite_set_sprite_collision_mask(
 );
 
 void hstx_dvi_sprite_render_loop();
+
+// With HSTX_DVI_SPRITE_TIMING defined, how hard the renderer worked on the
+// last frame it drew. The times are in system clock cycles, and are only
+// measured on Arm, being left at 0 otherwise.
+typedef struct {
+	uint32_t line_max;   // the slowest row
+	uint32_t window_max; // the slowest run of rows that fits in the row FIFO
+	uint32_t frame;      // all the rows
+	// The least time the rows were ready ahead of the display, from the row
+	// FIFO being full at the top of the frame. Below 0 a row was late and the
+	// frame was dropped.
+	int32_t ahead_min;
+	uint32_t calls_max;  // the most sprite renderer calls in a run of rows that fits in the row FIFO
+} HstxDviSpriteTiming_t;
+
+extern volatile HstxDviSpriteTiming_t hstx_dvi_sprite_timing;
 
 __force_inline void hstx_dvi_sprite_disable_all() {
 	for (uint32_t i = 0; i < MAX_SPRITES; ++i) {

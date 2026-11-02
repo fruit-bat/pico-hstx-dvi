@@ -24,6 +24,12 @@ cmake -DGAME_NESPAD=ON ..
 Both pads control the game. They share CLK on GPIO 26 and LATCH on GPIO 27, with DATA
 from pad 1 on GPIO 20 and pad 2 on GPIO 21 (see `apps/common/game/CMakeLists.txt`).
 
+The buttons on GPIOs can be left out, to free the GPIOs for other things, leaving only the pads:
+
+```sh
+cmake -DGAME_NESPAD=ON -DGAME_BUTTONS=OFF ..
+```
+
 ## CP/M (hstx_dvi_cpm)
 
 `hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen with

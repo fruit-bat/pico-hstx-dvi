@@ -43,10 +43,31 @@ add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-
 include(${PICO_FOLDER}/pimoroni-pico/drivers/fatfs/fatfs.cmake)
 include(${PICO_FOLDER}/pimoroni-pico/drivers/sdcard/sdcard.cmake)
 
+# Buttons on GPIOs for the games, each to ground. Turned off, the GPIOs are
+# left free for other things, and only a pad is read, e.g. cmake -DGAME_BUTTONS=OFF ..
+option(GAME_BUTTONS "Read buttons on GPIOs in the games" ON)
+
 # NES or SNES gamepads for the games, as well as the buttons, e.g. cmake -DGAME_NESPAD=ON ..
 option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" OFF)
 if (GAME_NESPAD)
   add_subdirectory(${PICO_FOLDER}/pico-nespad "${CMAKE_CURRENT_BINARY_DIR}/pico-nespad")
+endif()
+
+# A PS/2 keyboard for the games, on GPIOs 0 and 1, e.g. cmake -DGAME_PS2KBD=ON ..
+# Not yet working on hardware, so off for now
+option(GAME_PS2KBD "Read a PS/2 keyboard in the games, using pico-ps2-keyboard" OFF)
+# Prints what goes to and from the keyboard, over USB serial
+option(GAME_PS2KBD_DEBUG "Print the PS/2 keyboard's traffic" OFF)
+if (GAME_PS2KBD)
+  add_subdirectory(${PICO_FOLDER}/pico-ps2-keyboard "${CMAKE_CURRENT_BINARY_DIR}/pico-ps2-keyboard")
+endif()
+
+# A USB keyboard for the games, on the Pico's USB port as a host, using tinyusb
+# and pico-hid-host, e.g. cmake -DGAME_USBKBD=ON .. The port can't then be the
+# serial port, so stdio goes to the UART on GPIOs 0 and 1 instead.
+option(GAME_USBKBD "Read a USB keyboard in the games, using pico-hid-host" OFF)
+if (GAME_USBKBD)
+  add_subdirectory(${PICO_FOLDER}/pico-hid-host "${CMAKE_CURRENT_BINARY_DIR}/pico-hid-host")
 endif()
 
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
@@ -63,3 +84,14 @@ add_subdirectory(hstx_dvi_manor  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_manor")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
 add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
 add_subdirectory(hstx_dvi_android_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_android_test")
+add_subdirectory(hstx_dvi_wireframe_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wireframe_test")
+add_subdirectory(hstx_dvi_harmless  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_harmless")
+
+# The games' serial port, moved off the USB port when it is a keyboard's host
+if (GAME_USBKBD)
+  foreach(game hstx_dvi_sprite_test hstx_dvi_defender hstx_dvi_wildwood hstx_dvi_manor
+      hstx_dvi_android_test hstx_dvi_wireframe_test hstx_dvi_harmless hstx_dvi_cpm)
+    pico_enable_stdio_usb(${game} 0)
+    pico_enable_stdio_uart(${game} 1)
+  endforeach()
+endif()
