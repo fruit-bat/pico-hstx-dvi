@@ -15,6 +15,7 @@ typedef struct {
 	float fore_shield, aft_shield, fuel, cabin_temp, laser_temp, altitude;
 	float speed;
 	float overdrive; // how far into it, shown in red at the top of the speed
+	float hyperdrive; // how near it is to engaging, in cyan at the very end
 	float energy; // across the four banks, which empty from the top
 	// From -1 to 1
 	float roll, pitch;

@@ -67,17 +67,22 @@ static void hud_bar(bool filled, float x0, float x1, float y, float v, hstx_dvi_
 	object_end();
 }
 
-// The speed: up to full speed along most of the bar, with the rest kept for
-// the overdrive, past a mark, the whole bar red when in it
-#define SPEED_SPAN 0.85f
+// The speed: up to full speed along most of the bar, then the overdrive,
+// past a mark, the whole bar red when in it, and at the very end, past
+// another, the hyperdrive engaging
+#define SPEED_SPAN 0.82f
+#define OVER_SPAN 0.94f
 
-static void hud_speed(bool filled, float x0, float x1, float y, float speed, float over,
-	hstx_dvi_pixel_t c, hstx_dvi_pixel_t hot, hstx_dvi_pixel_t track) {
+static void hud_speed(bool filled, float x0, float x1, float y, float speed, float over, float hyper,
+	hstx_dvi_pixel_t c, hstx_dvi_pixel_t hot, hstx_dvi_pixel_t charge, hstx_dvi_pixel_t track) {
 	if (!object_begin()) return;
-	const float top = x0 + (x1 - x0) * SPEED_SPAN;
-	const float x = over > 0.0f ? top + (x1 - top) * clamp01(over) : x0 + (top - x0) * clamp01(speed);
+	const float top = x0 + (x1 - x0) * SPEED_SPAN, end = x0 + (x1 - x0) * OVER_SPAN;
+	// The hyperdrive first, as what is added first is in front
+	if (hyper > 0.0f) hud_block(filled, end, y, end + (x1 - end) * clamp01(hyper), y + GAUGE_H - 1, charge);
+	const float x = over > 0.0f ? top + (end - top) * clamp01(over) : x0 + (top - x0) * clamp01(speed);
 	if (x > x0 + 1.0f) hud_block(filled, x0, y, x, y + GAUGE_H - 1, over > 0.0f ? hot : c);
 	add_line((Vec2_t){ top, y }, (Vec2_t){ top, y + GAUGE_H - 1 }, track);
+	add_line((Vec2_t){ end, y }, (Vec2_t){ end, y + GAUGE_H - 1 }, track);
 	add_box(x0, y, x1, y + GAUGE_H - 1, track);
 	object_end();
 }
@@ -142,7 +147,8 @@ void hud_draw(const Hud_t* hud, const Blip_t* blips, uint32_t n, bool filled) {
 	for (uint32_t g = GAUGE_FS; g <= GAUGE_AL; ++g) {
 		hud_bar(filled, GAUGE_X0, GAUGE_X1, gauge_y(g), left[g], left_c[g], track);
 	}
-	hud_speed(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(0), hud->speed, hud->overdrive, yellow, red, track);
+	hud_speed(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(0), hud->speed, hud->overdrive, hud->hyperdrive,
+		yellow, red, hud_rgb(0, 219, 255), track);
 	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(1), hud->roll, green, track);
 	hud_marker(filled, GAUGE_RIGHT_X0, GAUGE_RIGHT_X1, gauge_y(2), hud->pitch, green, track);
 	for (uint32_t b = 0; b < 4; ++b) {

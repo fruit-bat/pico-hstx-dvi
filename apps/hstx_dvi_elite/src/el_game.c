@@ -170,7 +170,7 @@
 #define OVERDRIVE_LOCK_PLANET 0.3f
 // Held on at full overdrive for this many frames more, the hyperdrive counts
 // down to the system the cursor is on
-#define HYPERDRIVE_WAIT 30
+#define HYPERDRIVE_WAIT 120
 // The dust streams by no faster than this, or every speck would be gone in a frame
 #define DUST_SPEED_MAX (3.0f * MAX_SPEED)
 // The docking computer flies to a point this far out in front of the slot,
@@ -317,7 +317,7 @@ static uint32_t _page_pick, _page_frames;
 #define PAGE_WAIT 30
 #define PAGE_TIMEOUT (45 * 60)
 // and in flight we slow to this, out of any overdrive, to read it
-#define PAGE_SPEED (0.2f * MAX_SPEED)
+#define PAGE_SPEED (0.1f * MAX_SPEED)
 // The next jump goes into witchspace, for a story; Marge has patched the
 // shields this fight; there were pirates about, and the shields were low,
 // last time we looked; and the docking computer docked us
@@ -352,10 +352,8 @@ static bool _station_angry;
 static uint32_t _station_police, _station_police_wait;
 static uint32_t _station_gun, _station_beam;
 static View_e _view;
-// The way we last looked out, to go back to from a chart; and whether the
-// shoulders have been used, when select leaves the views to them
+// The way we last looked out, to go back to from a chart
 static View_e _look;
-static bool _shoulders;
 static State_e _state;
 // Frames into the state, for the tunnel and the end
 static uint32_t _state_frames;
@@ -465,8 +463,15 @@ static void start(void) {
 	dust_init();
 }
 
-// Back to full speed at once
+static void message(const char* m);
+
+// Back to full speed at once; a jump counting down from the overdrive is
+// called off
 static void overdrive_off(void) {
+	if (_overdrive && _hyper_frames && !_hyper_galactic) {
+		_hyper_frames = 0;
+		message("HYPERSPACE CANCELLED");
+	}
 	_overdrive = false;
 	_over_ask = false;
 	_over = 0.0f;
@@ -732,14 +737,13 @@ static bool looking_out(void) {
 	return _view <= VIEW_RIGHT;
 }
 
-// The view after this one, as select goes round them: in flight, once the
-// shoulders look round, only the charts and data
+// The screen after this one, as select goes round them: the front and the
+// charts and data, as the shoulders look round the ship
 static View_e next_view(void) {
 	View_e v = _view;
 	for (;;) {
 		v = (View_e)((v + 1) % VIEWS);
-		if (_state == STATE_DOCKED && v >= VIEW_REAR && v <= VIEW_RIGHT) continue;
-		if (_state != STATE_DOCKED && _shoulders && v <= VIEW_RIGHT) continue;
+		if (v >= VIEW_REAR && v <= VIEW_RIGHT) continue;
 		if (_state != STATE_DOCKED && (v == VIEW_MARKET || v == VIEW_EQUIPMENT)) continue;
 		return v;
 	}
@@ -749,7 +753,6 @@ static View_e next_view(void) {
 // for -1, as the shoulders turn it; from a chart, back the way we looked
 static View_e look_round(int32_t step) {
 	static const View_e round[4] = { VIEW_FRONT, VIEW_RIGHT, VIEW_REAR, VIEW_LEFT };
-	_shoulders = true;
 	if (!looking_out()) return _look <= VIEW_RIGHT ? _look : VIEW_FRONT;
 	uint32_t i = 0;
 	while (round[i] != _view) ++i;
@@ -973,10 +976,8 @@ static void fly(uint8_t held) {
 			else start_hyperspace(false);
 		}
 	}
-	if (!faster) {
-		_hyper_hold = 0;
-		_hyper_tried = false;
-	}
+	if (!faster || !_overdrive) _hyper_hold = 0;
+	if (!faster) _hyper_tried = false;
 	const float speed = _speed + (OVERDRIVE_SPEED - MAX_SPEED) * _over;
 	_roll = towards(_roll, roll_in * MAX_ROLL, ROLL_STEP);
 	_pitch = towards(_pitch, pitch_in * MAX_PITCH, PITCH_STEP);
@@ -1417,6 +1418,7 @@ static void draw_dashboard(void) {
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
 		.speed = _speed / MAX_SPEED,
 		.overdrive = _over,
+		.hyperdrive = _hyper_frames && !_hyper_galactic ? 1.0f : (float)_hyper_hold / (float)HYPERDRIVE_WAIT,
 		.energy = _energy,
 		.roll = _roll / MAX_ROLL,
 		.pitch = _pitch / MAX_PITCH,
@@ -1913,7 +1915,7 @@ static void keyboard(void) {
 	if (KEY_PRESSED(HID_KEY_M)) fire_missile();
 	if (KEY_PRESSED(HID_KEY_E)) ecm();
 	if (KEY_PRESSED(HID_KEY_C)) docking_computer(!_docking);
-	if (KEY_PRESSED(HID_KEY_H)) start_hyperspace(game_key_modifiers() & (KEYBOARD_MODIFIER_LEFTCTRL | KEYBOARD_MODIFIER_RIGHTCTRL));
+	if (KEY_PRESSED(HID_KEY_H) && (game_key_modifiers() & (KEYBOARD_MODIFIER_LEFTCTRL | KEYBOARD_MODIFIER_RIGHTCTRL))) start_hyperspace(true);
 	if (KEY_PRESSED(HID_KEY_J)) {
 		if (_overdrive) {
 			overdrive_off();
@@ -2167,7 +2169,8 @@ void game_play(void) {
 				const uint16_t taken = _state == STATE_DOCKED ? (uint16_t)~EL_INP_START : (uint16_t)(EL_INP_UP | EL_INP_DOWN | EL_INP_A);
 				pressed &= (uint16_t)~taken;
 				held &= (uint16_t)~taken;
-				if (_state == STATE_FLYING && !_docking) {
+				// but not when about to jump, which would call it off
+				if (_state == STATE_FLYING && !_docking && !_hyper_frames) {
 					if (_overdrive) overdrive_off();
 					if (_speed > PAGE_SPEED) _speed = fmaxf(PAGE_SPEED, _speed - SPEED_STEP);
 				}
@@ -2217,9 +2220,9 @@ void game_play(void) {
 					break;
 				}
 				case STATE_FLYING:
-					// Fire on the charts or data jumps to the system the cursor is on
-					// and with B held on the galactic chart, the galactic hyperdrive to the next galaxy
-					if ((pressed & EL_INP_A) && !looking_out()) start_hyperspace((held & EL_INP_B) && _view == VIEW_GALAXY);
+					// With B held, fire on the galactic chart starts the galactic hyperdrive
+					// to the next galaxy; the hyperdrive is from the overdrive
+					if ((pressed & EL_INP_A) && (held & EL_INP_B) && _view == VIEW_GALAXY) start_hyperspace(true);
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
 						if (mass_locked(LOCK_PLANET)) message("MASS LOCKED");
@@ -2322,9 +2325,10 @@ void game_play(void) {
 		}
 		// The countdown to hyperspace, and any message
 		if (_hyper_frames) {
-			char count[12];
-			snprintf(count, sizeof(count), "%u", (unsigned)((_hyper_frames + 59) / 60));
-			screen_text(16, VIEW_TOP + 6, count, GAME_YELLOW, true);
+			char count[32];
+			snprintf(count, sizeof(count), "%s %u", _hyper_galactic ? "GALACTIC HYPERSPACE" : "HYPERSPACE",
+				(unsigned)((_hyper_frames + 59) / 60));
+			screen_text_centre(VIEW_TOP + 40, count, GAME_YELLOW, true);
 		}
 		// The ship the targeting computer follows, under the sights, where the eye is
 		if (_tracked_name_frames) {

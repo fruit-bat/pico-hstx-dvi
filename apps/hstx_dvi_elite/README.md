@@ -39,8 +39,10 @@ It keeps to the same ship while it can, and shows its name under the sights, wit
 
 ## Hyperspace
 
-On the charts or the data, fire starts a countdown of 10 seconds to the system the cursor is on,
-if it is within reach of the fuel, shown by the circle round us on the charts. The jump uses as much fuel as it is long,
+Pick a system with the cursor on the charts, then go into the overdrive and hold on: two seconds more, filling the
+short cyan end of the speed gauge, start a countdown of 10 seconds to it, shown big at the top of the view,
+if it is within reach of the fuel, shown by the circle round us on the charts. With the cursor on the system we are in,
+it says NO HYPERSPACE COORDINATES. Slowing down, out of the overdrive, before it ends calls the jump off. The jump uses as much fuel as it is long,
 up to 7 light years with full tanks, and fuel is bought at the station.
 It cannot start, or end, too close to anything, the planet, the sun, the station or another ship: we are mass locked.
 Each system's planet is as big as its data says and coloured as it is on the charts,
@@ -81,8 +83,7 @@ It burns a tenth of a light year of fuel each second, so getting there costs abo
 which fuel scoops soon win back. It cannot be used close to the planet, the sun, the station or another ship,
 and drops out to full speed when near any of them, when out of fuel, or with B and down.
 
-Held on for half a second more at full overdrive, the hyperdrive starts its countdown to the system the cursor is on,
-or says NO HYPERSPACE COORDINATES if the cursor is on the system we are in. Fire on a chart still does the same.
+Held on for two seconds more at full overdrive, the hyperdrive starts its countdown, see Hyperspace.
 
 ## The sun, fuel scoops and canisters
 
@@ -130,7 +131,7 @@ who knows where the gold is, a wedding cake to deliver in one piece, a trader wh
 an old admiral with two singing whales, and a farm boy who flies with his eyes shut.
 Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages over
 the view, while the game goes on: up and down pick a choice, and fire takes it, and in flight the other controls still
-fly, though the ship slows to a fifth of full speed, out of any overdrive, to read it. Left for 45 seconds in flight,
+fly, though the ship slows to a tenth of full speed, out of any overdrive, to read it. Left for 45 seconds in flight,
 a page goes, taking the second choice, which leaves things be; docked, it waits. Only one goes at a time, and none
 needs signing up for.
 
@@ -162,14 +163,14 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 
 - Left and right roll, and up and down dive and climb, as with a joystick.
 - B held with up or down speeds up or slows down. Held on at full speed for half a second, it goes into the overdrive.
-- A fires the laser, launches you when docked, from the status screen, and in flight on the charts or data jumps to the system the cursor is on.
+- A fires the laser, and launches you when docked, from the status screen.
 - B held with A launches a missile, and with select sets off the ECM. On the galactic chart B held with A starts the galactic hyperdrive.
-- Select shows the next screen: the front, rear, left and right views, the inventory, the ship's log, the short range chart, the galactic chart,
+- Select shows the next screen: the front view, the inventory, the ship's log, the short range chart, the galactic chart,
   and the data on the system the cursor is on. The controls fly the ship the same whichever way you look.
   On the charts the pad moves the cursor, faster with B held.
 - On a SNES pad, in flight, the shoulders look round the ship: the right one clockwise, front, right, rear and left,
-  and the left one the other way. From a chart either goes back to the view you were looking through. Once the
-  shoulders have been used, select leaves the views to them, and in flight shows only the charts and data. X turns the docking computer on and off,
+  and the left one the other way. From a chart either goes back to the view you were looking through. Without a SNES
+  pad the rear, left and right views are only on a keyboard, F1 to F3. X turns the docking computer on and off,
   and three quick presses of A set off the energy bomb; fire is B alone.
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
@@ -204,7 +205,7 @@ Both are off by default.
 | M | missile |
 | E | ECM |
 | J | overdrive, on and off |
-| H | hyperspace to the system on the charts; Ctrl-H the galactic hyperdrive |
+| Ctrl-H | the galactic hyperdrive |
 | C | docking computer |
 | Tab | energy bomb, at once |
 | F10 (f0) | front view, or launch when docked |
@@ -269,7 +270,7 @@ host/build/elite_host dock 420 20 frames
 `bomb` has an energy bomb fitted and three pirates put round it, arms the bomb, then sets it off.
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
-`hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
+`hyper` picks Diso on the short range chart and jumps there from Lave, through the overdrive and the hyperdrive.
 `story` has Pip aboard and the lost kittens start: the basket is scooped and its page read.
 `race` has the great race offered, and picks the second choice.
 `station` is put still in front of the slot and shoots the station, which launches Vipers and fires its guns.

@@ -26,10 +26,9 @@
 // dodo    - starts a game, launches, then is moved to a system with a
 //           dodecahedron station, behind it, and the docking computer flies in
 // crash   - as dock, but rolled so the slot is not level, and hits the station
-// hyper   - starts a game, launches, climbs away, tries to jump while still
-//           too close to the station, then picks Diso on the short range
-//           chart and jumps there once clear, then tries Lave's far
-//           neighbours, out of range
+// hyper   - starts a game, launches, climbs away, picks Diso on the short
+//           range chart, then holds on into the overdrive and the hyperdrive,
+//           and jumps there
 // fight   - starts a game, launches, then a Sidewinder is put ahead, which
 //           we shoot down, and then a Python, at which we fire a missile
 // target  - starts a game, launches, then has a targeting computer fitted and
@@ -117,16 +116,16 @@ uint32_t host_input(uint32_t f) {
 		// Climb away and speed up, as in hyper, then the galactic chart
 		if (f >= 160 && f < 235) return D;
 		if (f >= 240 && f < 310) return B | U;
-		if (f >= 320 && f < 362 && (f - 320) % 6 < 3) return SELECT;
+		if (f >= 320 && f < 344 && (f - 320) % 6 < 3) return SELECT;
 		if (f >= 700 && f < 703) return B | A;
 		// Arrived, the galactic chart again
-		if (f >= 1500 && f < 1542 && (f - 1500) % 6 < 3) return SELECT;
+		if (f >= 1500 && f < 1524 && (f - 1500) % 6 < 3) return SELECT;
 	}
 	if (!strcmp(host_mode, "witch")) {
 		if (f >= 100 && f < 175) return D;
 		if (f >= 400 && f < 800) return A;
 		// Round to the short range chart, then the galactic one
-		if (f >= 900 && f < 960 && (f - 900) % 10 < 3) return SELECT;
+		if (f >= 900 && f < 930 && (f - 900) % 10 < 3) return SELECT;
 		if (f >= 1000 && f < 1003) return SELECT;
 	}
 	if (!strcmp(host_mode, "save")) {
@@ -202,8 +201,8 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 200 && f < 300) return B | U;
 		if (f >= 340 && f < 400) return R;
 		if (f >= 440 && f < 520) return D;
-		// The charts, moving the cursor
-		if (f >= 600 && f < 603) return SELECT;
+		// Round the inventory and the log to the charts, moving the cursor
+		if (f >= 600 && f < 618 && (f - 600) % 6 < 3) return SELECT;
 		if (f >= 620 && f < 700) return R | D;
 		if (f >= 760 && f < 763) return SELECT;
 		if (f >= 780 && f < 860) return L;
@@ -242,7 +241,7 @@ uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "story")) {
 		// Read the page, then go on, and round to the ship's log
 		if (f >= 700 && f < 703) return A;
-		if (f >= 760 && f < 810 && (f - 760) % 10 < 3) return SELECT;
+		if (f >= 760 && f < 780 && (f - 760) % 10 < 3) return SELECT;
 	}
 	if (!strcmp(host_mode, "station")) {
 		if (f >= 210 && f < 225) return A;
@@ -251,20 +250,16 @@ uint32_t host_input(uint32_t f) {
 		// Slow down, then shoot
 		if (f >= 160 && f < 180) return B | D;
 		if (f >= 202 && f < 260) return A;
-		if (f >= 300 && f < 308 && !(f & 1)) return SELECT;
+		if (f >= 300 && f < 303) return SELECT;
 	}
 	if (!strcmp(host_mode, "views")) {
 		// Climb a quarter turn, so the station is not behind, slow down, look
 		// back and shoot, then left and right, and round to the front
 		if (f >= 100 && f < 175) return D;
 		if (f >= 180 && f < 200) return B | D;
-		if (f >= 245 && f < 248) return SELECT;
 		if (f >= 260 && f < 460) return A;
-		if (f >= 480 && f < 483) return SELECT;
 		if (f >= 500 && f < 530) return R;
-		if (f >= 560 && f < 563) return SELECT;
 		if (f >= 580 && f < 610) return B | U;
-		if (f >= 660 && f < 663) return SELECT;
 	}
 	if (!strcmp(host_mode, "overdrive")) {
 		// Climb away from the planet, then full speed and on
@@ -273,26 +268,23 @@ uint32_t host_input(uint32_t f) {
 	}
 	if (!strcmp(host_mode, "scoop")) {
 		// Look at the inventory, then round the charts back to the front
-		if (f >= 450 && f < 510 && (f < 458 || f >= 500) && !(f & 1)) return SELECT;
+		if (f >= 450 && f < 510 && (f < 452 || f >= 500) && !(f & 1)) return SELECT;
 		// Dive into the sun, below us
 		if (f >= 600 && f < 700) return U;
 		if (f >= 700 && f < 900) return B | U;
 	}
 	if (!strcmp(host_mode, "hyper")) {
 		// Climb a quarter turn, away from both the planet and the station,
-		// and speed up, trying to jump too soon on the way, then go to Diso,
-		// 9 steps left of Lave, once clear
+		// and speed up, then pick Diso, 9 steps left of Lave, and back to
+		// the front; then on into the overdrive and the hyperdrive
 		if (f >= 160 && f < 235) return D;
 		if (f >= 240 && f < 310) return B | U;
-		// Round the views, the inventory and the log to the short range chart
-		if (f >= 320 && f < 356 && (f - 320) % 6 < 3) return SELECT;
-		if (f >= 352 && f < 375) return L;
-		if (f >= 380 && f < 383) return A;
-		if (f >= 700 && f < 703) return A;
-		// Then too far
-		if (f >= 1600 && f < 1603) return SELECT;
-		if (f >= 1620 && f < 1640) return R | B;
-		if (f >= 1700 && f < 1703) return A;
+		// Round the inventory and the log to the short range chart
+		if (f >= 320 && f < 338 && (f - 320) % 6 < 3) return SELECT;
+		if (f >= 360 && f < 383) return L;
+		// and on round the galactic chart and the data to the front
+		if (f >= 400 && f < 418 && (f - 400) % 6 < 3) return SELECT;
+		if (f >= 440 && f < 800) return B | U;
 	}
 	return 0;
 }
@@ -319,6 +311,12 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 120 && !strcmp(host_mode, "scoop")) game_debug_scoop();
 	if (frame == 180 && !strcmp(host_mode, "overdrive")) game_debug_face_sun();
 	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");
+	if (!strcmp(host_mode, "views")) {
+		// The shoulders, which the PC does not have: round to the rear,
+		// then left, right, and back to the front
+		if (frame == 245 || frame == 249 || frame == 480 || frame == 560 || frame == 564) game_debug_press(512);
+		if (frame == 660) game_debug_press(256);
+	}
 	if (frame % 600 == 0) {
 		printf("%6u sprites %3u\n", frame, sprites);
 	}
