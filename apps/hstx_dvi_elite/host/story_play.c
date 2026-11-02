@@ -196,6 +196,15 @@ static uint32_t waits(uint32_t i) {
 	}
 	printf("\n");
 	state();
+	// The log, as the ship's log shows it
+	static char lines[12][STORY_LOG_LINE];
+	bool choice[12];
+	int32_t story;
+	const uint32_t n = story_log(lines, choice, 12, &story);
+	if (n && story == (int32_t)i) {
+		printf("  so far:\n");
+		for (uint32_t k = 0; k < n; ++k) printf("    %s%s\n", choice[k] ? "  " : "", lines[k]);
+	}
 	printf("  waits for:\n");
 	for (uint32_t k = 0; k < s->n; ++k) {
 		const StoryExit_t* x = &s->exits[k];

@@ -168,6 +168,9 @@
 // above the surface, as the station is not far beyond hyperspace's limit;
 // still some frames away at full overdrive
 #define OVERDRIVE_LOCK_PLANET 0.3f
+// Held on at full overdrive for this many frames more, the hyperdrive counts
+// down to the system the cursor is on
+#define HYPERDRIVE_WAIT 30
 // The dust streams by no faster than this, or every speck would be gone in a frame
 #define DUST_SPEED_MAX (3.0f * MAX_SPEED)
 // The docking computer flies to a point this far out in front of the slot,
@@ -271,6 +274,10 @@ static float _over;
 static uint32_t _over_hold, _over_fuel;
 // Whether the overdrive was asked for at once, from the keyboard
 static bool _over_ask;
+// How long we have held on at full overdrive, and whether the hyperdrive
+// was tried, until we let go
+static uint32_t _hyper_hold;
+static bool _hyper_tried;
 // Whether the docking computer is flying us, and whether it is on the run in
 static bool _docking, _dock_final;
 // Our ship, left behind when we escape in the pod, and how it is going
@@ -309,6 +316,8 @@ static bool _page_shown, _page_fire;
 static uint32_t _page_pick, _page_frames;
 #define PAGE_WAIT 30
 #define PAGE_TIMEOUT (45 * 60)
+// and in flight we slow to this, out of any overdrive, to read it
+#define PAGE_SPEED (0.2f * MAX_SPEED)
 // The next jump goes into witchspace, for a story; Marge has patched the
 // shields this fight; there were pirates about, and the shields were low,
 // last time we looked; and the docking computer docked us
@@ -956,6 +965,18 @@ static void fly(uint8_t held) {
 		else _speed = fmaxf(_speed - SPEED_STEP, 0.0f);
 	}
 	overdrive();
+	// Held on further, in full overdrive, the hyperdrive
+	if (faster && _overdrive && _over >= 1.0f && !_hyper_tried && !_hyper_frames) {
+		if (++_hyper_hold >= HYPERDRIVE_WAIT) {
+			_hyper_tried = true;
+			if (chart_selected() == chart_home() && !_witch) message("NO HYPERSPACE COORDINATES");
+			else start_hyperspace(false);
+		}
+	}
+	if (!faster) {
+		_hyper_hold = 0;
+		_hyper_tried = false;
+	}
 	const float speed = _speed + (OVERDRIVE_SPEED - MAX_SPEED) * _over;
 	_roll = towards(_roll, roll_in * MAX_ROLL, ROLL_STEP);
 	_pitch = towards(_pitch, pitch_in * MAX_PITCH, PITCH_STEP);
@@ -2044,48 +2065,63 @@ static void page_draw(void) {
 	screen_text_centre(top + h - 14, ready ? hint : "", GAME_CYAN, false);
 }
 
-// The ship's log: the story going, what it waits for, and who and what is
-// aboard; and beside them the stories told
+// The ship's log: the story going, or last told, as it went, and what it
+// waits for; who and what is aboard; and how many stories have been told
 #define LOG_X ((GAME_SCREEN_W - 46 * 8) / 2)
-#define LOG_TOLD_X (LOG_X + 30 * 8)
 #define LOG_LINE 12
-#define LOG_HINTS 6
+#define LOG_LINES 9
+#define LOG_HINTS 3
 
 static void draw_log(void) {
 	static const char* const skills[COMPANIONS] = {
 		NULL, "Spots pirates sooner", "Patches the shields", "Sells for more", "Talks to Thargoids"
 	};
+	char s[GAME_TEXT_MAX + 1];
 	int32_t y = VIEW_TOP + 10;
 	screen_text(LOG_X, y, "STORY:", GAME_CYAN, false);
+	snprintf(s, sizeof(s), "TOLD %u OF %u", (unsigned)story_told(), (unsigned)story_count());
+	screen_text(LOG_X + 46 * 8 - (int32_t)strlen(s) * 8, y, s, GAME_CYAN, false);
 	y += LOG_LINE + 4;
+	static char lines[LOG_LINES][STORY_LOG_LINE];
+	bool choice[LOG_LINES];
+	int32_t story;
+	const uint32_t n = story_log(lines, choice, LOG_LINES, &story);
 	const int32_t going = story_active();
-	if (going < 0) {
-		screen_text(LOG_X + 16, y, "None. They find you", GAME_GREY, false);
-		screen_text(LOG_X + 16, y + LOG_LINE, "as you go.", GAME_GREY, false);
-		y += LOG_LINE * 2;
+	if (going >= 0) story = going;
+	if (story < 0) {
+		screen_text(LOG_X + 16, y, "None yet. They find you as you go.", GAME_GREY, false);
+		y += LOG_LINE;
 	}
 	else {
-		screen_text(LOG_X + 16, y, story_name((uint32_t)going), GAME_YELLOW, false);
+		snprintf(s, sizeof(s), "%s%s", story_name((uint32_t)story), going < 0 ? " (TOLD)" : "");
+		screen_text(LOG_X + 16, y, s, GAME_YELLOW, false);
 		y += LOG_LINE + 4;
-		static char hints[LOG_HINTS][STORY_HINT_MAX];
-		const uint32_t n = story_hints(hints, LOG_HINTS);
-		for (uint32_t i = 0; i < n; ++i) {
-			screen_text(LOG_X + 16, y, hints[i], GAME_WHITE, false);
+		// What happened, if it is the story the log is of
+		for (uint32_t i = 0; i < n && (going < 0 || going == story); ++i) {
+			screen_text(LOG_X + (choice[i] ? 32 : 16), y, lines[i], choice[i] ? GAME_YELLOW : GAME_WHITE, false);
 			y += LOG_LINE;
 		}
+		if (going >= 0) {
+			static char hints[LOG_HINTS][STORY_HINT_MAX];
+			const uint32_t h = story_hints(hints, LOG_HINTS);
+			for (uint32_t i = 0; i < h; ++i) {
+				if (!i) screen_text(LOG_X + 16, y + 4, "NEXT:", GAME_CYAN, false);
+				screen_text(LOG_X + 16 + 6 * 8, y + 4, hints[i], GAME_WHITE, false);
+				y += LOG_LINE;
+			}
+			y += 4;
+		}
 	}
-	y += 8;
+	y += 10;
 	screen_text(LOG_X, y, "ABOARD:", GAME_CYAN, false);
 	y += LOG_LINE + 4;
-	char s[GAME_TEXT_MAX + 1];
 	bool any = false;
 	if (cmdr.story.companion && cmdr.story.companion < COMPANIONS) {
 		const uint32_t c = cmdr.story.companion;
 		if (cmdr.story.away) snprintf(s, sizeof(s), "%s (Taken!)", companion_name_of(c));
 		else snprintf(s, sizeof(s), "%s (%s)", companion_name_of(c), companion_mood_name());
 		screen_text(LOG_X + 16, y, s, cmdr.story.away ? GAME_RED : GAME_GREEN, false);
-		y += LOG_LINE;
-		screen_text(LOG_X + 32, y, skills[c], GAME_GREY, false);
+		screen_text(LOG_X + 16 + 18 * 8, y, skills[c], GAME_GREY, false);
 		y += LOG_LINE;
 		any = true;
 	}
@@ -2103,16 +2139,6 @@ static void draw_log(void) {
 		any = true;
 	}
 	if (!any) screen_text(LOG_X + 16, y, cmdr.cabin ? "Nobody yet" : "Nobody: no cabin", GAME_GREY, false);
-	// The stories told
-	y = VIEW_TOP + 10;
-	snprintf(s, sizeof(s), "TOLD: %u OF %u", (unsigned)story_told(), (unsigned)story_count());
-	screen_text(LOG_TOLD_X, y, s, GAME_CYAN, false);
-	y += LOG_LINE + 4;
-	for (uint32_t i = 0; i < story_count() && y < VIEW_BOTTOM - 12; ++i) {
-		if (story_progress(i)->status != STORY_TOLD) continue;
-		screen_text(LOG_TOLD_X + 16, y, story_name(i), GAME_GREY, false);
-		y += LOG_LINE;
-	}
 }
 
 void game_play(void) {
@@ -2135,14 +2161,19 @@ void game_play(void) {
 			if (options_input(pressed)) return;
 		}
 		else {
+			const bool firing = (held & EL_INP_A) != 0;
 			if (_page_shown) {
 				page_input(pressed);
 				const uint16_t taken = _state == STATE_DOCKED ? (uint16_t)~EL_INP_START : (uint16_t)(EL_INP_UP | EL_INP_DOWN | EL_INP_A);
 				pressed &= (uint16_t)~taken;
 				held &= (uint16_t)~taken;
+				if (_state == STATE_FLYING && !_docking) {
+					if (_overdrive) overdrive_off();
+					if (_speed > PAGE_SPEED) _speed = fmaxf(PAGE_SPEED, _speed - SPEED_STEP);
+				}
 			}
 			// Fire that chose waits to be let go before it fires
-			if (_page_fire && (held & EL_INP_A)) {
+			if (_page_fire && firing) {
 				pressed &= (uint16_t)~EL_INP_A;
 				held &= (uint16_t)~EL_INP_A;
 			}

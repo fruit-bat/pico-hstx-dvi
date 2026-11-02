@@ -4,6 +4,7 @@
 //
 // host/story_harness.sh builds and runs it. It exits with 1 if anything is
 // wrong: text too long, a step never reached, or a story with no ending.
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -137,9 +138,10 @@ static void unsnap(const Snap_t* s) {
 	story_pending_put(&s->pending);
 }
 
+// Whether the story has been here before, whatever the log says of how
 static bool seen_before(void) {
 	for (uint32_t i = 0; i < _seen_n; ++i) {
-		if (!memcmp(&_seen[i], &_save, sizeof(_save))) return true;
+		if (!memcmp(&_seen[i], &_save, offsetof(StorySave_t, log_story))) return true;
 	}
 	if (_seen_n < STATES_MAX) _seen[_seen_n++] = _save;
 	return false;
@@ -238,7 +240,7 @@ static void walk(uint32_t story) {
 			story_event(ev[k], a);
 		}
 		if (!pages(story)) {
-			if (!memcmp(&was, &_save, sizeof(was))) {
+			if (!memcmp(&was, &_save, offsetof(StorySave_t, log_story))) {
 				indent();
 				printf("(nothing changes)\n");
 			}

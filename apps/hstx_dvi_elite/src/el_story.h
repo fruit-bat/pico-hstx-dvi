@@ -29,6 +29,7 @@ extern "C" {
 #define STORIES_MAX 12
 #define STORY_ITEMS 8
 #define STORY_PLACES 3
+#define STORY_LOG 16
 
 // What has happened, with the system, item or story ship it happened to
 typedef enum {
@@ -84,6 +85,12 @@ typedef struct {
 	uint8_t pad[2];
 	uint32_t flags;            // what the stories remember, STORY_FLAG_
 	uint32_t seed;             // for picking, so the harness can repeat it
+	// What happened in the story last going, from 1, for the log: each the
+	// step, and the exit taken from it and the choice made, from 1, or 0
+	uint8_t log_story;
+	uint8_t log_n;
+	uint8_t log[STORY_LOG][2];
+	uint8_t pad2[2];
 } StorySave_t;
 
 // What the stories remember that the game looks at
@@ -120,6 +127,12 @@ void story_event(StoryEvent_e ev, uint32_t arg);
 uint32_t story_hints(char (*line)[STORY_HINT_MAX], uint32_t max);
 // How many stories have been told
 uint32_t story_told(void);
+// What has happened in the story last going, oldest first, in short: what
+// each page or line began with, and after it any choice made, as choice[].
+// Returns how many lines, the last ones if there are more than max, and the
+// story, from 0, or -1.
+#define STORY_LOG_LINE 46
+uint32_t story_log(char (*line)[STORY_LOG_LINE], bool* choice, uint32_t max, int32_t* story);
 
 // The page waiting to be read, if any, and the choice made on it, which
 // does what it says

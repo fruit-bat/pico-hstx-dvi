@@ -262,6 +262,25 @@ static void say(const StoryExit_t* x, const StoryProgress_t* p) {
 	if (name) story_host_say((Speaker_e)x->who, name, line);
 }
 
+// Remembers an exit with something to read, from story i's step now, and
+// the choice made, for the log
+static void note(uint32_t i, const StoryExit_t* x, int32_t choice) {
+	const StoryProgress_t* p = &_s->story[i];
+	const StoryStep_t* s = &story_data[i].steps[p->step];
+	if (!x->text || x < s->exits || x >= s->exits + s->n) return;
+	if (_s->log_story != i + 1) {
+		_s->log_story = (uint8_t)(i + 1);
+		_s->log_n = 0;
+	}
+	if (_s->log_n == STORY_LOG) {
+		memmove(_s->log[0], _s->log[1], sizeof(_s->log[0]) * (STORY_LOG - 1));
+		--_s->log_n;
+	}
+	_s->log[_s->log_n][0] = p->step;
+	_s->log[_s->log_n][1] = (uint8_t)(((x - s->exits) << 2) | (uint32_t)(choice + 1));
+	++_s->log_n;
+}
+
 static void take_exit(uint32_t i, const StoryExit_t* x) {
 	const StoryProgress_t* p = &_s->story[i];
 	if (x->text && x->who == SPEAK_PAGE) {
@@ -269,6 +288,7 @@ static void take_exit(uint32_t i, const StoryExit_t* x) {
 		_pending_exit = x;
 		return;
 	}
+	note(i, x, -1);
 	if (x->text) say(x, p);
 	take_choice(i, &x->choice[0]);
 }
@@ -379,6 +399,7 @@ void story_choose(uint32_t choice) {
 		if (!found || !holds(&found->when, &_s->story[i])) return;
 		c = found;
 	}
+	note(i, x, c->label ? (int32_t)(c - x->choice) : -1);
 	_pending = PENDING_NONE;
 	take_choice(i, c);
 }
@@ -487,6 +508,69 @@ uint32_t story_hints(char (*line)[STORY_HINT_MAX], uint32_t max) {
 		bool again = false;
 		for (uint32_t j = 0; j < n; ++j) again |= !strcmp(line[j], l);
 		if (!again) ++n;
+	}
+	return n;
+}
+
+// The start of a page or line, as one line: to the end of its first
+// sentence, or as many words as fit
+static void gist(char* out, uint32_t n, const StoryExit_t* x, const StoryProgress_t* p) {
+	// Static, as core 0's stack is small
+	static char all[PAGE_LINES * PAGE_LINE_MAX];
+	fill(all, sizeof(all), x->text, (uint32_t)strlen(x->text), p);
+	for (char* c = all; *c; ++c) {
+		if (*c == '\n') *c = ' ';
+	}
+	uint32_t len = (uint32_t)strlen(all), end = 0;
+	for (uint32_t k = 0; k < len; ++k) {
+		if ((all[k] == '.' || all[k] == '!' || all[k] == '?') && (all[k + 1] == ' ' || !all[k + 1])) {
+			end = k + 1;
+			break;
+		}
+	}
+	if (!end || end > n - 1) {
+		// Whole words, and dots to show there is more
+		end = len < n - 1 ? len : n - 4;
+		if (end < len) {
+			while (end && all[end] != ' ') --end;
+			all[end++] = '.';
+			all[end++] = '.';
+			all[end++] = '.';
+		}
+	}
+	all[end] = 0;
+	const char* name = x->who == SPEAK_COMPANION ? companion_name() : x->who == SPEAK_PET ? pet_name() : NULL;
+	uint32_t k = 0;
+	for (const char* c = name ? name : ""; *c && k + 1 < n; ++c) out[k++] = *c;
+	for (const char* c = name ? ": " : ""; *c && k + 1 < n; ++c) out[k++] = *c;
+	for (const char* c = all; *c && k + 1 < n; ++c) out[k++] = *c;
+	out[k] = 0;
+}
+
+uint32_t story_log(char (*line)[STORY_LOG_LINE], bool* choice, uint32_t max, int32_t* story) {
+	*story = _s && _s->log_story ? (int32_t)_s->log_story - 1 : -1;
+	if (*story < 0 || (uint32_t)*story >= story_data_count) return 0;
+	const uint32_t i = (uint32_t)*story;
+	const StoryProgress_t* p = &_s->story[i];
+	// Each entry is a line, and one more with a choice: the last that fit
+	uint32_t first = _s->log_n, lines = 0;
+	while (first > 0) {
+		const uint32_t more = 1 + ((_s->log[first - 1][1] & 3) != 0);
+		if (lines + more > max) break;
+		lines += more;
+		--first;
+	}
+	uint32_t n = 0;
+	for (uint32_t e = first; e < _s->log_n; ++e) {
+		const uint32_t step = _s->log[e][0], exit = _s->log[e][1] >> 2, c = _s->log[e][1] & 3;
+		if (step >= story_data[i].n || exit >= story_data[i].steps[step].n) continue;
+		const StoryExit_t* x = &story_data[i].steps[step].exits[exit];
+		gist(line[n], STORY_LOG_LINE, x, p);
+		choice[n++] = false;
+		if (c && x->choice[c - 1].label) {
+			snprintf(line[n], STORY_LOG_LINE, "> %s", x->choice[c - 1].label);
+			choice[n++] = true;
+		}
 	}
 	return n;
 }

@@ -81,6 +81,9 @@ It burns a tenth of a light year of fuel each second, so getting there costs abo
 which fuel scoops soon win back. It cannot be used close to the planet, the sun, the station or another ship,
 and drops out to full speed when near any of them, when out of fuel, or with B and down.
 
+Held on for half a second more at full overdrive, the hyperdrive starts its countdown to the system the cursor is on,
+or says NO HYPERSPACE COORDINATES if the cursor is on the system we are in. Fire on a chart still does the same.
+
 ## The sun, fuel scoops and canisters
 
 Close to the sun the cabin heats up, shown by CT on the dashboard; too hot, it drains your energy, and flying into the sun is the end.
@@ -127,11 +130,13 @@ who knows where the gold is, a wedding cake to deliver in one piece, a trader wh
 an old admiral with two singing whales, and a farm boy who flies with his eyes shut.
 Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages over
 the view, while the game goes on: up and down pick a choice, and fire takes it, and in flight the other controls still
-fly. Left for 45 seconds in flight, a page goes, taking the second choice, which leaves things be; docked, it waits. Only one goes at a time, and
-none needs signing up for.
+fly, though the ship slows to a fifth of full speed, out of any overdrive, to read it. Left for 45 seconds in flight,
+a page goes, taking the second choice, which leaves things be; docked, it waits. Only one goes at a time, and none
+needs signing up for.
 
-The ship's log, one of the screens select shows, has the story going and what it waits for next, who and what is
-aboard, and the stories told.
+The ship's log, one of the screens select shows, has the story going, or the one last told, as it went: how each
+page began and the choice made on it; then what it waits for next, who and what is aboard, and how many stories
+have been told.
 
 Stories put named items aboard, shown on the inventory, and may leave a ship to disable rather than destroy:
 hit hard, it goes dark and drifts, and leaves what it carried in a canister. A story's canister is taken aboard
