@@ -59,6 +59,7 @@ typedef struct {
 	uint32_t retreat;  // frames it turns away for, having come too close
 	uint32_t respawn;  // frames until another takes its place, once destroyed
 	int32_t mother;    // for a Thargon, the Thargoid that launched it, or -1
+	uint32_t wanted;   // its bounty, in percent of its class's, as some are wanted more
 } Ship_t;
 
 #define SHIPS 6
@@ -112,6 +113,12 @@ int32_t ships_in_sights(const Frame_t* me, float range);
 int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep);
 // The ship nearest the way we point, for a missile, or -1
 int32_t ships_nearest_ahead(const Frame_t* me);
+// How much of a laser's damage reaches d away, of the range it reaches: all of
+// it close in, falling to a little at the end of the range
+float ships_laser_falloff(float d, float range);
+// The bounty on a ship, in tenths of a credit: on pirates and aliens, and
+// none on the rest
+uint32_t ships_bounty(uint32_t i);
 // Damages a ship we have hit, destroying it if it has no energy left
 void ships_hit(uint32_t i, float damage, ShipsEvents_t* ev);
 // Fires a missile from us at a ship, returning false if one cannot be fired

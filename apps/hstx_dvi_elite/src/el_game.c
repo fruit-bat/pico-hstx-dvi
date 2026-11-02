@@ -290,8 +290,10 @@ static uint32_t _laser_wait, _laser_beam;
 // middle of the view it is, where the sights and the laser go
 static int32_t _tracked = -1;
 static Vec2_t _sights_off;
-// The name of the ship it follows, or last followed, and how long it shows for
+// The name of the ship it follows, or last followed, its bounty, and how long
+// they show for
 static const char* _tracked_name;
+static uint32_t _tracked_bounty;
 static uint32_t _tracked_name_frames;
 static uint32_t _kills;
 // The slot we save to, or -1 if there is nowhere to save
@@ -915,6 +917,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (cmdr.targeting && cmdr.laser[_view] != LASER_NONE) _tracked = ships_tracked(&_eye, LASER_RANGE, TRACK_CONE, keep);
 	if (_tracked >= 0) {
 		_tracked_name = ships[_tracked].cls->name;
+		_tracked_bounty = ships_bounty((uint32_t)_tracked);
 		_tracked_name_frames = TRACK_NAME_FRAMES;
 	}
 	if (held & EL_INP_B) {
@@ -934,7 +937,8 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	}
 	// The ship the targeting computer follows, else the one in the middle
 	const int32_t i = _tracked >= 0 ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
-	if (i >= 0) ships_hit((uint32_t)i, l->damage, ev);
+	// Doing less the further it goes
+	if (i >= 0) ships_hit((uint32_t)i, l->damage * ships_laser_falloff(vec_length(vec_sub(ships[i].fr.pos, _me.pos)), LASER_RANGE), ev);
 }
 
 // The energy bomb's button, which sets it off when pressed three times quickly
@@ -1004,6 +1008,11 @@ static void take(const ShipsEvents_t* ev) {
 	if (ev->smashed) message(cmdr.scoops ? "CARGO LOST" : "NO FUEL SCOOPS");
 	_kills += ev->kills;
 	cmdr.cash += ev->bounty;
+	if (ev->bounty) {
+		static char bounty[24];
+		snprintf(bounty, sizeof(bounty), "BOUNTY %u.%u CR", (unsigned)(ev->bounty / 10), (unsigned)(ev->bounty % 10));
+		message(bounty);
+	}
 	if (ev->innocent && !_offender) {
 		_offender = true;
 		message("OFFENDER");
@@ -1802,8 +1811,13 @@ void game_play(void) {
 				const int32_t x = (int32_t)(CENTRE_X + _sights_off.x);
 				const int32_t sy = (int32_t)(CENTRE_Y + _sights_off.y);
 				int32_t y = sy + TRACK_NAME_GAP;
-				if (y + TRACK_NAME_H > VIEW_BOTTOM) y = sy - TRACK_NAME_GAP - TRACK_NAME_H;
+				if (y + TRACK_NAME_H * 2 > VIEW_BOTTOM) y = sy - TRACK_NAME_GAP - TRACK_NAME_H * 2;
 				screen_text_centre_on(x, y, _tracked_name, _tracked >= 0 ? GAME_GREEN : GAME_GREY, true);
+				// and its bounty under it, or that it is clean, and not to be shot
+				char bounty[24];
+				if (_tracked_bounty) snprintf(bounty, sizeof(bounty), "BOUNTY %u.%u CR", (unsigned)(_tracked_bounty / 10), (unsigned)(_tracked_bounty % 10));
+				else snprintf(bounty, sizeof(bounty), "CLEAN");
+				screen_text_centre_on(x, y + TRACK_NAME_H + 2, bounty, _tracked < 0 ? GAME_GREY : _tracked_bounty ? GAME_YELLOW : GAME_WHITE, true);
 			}
 		}
 		if (_message_frames) {

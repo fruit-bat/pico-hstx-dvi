@@ -31,6 +31,15 @@ Canister_t canisters[CANISTERS];
 // How well a ship must point at us to fire
 #define SHOT_AIM 0.985f
 #define BEAM_FRAMES 5
+// A laser does all its damage out to this much of its range, then less, to
+// this much at the end of it; so a ship holds its fire until it does at least
+// this much, closing in
+#define LASER_NEAR 0.25f
+#define LASER_FAR_DAMAGE 0.2f
+#define HOLD_FIRE 0.6f
+// A ship's bounty is from this to this percent of its class's
+#define WANTED_LOW 60
+#define WANTED_HIGH 160
 // How far a ship's weaving takes its aim off us
 #define JINK 0.35f
 // A trader with less than this of its hull left runs
@@ -98,7 +107,7 @@ static const ShipClass_t _classes[] = {
 	// The police
 	{ "VIPER",         20.0f, 0.045f,  6.0f, 0.16f, 35, 70, 6000.0f,  700.0f, false, 1,   0 },
 	// Traders. The big ones are slow and turn badly, but are tough and hit
-	// hard from a long way off, keeping their distance
+	// hard from further off than the rest, keeping their distance
 	{ "COBRA MK III",  15.0f, 0.035f,  6.0f, 0.15f, 45, 60, 6000.0f,  800.0f, false, 1,   0 },
 	{ "MORAY",         14.0f, 0.035f,  5.0f, 0.13f, 50, 55, 5000.0f,  800.0f, false, 0,   0 },
 	{ "PYTHON",        10.0f, 0.015f, 12.0f, 0.30f, 55, 70, 8000.0f, 1500.0f, false, 2,   0 },
@@ -189,6 +198,20 @@ static void set_class(Ship_t* s, const ShipClass_t* c) {
 	s->model = model_named(c->name);
 	s->energy = c->hull;
 	s->missiles = c->missiles;
+	s->wanted = WANTED_LOW + (uint32_t)rand() % (WANTED_HIGH - WANTED_LOW + 1);
+}
+
+float ships_laser_falloff(float d, float range) {
+	const float near = range * LASER_NEAR;
+	if (d <= near) return 1.0f;
+	const float t = fminf((d - near) / (range - near), 1.0f);
+	return 1.0f - t * (1.0f - LASER_FAR_DAMAGE);
+}
+
+uint32_t ships_bounty(uint32_t i) {
+	const Ship_t* s = &ships[i];
+	if (s->role != ROLE_PIRATE && s->role != ROLE_THARGOID && s->role != ROLE_THARGON) return 0;
+	return s->cls->bounty * s->wanted / 100;
 }
 
 // A ship somewhere round the station, as the system goes: pirates where the
@@ -326,7 +349,8 @@ static void destroy(Ship_t* s, ShipsEvents_t* ev, bool by_us) {
 	s->respawn = _witch || (uint32_t)(s - ships) >= _traffic ? 0 : RESPAWN_FRAMES;
 	if (by_us) {
 		++ev->kills;
-		if (s->role == ROLE_PIRATE || s->role == ROLE_THARGOID || thargon) ev->bounty += s->cls->bounty;
+		const uint32_t bounty = ships_bounty((uint32_t)(s - ships));
+		if (s->role == ROLE_PIRATE || s->role == ROLE_THARGOID || thargon) ev->bounty += bounty;
 		else ev->innocent = true;
 	}
 	// A Thargoid's Thargons go dead, and drift, tumbling
@@ -427,16 +451,18 @@ static void attack(Ship_t* s, uint32_t i, const ShipsWorld_t* w, ShipsEvents_t* 
 	frame_roll(&s->fr, 0.02f);
 	frame_tidy(&s->fr);
 
-	// Fires when pointing at us
+	// Fires when pointing at us, and close enough to do some good, as a laser
+	// does less the further it goes
 	if (s->cooldown) --s->cooldown;
 	const bool pointing = vec_dot(s->fr.f, dir) > SHOT_AIM;
-	if (!s->cooldown && pointing && d < c->range) {
+	const float falloff = ships_laser_falloff(d, c->range);
+	if (!s->cooldown && pointing && d < c->range && falloff >= HOLD_FIRE) {
 		s->cooldown = c->rate;
 		s->beam = BEAM_FRAMES;
 		if (percent() < c->aim) {
 			// On the shield on the side it is
-			if (vec_dot(vec_scale(to, -1.0f), w->me->f) >= 0.0f) ev->fore += c->damage;
-			else ev->aft += c->damage;
+			if (vec_dot(vec_scale(to, -1.0f), w->me->f) >= 0.0f) ev->fore += c->damage * falloff;
+			else ev->aft += c->damage * falloff;
 		}
 	}
 	// A Thargoid launches its Thargons into any room there is

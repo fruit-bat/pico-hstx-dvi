@@ -34,7 +34,7 @@ within half a second; one press only arms it. On a SNES pad A is not fire: B is.
 
 A targeting computer, sold from tech level 8 and not in the original, moves the sights onto a ship within about
 7 degrees of the middle of the view and in laser range, green while it follows it, and the laser hits that ship.
-It keeps to the same ship while it can, and shows its name under the sights, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
+It keeps to the same ship while it can, and shows its name under the sights, with its bounty, or CLEAN if it has none and is not to be shot, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
 
 ## Hyperspace
 
@@ -92,6 +92,8 @@ The inventory, one of the screens select shows, lists the cargo in the hold and 
 ## Combat
 
 Fire shoots the laser the way you look, if one is fitted there, which heats up as it fires and stops when too hot until it has cooled.
+A laser does all its damage out to a quarter of its reach, then less and less, to a fifth at the end of it,
+so a fight is best close in. The other ships know it, and hold their fire until they are close enough to do some good.
 B held with fire launches a missile at the ship nearest the middle of the view, if any are left.
 B held with select sets off the ECM, if fitted, which blows up every missile flying.
 
@@ -102,14 +104,14 @@ Each type of ship has a character, loosely after the original:
 - Light fighters, the Sidewinder, Gecko and Worm, are fast and weave as they come, small and hard to hit, but fragile and weak.
 - The Mamba, Krait, Adder and Cobra Mk I are all-rounders.
 - The Asp Mk II and Fer-de-Lance are heavy fighters: fast, tough and hard hitting, for a big bounty.
-- The Python, Boa and Anaconda are slow and turn badly, but are tough, hit hard from a long way off and keep their distance,
+- The Python, Boa and Anaconda are slow and turn badly, but are tough, hit hard from further off than the rest and keep their distance,
   and may fire missiles: deadly head on, but easy to get behind.
 - The police fly Vipers, fast and accurate.
 
 Each system has a character from its data. Where the government is weak there are more pirates, and more of them heavy fighters;
 where it is strong, more police. The more people, the busier it is, and industrial systems see the big freighters.
 Hits take your shields down, fore or aft, then your energy, and they build up again slowly. With no energy left the game is over.
-Pirates and Thargoids bring a bounty, and the ships destroyed raise your rating, as in the original.
+Pirates and Thargoids bring a bounty, shown when you destroy one, some wanted more than others of their type, and the ships destroyed raise your rating, as in the original.
 
 ## The controls
 
