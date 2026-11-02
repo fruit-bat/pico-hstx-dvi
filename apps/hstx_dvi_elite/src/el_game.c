@@ -1621,7 +1621,7 @@ static const char* rating(uint32_t kills_made) {
 	return names[i];
 }
 
-static void draw_turning(const WireModel_t* model);
+static void draw_turning(const WireModel_t* model, float x);
 
 // Our status, as in the original game, with a ship like ours turning beside it
 static void draw_status(void) {
@@ -1654,16 +1654,17 @@ static void draw_status(void) {
 	}
 	if (_state == STATE_DOCKED && (_frame / 30) & 1) screen_text_centre(VIEW_BOTTOM - 24, "FIRE TO LAUNCH", GAME_CYAN, true);
 
-	draw_turning(ships_model(trade_hull()->name));
+	draw_turning(ships_model(trade_hull()->name), 150.0f);
 }
 
-// A ship turning on the right of the screen, as far off as it is big
-static void draw_turning(const WireModel_t* model) {
+// A ship turning on the right of the screen, x right of the middle, as far
+// off as it is big
+static void draw_turning(const WireModel_t* model, float x) {
 	const float t = (float)_frame / 60.0f;
 	float m[3][3];
 	make_matrix(m, t * 0.5f, 0.45f, 0.0f);
 	const float z = 650.0f * model->radius / model_cobra.radius;
-	const Vec3_t pos = { 150.0f * z / (FOCAL * draw_aspect), -30.0f * z / FOCAL, z };
+	const Vec3_t pos = { x * z / (FOCAL * draw_aspect), -30.0f * z / FOCAL, z };
 	draw_object(model, pos, m, model->rgb, draw_style);
 }
 
@@ -2315,7 +2316,7 @@ void game_play(void) {
 				break;
 			case VIEW_SHIPYARD:
 				snprintf(title, sizeof(title), "%s SHIPYARD", chart_system(chart_home())->name);
-				draw_turning(ships_model(trade_draw_shipyard(chart_system(chart_home()))->name));
+				draw_turning(ships_model(trade_draw_shipyard(chart_system(chart_home()))->name), 175.0f);
 				break;
 			case VIEW_INVENTORY:
 				snprintf(title, sizeof(title), "INVENTORY");

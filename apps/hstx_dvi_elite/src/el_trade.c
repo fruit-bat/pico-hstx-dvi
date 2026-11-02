@@ -540,15 +540,17 @@ const Hull_t* trade_draw_shipyard(const GalaxySystem_t* sys) {
 		screen_text(SHIPYARD_X + 13 * 8, y, s, c, false);
 		y += LIST_LINE + 3;
 	}
-	// What the one picked is like, beside ours
+	// What the one picked is like, beside ours, in short lines under the
+	// list, clear of the ship turning on the right, which would hide them
 	const Hull_t* pick = &_hulls[sold[_hull_item]];
-	y += 8;
-	snprintf(s, sizeof(s), "Speed %u%%  Turn %u%%  Armour %u%%", (unsigned)(pick->speed * 100.0f + 0.5f),
-		(unsigned)(pick->turn * 100.0f + 0.5f), (unsigned)(pick->toughness * 100.0f + 0.5f));
+	y += 4;
+	snprintf(s, sizeof(s), "Speed %u%%  Turn %u%%", (unsigned)(pick->speed * 100.0f + 0.5f), (unsigned)(pick->turn * 100.0f + 0.5f));
 	screen_text(SHIPYARD_X, y, s, GAME_WHITE, false);
 	y += LIST_LINE;
-	snprintf(s, sizeof(s), "Hold %u t (%u t with bay)  Missiles %u", (unsigned)pick->hold, (unsigned)(pick->hold + pick->bay),
-		(unsigned)pick->missiles);
+	snprintf(s, sizeof(s), "Armour %u%%  Missiles %u", (unsigned)(pick->toughness * 100.0f + 0.5f), (unsigned)pick->missiles);
+	screen_text(SHIPYARD_X, y, s, GAME_WHITE, false);
+	y += LIST_LINE;
+	snprintf(s, sizeof(s), "Hold %u t, %u t bay", (unsigned)pick->hold, (unsigned)(pick->hold + pick->bay));
 	screen_text(SHIPYARD_X, y, s, GAME_WHITE, false);
 	y += LIST_LINE + 4;
 	snprintf(s, sizeof(s), "Trade-in %u.%u Cr", (unsigned)(trade_in() / 10), (unsigned)(trade_in() % 10));
