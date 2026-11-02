@@ -181,7 +181,7 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
   the shape of the screen, the lens: how wide the view is, wide, normal or narrow (on a 16:9 screen about 106, 94 or 88 degrees across;
-  the wider, the more things stretch towards the sides as they would through a wide camera lens), and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything, ALL SHIPS, which puts every ship in the shipyard, WITCHSPACE, which makes the next jump go wrong (both for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
+  the wider, the more things stretch towards the sides as they would through a wide camera lens), and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything and gives 10000 credits, ALL SHIPS, which puts every ship in the shipyard, WITCHSPACE, which makes the next jump go wrong (both for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 

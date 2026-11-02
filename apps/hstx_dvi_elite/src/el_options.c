@@ -34,6 +34,9 @@ typedef enum {
 #define VALUE_W 19
 // How wide the mark on the chosen option is, a little wider than a line
 #define SELECT_W ((NAME_W + VALUE_W + 2) * 8)
+// The rows, as close as the mark on the chosen one allows, so that all of
+// them fit above the dashboard
+#define OPTION_LINE 16
 // And the panel they are on, with room for the arrows
 #define PANEL_W (SELECT_W + 64)
 
@@ -155,13 +158,13 @@ void options_draw(void) {
 	char s[GAME_TEXT_MAX + 1];
 	const uint32_t n = count();
 	// Centred in the view, with the line at the end
-	const int32_t top = CENTRE_Y - (24 * (int32_t)n + 16) / 2;
+	const int32_t top = CENTRE_Y - (OPTION_LINE * (int32_t)n + 16) / 2;
 	// The mark on the chosen one, in front of the panel, so first
-	screen_select((GAME_SCREEN_W - SELECT_W) / 2, top + 24 * (int32_t)_option, SELECT_W);
+	screen_select((GAME_SCREEN_W - SELECT_W) / 2, top + OPTION_LINE * (int32_t)_option, SELECT_W);
 	// On a panel of their own, hiding the screen under them
 	if (object_begin()) {
 		const float x0 = (float)(GAME_SCREEN_W - PANEL_W) / 2.0f, x1 = x0 + PANEL_W;
-		const float y0 = (float)top - 16.0f, y1 = (float)(top + 24 * (int32_t)n + 16 + 8 + 12);
+		const float y0 = (float)top - 16.0f, y1 = (float)(top + OPTION_LINE * (int32_t)n + 16 + 8 + 12);
 		add_box(x0, y0, x1, y1, hstx_dvi_pixel_rgb(36, 109, 219));
 		add_rect(x0, y0, x1, y1, hstx_dvi_pixel_rgb(0, 0, 0));
 		object_end();
@@ -180,10 +183,10 @@ void options_draw(void) {
 			default: line(s, sizeof(s), "END GAME", "(FIRE)", false); break;
 		}
 		game_text_set(&t[i], s, 1);
-		game_spr_text_centre(&t[i], top + 24 * (int32_t)i, game_pallet(i == _option ? GAME_YELLOW : GAME_WHITE));
+		game_spr_text_centre(&t[i], top + OPTION_LINE * (int32_t)i, game_pallet(i == _option ? GAME_YELLOW : GAME_WHITE));
 		draw_count_sprite();
 	}
 	game_text_set(&t[OPTIONS], "START TO GO ON", 1);
-	game_spr_text_centre(&t[OPTIONS], top + 24 * (int32_t)n + 16, game_pallet(GAME_CYAN));
+	game_spr_text_centre(&t[OPTIONS], top + OPTION_LINE * (int32_t)n + 16, game_pallet(GAME_CYAN));
 	draw_count_sprite();
 }

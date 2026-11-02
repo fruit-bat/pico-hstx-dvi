@@ -126,6 +126,8 @@ static const Hull_t _hulls[] = {
 	{ "ANACONDA",      300000, 11, 0.55f, 0.45f, 2.5f, 120, 60, 4 },
 };
 #define HULLS (sizeof(_hulls) / sizeof(_hulls[0]))
+// What MAX EQUIP gives, in tenths of a credit
+#define MAX_EQUIP_CASH 100000
 // What a ship is worth traded in, in percent of its price
 #define TRADE_IN 75
 bool trade_all_ships = false;
@@ -178,6 +180,8 @@ void trade_escape(void) {
 }
 
 void trade_max_equipment(void) {
+	// and some cash, for trying the shipyard
+	cmdr.cash += MAX_EQUIP_CASH;
 	cmdr.fuel = GALAXY_FUEL_MAX;
 	cmdr.missiles = trade_hull()->missiles;
 	cmdr.hold = trade_hull()->hold + trade_hull()->bay;
