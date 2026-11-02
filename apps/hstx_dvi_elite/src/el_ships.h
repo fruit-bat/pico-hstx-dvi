@@ -87,6 +87,7 @@ typedef struct {
 	bool offender;       // whether the police are after us
 	bool scoops;         // whether we have fuel scoops, to pick up canisters
 	bool witch;          // whether we are in witchspace
+	Vec3_t velocity;     // ours, in units a frame
 } ShipsWorld_t;
 
 // What happened to us and the ships this frame
@@ -111,6 +112,9 @@ int32_t ships_in_sights(const Frame_t* me, float range);
 // keeping to the one it followed, keep, while it can; or -1. The station is
 // never one, as it isn't a ship here.
 int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep);
+// A Viper launched from the station's slot, at frame from, after us; false if
+// there is no room for one
+bool ships_launch_police(const Frame_t* from, const ShipsWorld_t* w);
 // The ship nearest the way we point, for a missile, or -1
 int32_t ships_nearest_ahead(const Frame_t* me);
 // How much of a laser's damage reaches d away, of the range it reaches: all of

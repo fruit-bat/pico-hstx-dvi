@@ -86,6 +86,17 @@
 #define LAUNCH_DISTANCE 2.0f
 // How close to the station we can be, as our ship has some size
 #define STATION_MARGIN 30.0f
+// Shot at, the station launches this many Vipers, this often, from this far
+// out of the slot; and its guns reach this far, fire this often, hit this
+// often in percent, and hit this hard, less the further they go
+#define STATION_POLICE 4
+#define STATION_POLICE_EVERY 75
+#define STATION_POLICE_OUT 1.2f
+#define STATION_GUN_RANGE 12000.0f
+#define STATION_GUN_EVERY 45
+#define STATION_GUN_AIM 70
+#define STATION_GUN_DAMAGE 0.35f
+#define STATION_BEAM_FRAMES 6
 // To dock we must be within this of straight in front of the slot, and
 // pointing at the station within it, as cosines, about 26 degrees
 #define DOCK_CONE 0.9f
@@ -305,6 +316,12 @@ static uint32_t _kills;
 static int32_t _slot = -1;
 static char _name[SAVE_NAME_MAX] = "JAMESON";
 static bool _offender;
+// Whether we have shot at the station, which then launches Vipers after us,
+// how many more and when the next, fires its guns at us, and won't have us
+// back. It lasts until we leave the system.
+static bool _station_angry;
+static uint32_t _station_police, _station_police_wait;
+static uint32_t _station_gun, _station_beam;
 static View_e _view;
 static State_e _state;
 // Frames into the state, for the tunnel and the end
@@ -320,7 +337,7 @@ static float towards(float v, float target, float step) {
 // What the other ships need to know
 static ShipsWorld_t world(void) {
 	const GalaxySystem_t* sys = chart_system(chart_home());
-	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops, _witch };
+	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops, _witch, vec_scale(_me.f, _speed) };
 }
 
 // Repaired, as when docked
@@ -385,6 +402,7 @@ static void enter_system(uint32_t i) {
 static void start(void) {
 	strcpy(_name, "JAMESON");
 	_offender = false;
+	_station_angry = false;
 	chart_set_galaxy(0);
 	enter_system(HOME);
 	frame_set(&_me, _station.pos, _station.f, _station.u);
@@ -527,6 +545,7 @@ static void arrive(void) {
 	}
 	// The police of the new system do not know us, for now
 	_offender = false;
+	_station_angry = false;
 	enter_system(_hyper_to);
 	trade_arrive(chart_system(_hyper_to));
 	frame_set(&_me, (Vec3_t){ 0.0f, 0.0f, -ARRIVAL * _planet_radius }, (Vec3_t){ 0.0f, 0.0f, 1.0f }, (Vec3_t){ 0.0f, 1.0f, 0.0f });
@@ -572,6 +591,18 @@ void game_debug_approach(float roll) {
 	frame_roll(&_me, roll);
 	frame_tidy(&_me);
 	_speed = MAX_SPEED;
+	_roll = 0.0f;
+	_pitch = 0.0f;
+	_view = VIEW_FRONT;
+	set_state(STATE_FLYING);
+}
+
+// For trying the station's anger on the PC: puts us still, out in front of
+// the slot, facing it, to shoot at it
+void game_debug_station(void) {
+	const Vec3_t out = vec_add(_station.pos, vec_scale(_station.f, 5000.0f));
+	frame_set(&_me, out, vec_scale(_station.f, -1.0f), _station.u);
+	_speed = 0.0f;
 	_roll = 0.0f;
 	_pitch = 0.0f;
 	_view = VIEW_FRONT;
@@ -636,7 +667,8 @@ static void touch_station(void) {
 	const bool in_front = dist > 0.0f && local.z / dist > DOCK_CONE;
 	const bool pointing = dist > 0.0f && -vec_dot(d, _me.f) / dist > DOCK_CONE;
 	const bool level = fabsf(vec_dot(_station.r, _me.u)) < DOCK_LEVEL;
-	if (in_front && pointing && level) set_state(STATE_DOCKING);
+	// The station we shot at keeps its doors shut
+	if (in_front && pointing && level && !_station_angry) set_state(STATE_DOCKING);
 	else set_state(STATE_DEAD);
 }
 
@@ -768,6 +800,10 @@ static void docking_computer(bool on) {
 	}
 	if (on && _witch) {
 		message("NO STATION");
+		return;
+	}
+	if (on && _station_angry) {
+		message("DOCKING REFUSED");
 		return;
 	}
 	if (on == _docking || _state != STATE_FLYING) return;
@@ -913,6 +949,54 @@ static bool locked(void) {
 	return _tracked >= 0 && _lock_frames >= TRACK_LOCK_FRAMES;
 }
 
+// Whether the station is in the middle of the view, nearer than d
+static bool station_in_sights(float d) {
+	const Vec3_t v = frame_view(&_eye, _station.pos);
+	const float r = _station_model->radius;
+	return v.z > 0.0f && v.z - r < d && v.x * v.x + v.y * v.y < r * r * 0.5f;
+}
+
+// We have shot at the station: it turns on us, for as long as we stay
+static void station_hit(void) {
+	if (_station_angry) return;
+	_station_angry = true;
+	_offender = true;
+	_station_police = STATION_POLICE;
+	_station_police_wait = 0;
+	_station_gun = STATION_GUN_EVERY;
+	docking_computer(false);
+	message("STATION HOSTILE");
+}
+
+// The station after us: Vipers out of the slot, and its guns
+static void station_attack(ShipsEvents_t* ev) {
+	if (_station_beam) --_station_beam;
+	if (!_station_angry || _witch) return;
+	if (_station_police) {
+		if (_station_police_wait) {
+			--_station_police_wait;
+		}
+		else {
+			Frame_t from = _station;
+			from.pos = vec_add(_station.pos, vec_scale(_station.f, _station_model->radius * STATION_POLICE_OUT));
+			const ShipsWorld_t w = world();
+			if (ships_launch_police(&from, &w)) --_station_police;
+			_station_police_wait = STATION_POLICE_EVERY;
+		}
+	}
+	if (_station_gun) --_station_gun;
+	const Vec3_t to = vec_sub(_me.pos, _station.pos);
+	const float d = vec_length(to);
+	if (_station_gun || d > STATION_GUN_RANGE) return;
+	_station_gun = STATION_GUN_EVERY;
+	_station_beam = STATION_BEAM_FRAMES;
+	if ((uint32_t)(rand() % 100) >= STATION_GUN_AIM) return;
+	const float damage = STATION_GUN_DAMAGE * ships_laser_falloff(d, STATION_GUN_RANGE);
+	// On the shield on the side it is
+	if (vec_dot(to, _me.f) <= 0.0f) ev->fore += damage;
+	else ev->aft += damage;
+}
+
 // The laser the way we look while fire is held, and a missile at the ship
 // nearest the middle of the view when fire is pressed with B held
 static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
@@ -951,6 +1035,12 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	}
 	// The ship the targeting computer follows, else the one in the middle
 	const int32_t i = locked() ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
+	// The station, if it is in the way first
+	const float ship_d = i >= 0 ? vec_length(vec_sub(ships[i].fr.pos, _me.pos)) : LASER_RANGE;
+	if (!_witch && station_in_sights(ship_d)) {
+		station_hit();
+		return;
+	}
 	// Doing less the further it goes
 	if (i >= 0) ships_hit((uint32_t)i, l->damage * ships_laser_falloff(vec_length(vec_sub(ships[i].fr.pos, _me.pos)), LASER_RANGE), ev);
 }
@@ -988,6 +1078,7 @@ static void escape(void) {
 	_roll = _pitch = 0.0f;
 	_view = VIEW_REAR;
 	_offender = false;
+	_station_angry = false;
 	trade_escape();
 	chart_set_fuel(cmdr.fuel);
 }
@@ -1265,6 +1356,14 @@ static void draw_view(void) {
 		object_end();
 	}
 	ships_draw_effects(&_eye, draw_style, _frame);
+	// The station's guns, from its side nearest us
+	if (_station_beam && object_begin()) {
+		const Vec3_t way = vec_unit(vec_sub(_me.pos, _station.pos));
+		const Vec3_t from = frame_view(&_eye, vec_add(_station.pos, vec_scale(way, _station_model->radius)));
+		const Vec3_t to = { 0.0f, -20.0f, NEAR_Z * 2.0f };
+		add_edge(from, to, hstx_dvi_pixel_rgb(255, 73, 73));
+		object_end();
+	}
 	// In front of the slot, so nearer than the station
 	draw_guides();
 
@@ -1737,6 +1836,7 @@ void game_play(void) {
 					}
 					fire(held, pressed, &ev);
 					bomb(pressed, &ev);
+					station_attack(&ev);
 					fly(held);
 					heat();
 					break;

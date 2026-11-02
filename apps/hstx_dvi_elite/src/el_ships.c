@@ -26,8 +26,12 @@ Canister_t canisters[CANISTERS];
 #define SPAWN_FAR 12000.0f
 #define LEAVE_RANGE 30000.0f
 #define RESPAWN_FRAMES (8 * 60)
-// How long a ship breaks off for, having come too close
+// How long a ship breaks off for, having come too close, and how far ahead
+// it looks, in frames at the speed we are closing, to break off in time to
+// miss us, turning across our way and slowing to turn tighter
 #define BREAK_FRAMES 70
+#define BREAK_AHEAD 25.0f
+#define BREAK_SPEED 0.6f
 // How well a ship must point at us to fire
 #define SHOT_AIM 0.985f
 #define BEAM_FRAMES 5
@@ -434,10 +438,18 @@ static void attack(Ship_t* s, uint32_t i, const ShipsWorld_t* w, ShipsEvents_t* 
 		turn_towards(&s->fr, vec_scale(dir, -1.0f), c->turn);
 		return;
 	}
-	if (d < c->close && !s->retreat) s->retreat = BREAK_FRAMES;
+	// How fast it and we are closing, so it breaks off sooner the faster it is
+	const Vec3_t closing_v = vec_sub(vec_scale(s->fr.f, s->speed), w->velocity);
+	const float closing = fmaxf(vec_dot(closing_v, dir), 0.0f);
+	if (d < c->close + closing * BREAK_AHEAD && !s->retreat) s->retreat = BREAK_FRAMES;
 	if (s->retreat) {
 		--s->retreat;
-		turn_towards(&s->fr, vec_scale(dir, -1.0f), c->turn);
+		// Across our way first, out of it, then away
+		Vec3_t side = vec_sub(s->fr.f, vec_scale(dir, vec_dot(s->fr.f, dir)));
+		if (vec_length(side) < 0.1f) side = s->fr.r;
+		const Vec3_t away = vec_unit(vec_sub(vec_unit(side), vec_scale(dir, 0.5f)));
+		turn_towards(&s->fr, away, c->turn * 1.5f);
+		s->speed = c->speed * BREAK_SPEED;
 	}
 	else {
 		Vec3_t aim = dir;
@@ -621,6 +633,25 @@ int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep) 
 		}
 	}
 	return best;
+}
+
+bool ships_launch_police(const Frame_t* from, const ShipsWorld_t* w) {
+	// Into a space, else in place of a trader minding its business
+	Ship_t* s = NULL;
+	for (uint32_t i = 0; i < SHIPS && !s; ++i) {
+		if (!ships[i].alive) s = &ships[i];
+	}
+	for (uint32_t i = 0; i < SHIPS && !s; ++i) {
+		if (ships[i].role == ROLE_TRADER && !ships[i].hostile) s = &ships[i];
+	}
+	if (!s) return false;
+	new_ship(s, w);
+	s->role = ROLE_POLICE;
+	set_class(s, &_classes[POLICE]);
+	s->hostile = true;
+	s->fr = *from;
+	s->speed = s->cls->speed * 0.5f;
+	return true;
 }
 
 int32_t ships_nearest_ahead(const Frame_t* me) {

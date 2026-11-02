@@ -100,6 +100,11 @@ B held with select sets off the ECM, if fitted, which blows up every missile fly
 
 The other ships are traders going about their business, pirates that come for you,
 and the police, who come for you if you destroy anyone but a pirate. Anyone shot at shoots back, or runs if it is a trader badly hurt.
+A ship coming at you breaks off in time to miss you, sooner the faster you are closing, turning across your way.
+
+Shoot at the station and it turns on you: it launches four Vipers after you, one after another out of the slot,
+fires its guns at you from up to 12000 away, and keeps its doors shut, so trying to dock is the end of you,
+and the docking computer refuses. You are an offender. It lasts until you leave the system, or escape in the pod.
 Each type of ship has a character, loosely after the original:
 
 - Light fighters, the Sidewinder, Gecko and Worm, are fast and weave as they come, small and hard to hit, but fragile and weak.
@@ -226,6 +231,7 @@ host/build/elite_host dock 420 20 frames
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
+`station` is put still in front of the slot and shoots the station, which launches Vipers and fires its guns.
 `target` fits everything, puts a Sidewinder ahead a little off the middle, which the sights follow, shoots it, and looks at the inventory.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.
 `views` puts a Sidewinder behind with a rear laser fitted, looks back and fires at it, then looks left and right.

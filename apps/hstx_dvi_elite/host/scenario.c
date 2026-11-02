@@ -36,6 +36,9 @@
 //           a Sidewinder put ahead, a little off the middle, which the sights
 //           follow and we shoot down, with everything else fitted, then
 //           looks at the inventory
+// station - starts a game, launches, is put still in front of the slot and
+//           shoots the station, which turns on us, launching Vipers and
+//           firing its guns
 // trade   - starts a game, and docked, buys food, holding to buy more, and
 //           computers, then a missile, and sells some food, then tries for
 //           a rear pulse laser
@@ -71,6 +74,7 @@ void game_debug_witch(void);
 void game_debug_dodo(void);
 void game_debug_galactic(void);
 void game_debug_target(void);
+void game_debug_station(void);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -224,6 +228,9 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 500 && f < 510) return B;
 		if (f >= 510 && f < 513) return B | A;
 	}
+	if (!strcmp(host_mode, "station")) {
+		if (f >= 210 && f < 225) return A;
+	}
 	if (!strcmp(host_mode, "target")) {
 		// Slow down, then shoot
 		if (f >= 160 && f < 180) return B | D;
@@ -290,6 +297,7 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 200 && !strcmp(host_mode, "fight")) game_debug_pirate("SIDEWINDER");
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
 	if (frame == 200 && !strcmp(host_mode, "target")) game_debug_target();
+	if (frame == 200 && !strcmp(host_mode, "station")) game_debug_station();
 	if (frame == 120 && !strcmp(host_mode, "scoop")) game_debug_scoop();
 	if (frame == 180 && !strcmp(host_mode, "overdrive")) game_debug_face_sun();
 	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");
