@@ -29,7 +29,7 @@ int main(void)
 
 	static const uint16_t pad_map[EL_INP_PAD_COUNT] = EL_INP_PAD_MAP;
 	game_input_init_pad(EL_INP_GPIO_START, EL_INP_GPIO_COUNT, pad_map, EL_INP_PAD_COUNT);
-#ifdef GAME_PS2KBD
+#ifdef GAME_KEYBOARD
 	static const GameKey_t keys[] = EL_INP_KEYS;
 	game_input_set_keys(keys, sizeof(keys) / sizeof(keys[0]));
 #endif

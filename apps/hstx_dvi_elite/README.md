@@ -131,10 +131,18 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 A NES or SNES pad works when built with `GAME_NESPAD`, and buttons on GPIOs 4 to 11, each to ground,
 in the order left, right, up, down, A, B, select and start, unless built with `GAME_BUTTONS` off.
 
-## A PS/2 keyboard
+## A keyboard
 
-Not yet working on hardware, so off by default. Built with `GAME_PS2KBD` (`cmake -DGAME_PS2KBD=ON ..`), a PS/2 keyboard on GPIO 0 (data) and 1 (clock) works
-alongside the pad, using [pico-ps2-keyboard](../../../pico-ps2-keyboard), with the keys of BBC Elite:
+A keyboard works alongside the pad, with the keys of BBC Elite, built with either or both of:
+
+- `GAME_USBKBD` (`cmake -DGAME_USBKBD=ON ..`): a USB keyboard on the Pico's own USB port, using tinyusb and
+  [pico-hid-host](../../../pico-hid-host). The port is then a host, so it needs an OTG adapter, and 5 V on
+  the Pico's VBUS pin to power the keyboard. It can't also be the serial port, so `printf` goes to the UART on
+  GPIO 0 (TX) and 1 (RX) instead. Not yet tried on hardware.
+- `GAME_PS2KBD` (`cmake -DGAME_PS2KBD=ON ..`): a PS/2 keyboard on GPIO 0 (data) and 1 (clock), using
+  [pico-ps2-keyboard](../../../pico-ps2-keyboard). Not yet working on hardware.
+
+Both are off by default.
 
 | Key | |
 |---|---|

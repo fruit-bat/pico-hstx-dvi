@@ -125,8 +125,8 @@
 #define BOMB_WINDOW 30
 #define BOMB_RANGE SCANNER_RANGE
 #define BOMB_FLASH 20
-// The keys of a PS/2 keyboard, which do nothing without one
-#ifdef GAME_PS2KBD
+// The keys of keyboard, which do nothing without one
+#ifdef GAME_KEYBOARD
 #define KEY_HELD(k) game_key_held(k)
 #define KEY_PRESSED(k) game_key_pressed(k)
 #else
@@ -1566,7 +1566,7 @@ static bool choose_commander(void) {
 	}
 }
 
-#ifdef GAME_PS2KBD
+#ifdef GAME_KEYBOARD
 // The keys of BBC Elite that are not the pad's: f0 to f9 as F10 and F1 to F9,
 // the views and screens, M missile, E ECM, J overdrive, H hyperspace and
 // Ctrl-H galactic hyperspace, C docking computer, D data on the system
@@ -1631,7 +1631,7 @@ void game_play(void) {
 					_view = next_view();
 				}
 			}
-#ifdef GAME_PS2KBD
+#ifdef GAME_KEYBOARD
 			keyboard();
 #endif
 			// A SNES pad's shoulders look round the ship, in flight

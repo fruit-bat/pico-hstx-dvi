@@ -46,11 +46,10 @@ extern "C" {
 	GAME_PAD_A & ~GAME_PAD_SNES_A, GAME_PAD_B & ~GAME_PAD_SNES_X, GAME_PAD_SELECT, GAME_PAD_START, \
 	GAME_PAD_L, GAME_PAD_R, GAME_PAD_SNES_X, GAME_PAD_SNES_A }
 
-// The keys of a PS/2 keyboard that press the bits, as in BBC Elite where
+// The keys of a keyboard that press the bits, as in BBC Elite where
 // they can: S and X dive and climb, < and > roll, A fires, with the arrows,
 // Enter and Escape for the menus. The rest of its keys are read by the game.
-#ifdef GAME_PS2KBD
-#include "ps2kbd_hid.h"
+#ifdef GAME_KEYBOARD
 #define EL_INP_KEYS { \
 	{ HID_KEY_ARROW_LEFT, EL_INP_LEFT }, { HID_KEY_ARROW_RIGHT, EL_INP_RIGHT }, \
 	{ HID_KEY_ARROW_UP, EL_INP_UP }, { HID_KEY_ARROW_DOWN, EL_INP_DOWN }, \
