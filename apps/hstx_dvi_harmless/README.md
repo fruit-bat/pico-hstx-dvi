@@ -3,6 +3,23 @@
 A game in the style of Elite, named after the rating every commander starts with, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
 fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, fight pirates, dock again, and trade.
 
+<p>
+  <img src="images/title.png" width="49%" alt="The title, with a Cobra Mk III turning">
+  <img src="images/parade.png" width="49%" alt="Between games, the ships fly by the sun">
+</p>
+<p>
+  <img src="images/targeting.png" width="49%" alt="The targeting computer locked on a Sidewinder, with its bounty, by the station">
+  <img src="images/hyperspace.png" width="49%" alt="The hyperspace countdown, in the overdrive">
+</p>
+<p>
+  <img src="images/story.png" width="49%" alt="A story's page: a basket of lost kittens">
+  <img src="images/log.png" width="49%" alt="The ship's log, with the story so far and who is aboard">
+</p>
+<p>
+  <img src="images/shipyard.png" width="49%" alt="The shipyard, with an Anaconda turning beside the list">
+  <img src="images/chart.png" width="49%" alt="The short range chart round Lave">
+</p>
+
 ## Between games
 
 The title, with a Cobra Mk III turning, then the galactic chart, the short range chart, the data on the systems nearest us,
