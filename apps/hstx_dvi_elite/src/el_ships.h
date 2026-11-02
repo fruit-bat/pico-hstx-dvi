@@ -169,6 +169,8 @@ void ships_debug_place(uint32_t i, const char* name, Vec3_t pos, Vec3_t f, Vec3_
 void ships_debug_canister(Vec3_t pos);
 // An explosion, as when a ship is destroyed
 void ships_explode(Vec3_t pos, float size);
+// The model of a ship, by its name, or a Cobra Mk III's
+const WireModel_t* ships_model(const char* name);
 // Explosions, lasers fired at us and missiles, before the ships so they are over them
 void ships_draw_effects(const Frame_t* me, Style_e style, uint32_t frame);
 

@@ -110,8 +110,32 @@ static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Military Laser", 60000, 10, LASER_MILITARY },
 };
 
-#define CARGO_SMALL 20
-#define CARGO_LARGE 35
+// The ships for sale, ours first, as a new commander and old saves have it.
+// Faster ships turn better but carry less; the big traders are slow and tough.
+static const Hull_t _hulls[] = {
+	{ "COBRA MK III",   25000,  1, 1.00f, 1.00f, 1.0f,  20, 15, 4 },
+	{ "ADDER",           8000,  1, 0.85f, 1.15f, 0.6f,   6,  4, 2 },
+	{ "COBRA MK I",     12000,  2, 0.90f, 1.05f, 0.7f,  10,  6, 2 },
+	{ "KRAIT",          20000,  3, 1.05f, 1.20f, 0.8f,   4,  4, 2 },
+	{ "MAMBA",          35000,  5, 1.10f, 1.15f, 0.9f,   6,  4, 3 },
+	{ "MORAY",          40000,  6, 0.90f, 0.95f, 1.2f,  14,  8, 3 },
+	{ "PYTHON",         80000,  7, 0.70f, 0.65f, 1.6f,  60, 30, 4 },
+	{ "BOA",           120000,  8, 0.65f, 0.60f, 1.8f,  75, 30, 4 },
+	{ "ASP MK II",     150000,  9, 1.25f, 1.10f, 1.4f,   8,  6, 4 },
+	{ "FER-DE-LANCE",  180000, 10, 1.15f, 1.10f, 1.5f,  12,  8, 4 },
+	{ "ANACONDA",      300000, 11, 0.55f, 0.45f, 2.5f, 120, 60, 4 },
+};
+#define HULLS (sizeof(_hulls) / sizeof(_hulls[0]))
+// What a ship is worth traded in, in percent of its price
+#define TRADE_IN 75
+bool trade_all_ships = false;
+static uint32_t _hull_item = 0;
+// The ship fire was pressed on once, to be pressed again to buy, or -1
+static int32_t _hull_confirm = -1;
+
+const Hull_t* trade_hull(void) {
+	return &_hulls[cmdr.hull < HULLS ? cmdr.hull : 0];
+}
 // What a passenger cabin takes from the hold
 #define CABIN_TONNES 5
 static uint32_t _item = 0;
@@ -122,6 +146,8 @@ static const char* const _mount_names[MOUNTS] = { "Front", "Rear", "Left", "Righ
 // The lists are centred across the screen: the market is 46 letters wide, and the equipment 35
 #define MARKET_X ((GAME_SCREEN_W - 46 * 8) / 2)
 #define EQUIP_X ((GAME_SCREEN_W - 35 * 8) / 2)
+// The shipyard's list, on the left, with the ship picked turning on the right
+#define SHIPYARD_X ((GAME_SCREEN_W - 46 * 8) / 2)
 #define LIST_TOP (VIEW_TOP + 10)
 #define LIST_LINE 12
 // The inventory's list of equipment, beside the cargo
@@ -133,7 +159,7 @@ void trade_commander_start(Commander_t* c) {
 	c->cash = 1000;
 	c->fuel = GALAXY_FUEL_MAX;
 	c->missiles = 3;
-	c->hold = CARGO_SMALL;
+	c->hold = _hulls[0].hold;
 	c->laser[MOUNT_FRONT] = LASER_PULSE;
 	for (uint32_t i = MOUNT_REAR; i < MOUNTS; ++i) c->laser[i] = LASER_NONE;
 	story_reset(&c->story);
@@ -153,8 +179,8 @@ void trade_escape(void) {
 
 void trade_max_equipment(void) {
 	cmdr.fuel = GALAXY_FUEL_MAX;
-	cmdr.missiles = MISSILES_MAX;
-	cmdr.hold = CARGO_LARGE;
+	cmdr.missiles = trade_hull()->missiles;
+	cmdr.hold = trade_hull()->hold + trade_hull()->bay;
 	cmdr.ecm = true;
 	cmdr.scoops = true;
 	cmdr.docking = true;
@@ -291,7 +317,7 @@ void trade_draw_inventory(void) {
 	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)hold());
 	screen_text(MARKET_X, y, s, GAME_CYAN, false);
 	y += LIST_LINE;
-	snprintf(s, sizeof(s), "Missiles: %u of %u", (unsigned)cmdr.missiles, (unsigned)MISSILES_MAX);
+	snprintf(s, sizeof(s), "Missiles: %u of %u", (unsigned)cmdr.missiles, (unsigned)trade_hull()->missiles);
 	screen_text(MARKET_X, y, s, GAME_CYAN, false);
 	y += LIST_LINE + 8;
 	screen_text(MARKET_X, y, "CARGO:", GAME_CYAN, false);
@@ -352,13 +378,13 @@ static const char* fit(Equip_e e) {
 			if (cmdr.fuel >= GALAXY_FUEL_MAX) return "FULL";
 			break;
 		case EQUIP_MISSILE:
-			if (cmdr.missiles >= MISSILES_MAX) return "FULL";
+			if (cmdr.missiles >= trade_hull()->missiles) return "FULL";
 			break;
 		case EQUIP_CABIN:
 			if (cmdr.cabin) return "FITTED";
 			break;
 		case EQUIP_CARGO_BAY:
-			if (cmdr.hold >= CARGO_LARGE) return "FITTED";
+			if (cmdr.hold > trade_hull()->hold) return "FITTED";
 			break;
 		case EQUIP_ECM:
 			if (cmdr.ecm) return "FITTED";
@@ -394,7 +420,7 @@ static const char* fit(Equip_e e) {
 		case EQUIP_FUEL: cmdr.fuel = GALAXY_FUEL_MAX; break;
 		case EQUIP_MISSILE: ++cmdr.missiles; break;
 		case EQUIP_CABIN: cmdr.cabin = true; break;
-		case EQUIP_CARGO_BAY: cmdr.hold = CARGO_LARGE; break;
+		case EQUIP_CARGO_BAY: cmdr.hold = trade_hull()->hold + trade_hull()->bay; break;
 		case EQUIP_ECM: cmdr.ecm = true; break;
 		case EQUIP_FUEL_SCOOPS: cmdr.scoops = true; break;
 		case EQUIP_ESCAPE_POD: cmdr.pod = true; break;
@@ -447,6 +473,92 @@ void trade_draw_equipment(const GalaxySystem_t* sys) {
 	screen_text_centre(VIEW_BOTTOM - 12, _equipment[_item].laser != LASER_NONE ? "FIRE BUYS  LEFT AND RIGHT CHOOSE WHERE" : "FIRE BUYS", GAME_GREY, false);
 }
 
+// The ships sold here, by tech level, as indexes into _hulls
+static uint32_t hulls_sold(const GalaxySystem_t* sys, uint32_t* sold) {
+	uint32_t n = 0;
+	for (uint32_t i = 0; i < HULLS; ++i) {
+		if (trade_all_ships || _hulls[i].tech <= sys->tech) sold[n++] = i;
+	}
+	return n;
+}
+
+static uint32_t trade_in(void) {
+	return trade_hull()->price * TRADE_IN / 100;
+}
+
+// Buys ship h, trading in ours: the equipment comes too, a large cargo bay
+// as the new ship's, and as many missiles as it carries; the cargo must fit
+static const char* buy_hull(uint32_t h) {
+	const Hull_t* to = &_hulls[h];
+	if (h == cmdr.hull) return "YOU HAVE ONE";
+	const bool bay = cmdr.hold > trade_hull()->hold;
+	const uint32_t hold = to->hold + (bay ? to->bay : 0);
+	if (cargo_tonnes() + (cmdr.cabin ? CABIN_TONNES : 0) + story_item_tonnes() > hold) return "HOLD TOO SMALL";
+	const uint32_t worth = trade_in();
+	if (to->price > worth && cmdr.cash < to->price - worth) return "NOT ENOUGH CASH";
+	cmdr.cash = cmdr.cash + worth - to->price;
+	cmdr.hull = h;
+	cmdr.hold = hold;
+	if (cmdr.missiles > to->missiles) cmdr.missiles = to->missiles;
+	return "SHIP BOUGHT";
+}
+
+const char* trade_shipyard_input(uint8_t pressed, const GalaxySystem_t* sys) {
+	uint32_t sold[HULLS];
+	const uint32_t n = hulls_sold(sys, sold);
+	if (_hull_item >= n) _hull_item = 0;
+	if (pressed & (EL_INP_UP | EL_INP_DOWN)) {
+		_hull_item = (pressed & EL_INP_DOWN) ? (_hull_item + 1) % n : (_hull_item + n - 1) % n;
+		_hull_confirm = -1;
+	}
+	if (!(pressed & EL_INP_A)) return NULL;
+	if ((int32_t)sold[_hull_item] != _hull_confirm && sold[_hull_item] != cmdr.hull) {
+		_hull_confirm = (int32_t)sold[_hull_item];
+		return "FIRE AGAIN TO BUY";
+	}
+	_hull_confirm = -1;
+	return buy_hull(sold[_hull_item]);
+}
+
+const Hull_t* trade_draw_shipyard(const GalaxySystem_t* sys) {
+	uint32_t sold[HULLS];
+	const uint32_t n = hulls_sold(sys, sold);
+	if (_hull_item >= n) _hull_item = 0;
+	int32_t y = LIST_TOP;
+	screen_text(SHIPYARD_X, y, "SHIP", GAME_CYAN, false);
+	screen_text(SHIPYARD_X + 14 * 8, y, "PRICE", GAME_CYAN, false);
+	y += LIST_LINE + 4;
+	char s[GAME_TEXT_MAX + 1];
+	for (uint32_t i = 0; i < n; ++i) {
+		const Hull_t* hull = &_hulls[sold[i]];
+		const bool ours = sold[i] == cmdr.hull;
+		const uint32_t c = i == _hull_item ? GAME_YELLOW : ours ? GAME_GREEN : GAME_WHITE;
+		if (i == _hull_item) screen_select(SHIPYARD_X, y, 22 * 8);
+		screen_text(SHIPYARD_X, y, hull->name, c, false);
+		if (ours) snprintf(s, sizeof(s), "   OURS");
+		else snprintf(s, sizeof(s), "%7u", (unsigned)(hull->price / 10));
+		screen_text(SHIPYARD_X + 13 * 8, y, s, c, false);
+		y += LIST_LINE + 3;
+	}
+	// What the one picked is like, beside ours
+	const Hull_t* pick = &_hulls[sold[_hull_item]];
+	y += 8;
+	snprintf(s, sizeof(s), "Speed %u%%  Turn %u%%  Armour %u%%", (unsigned)(pick->speed * 100.0f + 0.5f),
+		(unsigned)(pick->turn * 100.0f + 0.5f), (unsigned)(pick->toughness * 100.0f + 0.5f));
+	screen_text(SHIPYARD_X, y, s, GAME_WHITE, false);
+	y += LIST_LINE;
+	snprintf(s, sizeof(s), "Hold %u t (%u t with bay)  Missiles %u", (unsigned)pick->hold, (unsigned)(pick->hold + pick->bay),
+		(unsigned)pick->missiles);
+	screen_text(SHIPYARD_X, y, s, GAME_WHITE, false);
+	y += LIST_LINE + 4;
+	snprintf(s, sizeof(s), "Trade-in %u.%u Cr", (unsigned)(trade_in() / 10), (unsigned)(trade_in() % 10));
+	screen_text(SHIPYARD_X, y, s, GAME_CYAN, false);
+	y += LIST_LINE;
+	cash_line(SHIPYARD_X, y);
+	screen_text_centre(VIEW_BOTTOM - 12, "FIRE TWICE BUYS, TRADING IN OURS", GAME_GREY, false);
+	return pick;
+}
+
 uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	static const char* const lasers[MOUNTS][LASER_NONE] = {
 		{ "Front Pulse Laser", "Front Beam Laser", "Front Military Laser" },
@@ -458,7 +570,7 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 	for (uint32_t i = 0; i < MOUNTS; ++i) {
 		if (n < max && cmdr.laser[i] != LASER_NONE) names[n++] = lasers[i][cmdr.laser[i]];
 	}
-	if (n < max && cmdr.hold >= CARGO_LARGE) names[n++] = "Large Cargo Bay";
+	if (n < max && cmdr.hold > trade_hull()->hold) names[n++] = "Large Cargo Bay";
 	if (n < max && cmdr.cabin) names[n++] = "Passenger Cabin";
 	if (n < max && cmdr.ecm) names[n++] = "E.C.M. System";
 	if (n < max && cmdr.scoops) names[n++] = "Fuel Scoops";

@@ -188,6 +188,12 @@ static uint32_t percent(void) {
 	return (uint32_t)(rand() % 100);
 }
 
+static const WireModel_t* model_named(const char* name);
+
+const WireModel_t* ships_model(const char* name) {
+	return model_named(name);
+}
+
 static const WireModel_t* model_named(const char* name) {
 	for (uint32_t i = 0; i < MODEL_SHIP_COUNT; ++i) {
 		if (!strcmp(model_ships[i]->name, name)) return model_ships[i];

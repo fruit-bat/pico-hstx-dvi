@@ -4,6 +4,8 @@
 // options - shows the options on the title and dithers, then starts a game
 //           and waits; built with EL_HOST_SAVE, the commanders go back to
 //           the title after 30 seconds
+// shipyard - starts a game, puts every ship on sale in the options, buys an
+//           Adder at the shipyard, looks at an Anaconda, then the status
 // fly     - starts a game, launches, speeds up, rolls and climbs, looks at
 //           the charts moving the cursor, then changes the style and the
 //           dashboard in the options, and fits everything
@@ -140,22 +142,30 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 104 && f < 107) return SELECT;
 		if (f >= 112 && f < 115) return R;
 		if (f >= 120 && f < 123) return R;
-		if (f >= 130 && f < 133) return SELECT;
-		if (f >= 133 && f < 136) return 0;
-		if (f >= 140 && f < 143) return SELECT;
-		if (f >= 143 && f < 146) return 0;
-		if (f >= 150 && f < 153) return SELECT;
-		if (f >= 153 && f < 156) return 0;
-		if (f >= 160 && f < 163) return SELECT;
-		if (f >= 163 && f < 166) return 0;
-		if (f >= 170 && f < 173) return SELECT;
-		if (f >= 200 && f < 203) return A;
+		// Round the screens to the status
+		if (f >= 130 && f < 210 && (f - 130) % 10 < 3) return SELECT;
+		if (f >= 215 && f < 218) return A;
 		// The dashboard filled, saved in the settings
 		if (f >= 230 && f < 233) return START;
 		if (f >= 240 && f < 243) return D;
 		if (f >= 250 && f < 253) return D;
 		if (f >= 260 && f < 263) return R;
 		if (f >= 270 && f < 273) return START;
+		return 0;
+	}
+	if (!strcmp(host_mode, "shipyard")) {
+		// Every ship for sale, from the options, then the shipyard: buy an
+		// Adder, look at the Anaconda, and round to the status
+		if (f >= 60 && f < 63) return START;
+		if (f >= 66 && f < 108 && (f - 66) % 6 < 3) return D;
+		if (f >= 110 && f < 113) return A;
+		if (f >= 120 && f < 123) return START;
+		if (f >= 140 && f < 170 && (f - 140) % 10 < 3) return SELECT;
+		if (f >= 180 && f < 183) return D;
+		if (f >= 240 && f < 243) return A;
+		if (f >= 250 && f < 253) return A;
+		if (f >= 280 && f < 334 && (f - 280) % 6 < 3) return D;
+		if (f >= 420 && f < 480 && (f - 420) % 10 < 3) return SELECT;
 		return 0;
 	}
 	if (!strcmp(host_mode, "trade")) {

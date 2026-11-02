@@ -241,6 +241,7 @@ typedef enum {
 	VIEW_RIGHT,
 	VIEW_MARKET,
 	VIEW_EQUIPMENT,
+	VIEW_SHIPYARD,
 	VIEW_INVENTORY,
 	VIEW_LOG,
 	VIEW_LOCAL,
@@ -250,7 +251,7 @@ typedef enum {
 } View_e;
 
 static const char* const _view_labels[VIEWS] = {
-	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "INVENTORY", "SHIP'S LOG", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
+	"FRONT VIEW", "REAR VIEW", "LEFT VIEW", "RIGHT VIEW", "MARKET PRICES", "EQUIP SHIP", "SHIPYARD", "INVENTORY", "SHIP'S LOG", "SHORT RANGE CHART", "GALACTIC CHART", "DATA ON SYSTEM"
 };
 
 typedef enum {
@@ -732,6 +733,11 @@ static void touch_station(void) {
 // ----------------------------------------------------------------------------
 // Moving
 
+// How fast our ship goes and turns, by its type
+static float top_speed(void) { return MAX_SPEED * trade_hull()->speed; }
+static float max_roll(void) { return MAX_ROLL * trade_hull()->turn; }
+static float max_pitch(void) { return MAX_PITCH * trade_hull()->turn; }
+
 // Whether we look out of the ship, rather than at a chart or the market
 static bool looking_out(void) {
 	return _view <= VIEW_RIGHT;
@@ -744,7 +750,7 @@ static View_e next_view(void) {
 	for (;;) {
 		v = (View_e)((v + 1) % VIEWS);
 		if (v >= VIEW_REAR && v <= VIEW_RIGHT) continue;
-		if (_state != STATE_DOCKED && (v == VIEW_MARKET || v == VIEW_EQUIPMENT)) continue;
+		if (_state != STATE_DOCKED && (v == VIEW_MARKET || v == VIEW_EQUIPMENT || v == VIEW_SHIPYARD)) continue;
 		return v;
 	}
 }
@@ -956,8 +962,8 @@ static void fly(uint8_t held) {
 	const bool faster = (b && looking_out() && (held & EL_INP_UP)) || KEY_HELD(HID_KEY_SPACE);
 	const bool slower = (b && looking_out() && (held & EL_INP_DOWN)) || KEY_HELD(HID_KEY_SLASH);
 	if (faster) {
-		_speed = fminf(_speed + SPEED_STEP, MAX_SPEED);
-		_over_hold = _speed >= MAX_SPEED ? _over_hold + 1 : 0;
+		_speed = fminf(_speed + SPEED_STEP, top_speed());
+		_over_hold = _speed >= top_speed() ? _over_hold + 1 : 0;
 	}
 	else {
 		_over_hold = 0;
@@ -978,9 +984,9 @@ static void fly(uint8_t held) {
 	}
 	if (!faster || !_overdrive) _hyper_hold = 0;
 	if (!faster) _hyper_tried = false;
-	const float speed = _speed + (OVERDRIVE_SPEED - MAX_SPEED) * _over;
-	_roll = towards(_roll, roll_in * MAX_ROLL, ROLL_STEP);
-	_pitch = towards(_pitch, pitch_in * MAX_PITCH, PITCH_STEP);
+	const float speed = _speed + (OVERDRIVE_SPEED - top_speed()) * _over;
+	_roll = towards(_roll, roll_in * max_roll(), ROLL_STEP);
+	_pitch = towards(_pitch, pitch_in * max_pitch(), PITCH_STEP);
 
 	frame_roll(&_me, _roll);
 	frame_pitch(&_me, _pitch);
@@ -1167,15 +1173,16 @@ static void move_pod(void) {
 	_hulk.pos = vec_add(_hulk.pos, _hulk_drift);
 	if (_hulk_on && _state_frames == HULK_BLOWS) {
 		_hulk_on = false;
-		ships_explode(_hulk.pos, model_cobra.radius);
+		ships_explode(_hulk.pos, ships_model(trade_hull()->name)->radius);
 	}
 }
 
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
 static void take(const ShipsEvents_t* ev) {
 	const bool busy = ships_hostile_near(&_me, SCANNER_RANGE);
-	_fore -= ev->fore;
-	_aft -= ev->aft;
+	// A tougher ship's shields take more
+	_fore -= ev->fore / trade_hull()->toughness;
+	_aft -= ev->aft / trade_hull()->toughness;
 	bool through = false;
 	if (_fore < 0.0f) {
 		_energy += _fore;
@@ -1416,12 +1423,12 @@ static void draw_dashboard(void) {
 		.cabin_temp = _cabin_temp,
 		.laser_temp = _laser_temp,
 		.altitude = fminf(fmaxf(altitude, 0.0f), 1.0f),
-		.speed = _speed / MAX_SPEED,
+		.speed = _speed / top_speed(),
 		.overdrive = _over,
 		.hyperdrive = _hyper_frames && !_hyper_galactic ? 1.0f : (float)_hyper_hold / (float)HYPERDRIVE_WAIT,
 		.energy = _energy,
-		.roll = _roll / MAX_ROLL,
-		.pitch = _pitch / MAX_PITCH,
+		.roll = _roll / max_roll(),
+		.pitch = _pitch / max_pitch(),
 		.missiles = cmdr.missiles,
 		.compass = _witch ? (Vec3_t){ 0.0f, 0.0f, 0.0f } : vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
@@ -1520,7 +1527,7 @@ static void draw_view(void) {
 		if (d < SHIP_SEEN) things[n++] = (Thing_t){ THING_SHIP, i, d - ships[i].model->radius };
 	}
 	if (_state == STATE_ESCAPE && _hulk_on) {
-		things[n++] = (Thing_t){ THING_HULK, 0, vec_length(frame_view(&_eye, _hulk.pos)) - model_cobra.radius };
+		things[n++] = (Thing_t){ THING_HULK, 0, vec_length(frame_view(&_eye, _hulk.pos)) - ships_model(trade_hull()->name)->radius };
 	}
 	for (uint32_t i = 0; i < CANISTERS; ++i) {
 		if (!canisters[i].on) continue;
@@ -1565,7 +1572,7 @@ static void draw_view(void) {
 				draw_body(&model_canister, &canisters[t->i].fr);
 				break;
 			case THING_HULK:
-				draw_body(&model_cobra, &_hulk);
+				draw_body(ships_model(trade_hull()->name), &_hulk);
 				break;
 		}
 	}
@@ -1614,7 +1621,9 @@ static const char* rating(uint32_t kills_made) {
 	return names[i];
 }
 
-// Our status, as in the original game, with a Cobra like ours turning beside it
+static void draw_turning(const WireModel_t* model);
+
+// Our status, as in the original game, with a ship like ours turning beside it
 static void draw_status(void) {
 	const char* const names[] = {
 		"Present System", "Hyperspace System", "Condition", "Fuel", "Cash", "Legal Status", "Rating"
@@ -1645,12 +1654,17 @@ static void draw_status(void) {
 	}
 	if (_state == STATE_DOCKED && (_frame / 30) & 1) screen_text_centre(VIEW_BOTTOM - 24, "FIRE TO LAUNCH", GAME_CYAN, true);
 
+	draw_turning(ships_model(trade_hull()->name));
+}
+
+// A ship turning on the right of the screen, as far off as it is big
+static void draw_turning(const WireModel_t* model) {
 	const float t = (float)_frame / 60.0f;
 	float m[3][3];
 	make_matrix(m, t * 0.5f, 0.45f, 0.0f);
-	const float z = 650.0f;
+	const float z = 650.0f * model->radius / model_cobra.radius;
 	const Vec3_t pos = { 150.0f * z / (FOCAL * draw_aspect), -30.0f * z / FOCAL, z };
-	draw_object(&model_cobra, pos, m, model_cobra.rgb, draw_style);
+	draw_object(model, pos, m, model->rgb, draw_style);
 }
 
 // The colours of the rings in hyperspace
@@ -1921,7 +1935,7 @@ static void keyboard(void) {
 			overdrive_off();
 		}
 		else {
-			_speed = MAX_SPEED;
+			_speed = top_speed();
 			_over_ask = true;
 		}
 	}
@@ -2212,6 +2226,7 @@ void game_play(void) {
 					const char* m = NULL;
 					if (_view == VIEW_MARKET) m = trade_market_input(pressed, held);
 					else if (_view == VIEW_EQUIPMENT) m = trade_equipment_input(pressed, chart_system(chart_home()));
+				else if (_view == VIEW_SHIPYARD) m = trade_shipyard_input(pressed, chart_system(chart_home()));
 					else move_cursor(held);
 					if (m) message(m);
 					chart_set_fuel(cmdr.fuel);
@@ -2297,6 +2312,10 @@ void game_play(void) {
 			case VIEW_EQUIPMENT:
 				snprintf(title, sizeof(title), "EQUIP SHIP");
 				trade_draw_equipment(chart_system(chart_home()));
+				break;
+			case VIEW_SHIPYARD:
+				snprintf(title, sizeof(title), "%s SHIPYARD", chart_system(chart_home())->name);
+				draw_turning(ships_model(trade_draw_shipyard(chart_system(chart_home()))->name));
 				break;
 			case VIEW_INVENTORY:
 				snprintf(title, sizeof(title), "INVENTORY");

@@ -49,11 +49,31 @@ typedef struct {
 	bool targeting;      // whether we have a targeting computer
 	bool cabin;          // whether we have a passenger cabin, for a companion
 	StorySave_t story;   // the stories, and who flies with us
+	uint32_t hull;       // the type of ship we fly, from the shipyard; 0 a Cobra Mk III
 } Commander_t;
 
 extern Commander_t cmdr;
 
+// The most missiles any ship carries, as the dashboard shows
 #define MISSILES_MAX 4
+
+// A type of ship from the shipyard: how it flies, beside a Cobra Mk III,
+// and what it carries
+typedef struct {
+	const char* name;   // as its model is named
+	uint32_t price;     // in tenths of a credit
+	uint32_t tech;      // the tech level it is sold from
+	float speed, turn;  // top speed and how quickly it turns
+	float toughness;    // how much its shields take, so damage is less
+	uint32_t hold;      // tonnes, and more with a large cargo bay
+	uint32_t bay;
+	uint32_t missiles;  // how many it carries, up to MISSILES_MAX
+} Hull_t;
+
+// The ship we fly
+const Hull_t* trade_hull(void);
+// Every ship for sale, whatever the tech level, for trying things out
+extern bool trade_all_ships;
 
 // As Commander Jameson starts
 void trade_new_commander(void);
@@ -68,6 +88,10 @@ const char* trade_market_input(uint8_t pressed, uint8_t held);
 const char* trade_equipment_input(uint8_t pressed, const GalaxySystem_t* sys);
 void trade_draw_market(void);
 void trade_draw_equipment(const GalaxySystem_t* sys);
+// The shipyard: up and down pick a ship, and fire twice buys it, trading in
+// ours. Drawing it returns the ship picked, for showing it beside the list.
+const char* trade_shipyard_input(uint8_t pressed, const GalaxySystem_t* sys);
+const Hull_t* trade_draw_shipyard(const GalaxySystem_t* sys);
 // A canister picked up: a good at random into the hold, returning its name,
 // or that the hold is full; from a Thargon, alien items
 const char* trade_scoop(bool alien);

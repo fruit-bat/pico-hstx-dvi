@@ -22,6 +22,7 @@ typedef enum {
 	OPTION_DOCK,
 	// For trying things out, until the game is finished
 	OPTION_MAX_EQUIP,
+	OPTION_ALL_SHIPS,
 	OPTION_WITCH,
 	OPTION_END,
 	OPTIONS
@@ -127,6 +128,9 @@ bool options_input(uint16_t pressed) {
 				_fitted = true;
 			}
 			break;
+		case OPTION_ALL_SHIPS:
+			if (pressed & (EL_INP_A | EL_INP_LEFT | EL_INP_RIGHT)) trade_all_ships = !trade_all_ships;
+			break;
 		default:
 			// The game ends
 			if (pressed & EL_INP_A) {
@@ -172,6 +176,7 @@ void options_draw(void) {
 			case OPTION_DOCK: line(s, sizeof(s), "DOCKING", "(FIRE)", false); break;
 			case OPTION_WITCH: line(s, sizeof(s), "WITCHSPACE", _witch ? "NEXT JUMP" : "(FIRE)", false); break;
 			case OPTION_MAX_EQUIP: line(s, sizeof(s), "MAX EQUIP", _fitted ? "FITTED" : "(FIRE)", false); break;
+			case OPTION_ALL_SHIPS: line(s, sizeof(s), "ALL SHIPS", trade_all_ships ? "ON" : "OFF", true); break;
 			default: line(s, sizeof(s), "END GAME", "(FIRE)", false); break;
 		}
 		game_text_set(&t[i], s, 1);

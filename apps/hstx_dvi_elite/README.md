@@ -67,13 +67,19 @@ Now and then a Thargoid turns up in an ordinary system too.
 
 ## Trading
 
-Docked, select also shows the market and the equipment for sale. In the market, up and down pick a good,
+Docked, select also shows the market, the equipment for sale and the shipyard. In the market, up and down pick a good,
 right buys and left sells, held to go on. The goods, and how their prices and how many are for sale depend on the economy,
-moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes;
+moved a little each time we arrive, are as in Ian Bell's Text Elite. Goods sold by the tonne fill the hold, of 20 tonnes in a Cobra Mk III;
 gold, platinum and gem-stones take no room. The equipment for sale depends on the tech level:
-fuel, missiles, a large cargo bay of 35 tonnes, the ECM, fuel scoops, an escape pod, an energy bomb, a targeting computer, a docking computer, a galactic hyperdrive, and pulse, beam and military lasers, the last two of which fire all the time.
+fuel, missiles, a large cargo bay (35 tonnes in a Cobra), the ECM, fuel scoops, an escape pod, an energy bomb, a targeting computer, a docking computer, a galactic hyperdrive, and pulse, beam and military lasers, the last two of which fire all the time.
 A laser can go at the front, rear, left or right, chosen with left and right, in place of a lesser one there.
 Like Commander Jameson you start with 100 credits, a pulse laser, three missiles and no ECM.
+
+The shipyard sells other ships, more of them the higher the tech level, from an Adder to an Anaconda, with the one
+picked turning beside the list. Each goes and turns faster or slower than a Cobra Mk III, has shields that take more
+or less, and carries more or less cargo and as many as four missiles. Fire twice buys one, trading in ours for three
+quarters of its price; the equipment comes too, a large cargo bay as the new ship's, and as many missiles as it carries,
+but the cargo must fit. ALL SHIPS in the options puts every ship on sale, for trying them out.
 
 ## The overdrive
 
@@ -175,7 +181,7 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 - Start shows the options: the way of drawing the view, solid wireframes, see-through wireframes, filled faces with dark outlines,
   or plain filled faces, whether the faces are dithered for more shades, the dashboard in lines or filled,
   the shape of the screen, the lens: how wide the view is, wide, normal or narrow (on a 16:9 screen about 106, 94 or 88 degrees across;
-  the wider, the more things stretch towards the sides as they would through a wide camera lens), and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything, WITCHSPACE, which makes the next jump go wrong (both for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
+  the wider, the more things stretch towards the sides as they would through a wide camera lens), and in a game, DOCKING, which turns on the docking computer, MAX EQUIP, which fits everything, ALL SHIPS, which puts every ship in the shipyard, WITCHSPACE, which makes the next jump go wrong (both for trying things out, to go when the game is done), and ending it. They can be changed on the title too.
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
@@ -280,6 +286,7 @@ host/build/elite_host dock 420 20 frames
 `overdrive` launches, climbs away, faces the sun and holds B and up, going into the overdrive once clear of the station, until near the sun.
 `scoop` is put beside the sun with fuel scoops and an empty tank, fills it, scoops up a canister a little above the nose, shows the inventory, then dives into the sun.
 `trade` buys and sells in the market at Lave, buys a missile, and tries for a rear pulse laser.
+`shipyard` puts every ship on sale, buys an Adder, looks at an Anaconda, and shows the Adder on the status.
 Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
 names it NAMESON, buys food and launches, saving it, to show in the slot when run again,
 then fills the dashboard in the options, which stays filled when run again.
