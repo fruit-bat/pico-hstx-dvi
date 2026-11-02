@@ -32,8 +32,9 @@ An energy bomb, sold from tech level 7, destroys every ship within range of the 
 with a white flash. It is used up, and can be bought again. It goes off with three quick presses of A on a SNES pad,
 within half a second; one press only arms it. On a SNES pad A is not fire: B is.
 
-A targeting computer, sold from tech level 8 and not in the original, moves the sights onto a ship within about
-7 degrees of the middle of the view and in laser range, green while it follows it, and the laser hits that ship.
+A targeting computer, sold from tech level 8 and not in the original, finds a ship within about
+7 degrees of the middle of the view and in laser range, naming it at once, then takes half a second to lock on, the sights
+sliding over to it in orange. Locked, they are green, and the laser hits that ship.
 It keeps to the same ship while it can, and shows its name under the sights, with its bounty, or CLEAN if it has none and is not to be shot, staying a couple of seconds, in grey, after it lets go. It never follows the station, so docking is as before.
 
 ## Hyperspace

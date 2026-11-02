@@ -188,6 +188,9 @@
 // How far off the middle of the view a targeting computer follows a ship, as
 // across for each ahead, about 7 degrees
 #define TRACK_CONE 0.12f
+// How long it takes to lock on to a ship it has found, the sights sliding
+// over to it, before the laser goes to it
+#define TRACK_LOCK_FRAMES 30
 // How long the name of the ship it follows stays up once it lets go, so it can be read
 #define TRACK_NAME_FRAMES 120
 // How far below the middle of the sights the name goes, clear of them, or
@@ -289,6 +292,8 @@ static uint32_t _laser_wait, _laser_beam;
 // The ship the targeting computer follows, or -1, and how far off the
 // middle of the view it is, where the sights and the laser go
 static int32_t _tracked = -1;
+// How long it has followed it, locked once TRACK_LOCK_FRAMES
+static uint32_t _lock_frames;
 static Vec2_t _sights_off;
 // The name of the ship it follows, or last followed, its bounty, and how long
 // they show for
@@ -902,6 +907,12 @@ static void ecm(void) {
 	}
 }
 
+// Whether the targeting computer has locked on to the ship it follows, so
+// the laser goes to it
+static bool locked(void) {
+	return _tracked >= 0 && _lock_frames >= TRACK_LOCK_FRAMES;
+}
+
 // The laser the way we look while fire is held, and a missile at the ship
 // nearest the middle of the view when fire is pressed with B held
 static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
@@ -915,6 +926,9 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (!looking_out()) return;
 	look();
 	if (cmdr.targeting && cmdr.laser[_view] != LASER_NONE) _tracked = ships_tracked(&_eye, LASER_RANGE, TRACK_CONE, keep);
+	// Locking on afresh to a new ship
+	if (_tracked < 0 || _tracked != keep) _lock_frames = 0;
+	else if (_lock_frames < TRACK_LOCK_FRAMES) ++_lock_frames;
 	if (_tracked >= 0) {
 		_tracked_name = ships[_tracked].cls->name;
 		_tracked_bounty = ships_bounty((uint32_t)_tracked);
@@ -936,7 +950,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 		message("LASER TEMPERATURE");
 	}
 	// The ship the targeting computer follows, else the one in the middle
-	const int32_t i = _tracked >= 0 ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
+	const int32_t i = locked() ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
 	// Doing less the further it goes
 	if (i >= 0) ships_hit((uint32_t)i, l->damage * ships_laser_falloff(vec_length(vec_sub(ships[i].fr.pos, _me.pos)), LASER_RANGE), ev);
 }
@@ -1157,7 +1171,9 @@ static Vec2_t sights_off(void) {
 	const Vec3_t v = frame_view(&_eye, ships[_tracked].fr.pos);
 	if (v.z <= 0.0f) return (Vec2_t){ 0.0f, 0.0f };
 	const Vec2_t p = project(&v);
-	return (Vec2_t){ p.x - CENTRE_X, p.y - CENTRE_Y };
+	// Sliding over to it while locking on
+	const float k = (float)_lock_frames / (float)TRACK_LOCK_FRAMES;
+	return (Vec2_t){ (p.x - CENTRE_X) * k, (p.y - CENTRE_Y) * k };
 }
 
 static void draw_dashboard(void) {
@@ -1182,7 +1198,8 @@ static void draw_dashboard(void) {
 		.scanner_range = SCANNER_RANGE,
 		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
 		.sights_off = _sights_off,
-		.locked = _tracked >= 0,
+		.locked = locked(),
+		.locking = _tracked >= 0 && !locked(),
 	};
 	Blip_t blips[SHIPS + CANISTERS + 1];
 	uint32_t n = 0;
@@ -1812,7 +1829,7 @@ void game_play(void) {
 				const int32_t sy = (int32_t)(CENTRE_Y + _sights_off.y);
 				int32_t y = sy + TRACK_NAME_GAP;
 				if (y + TRACK_NAME_H * 2 > VIEW_BOTTOM) y = sy - TRACK_NAME_GAP - TRACK_NAME_H * 2;
-				screen_text_centre_on(x, y, _tracked_name, _tracked >= 0 ? GAME_GREEN : GAME_GREY, true);
+				screen_text_centre_on(x, y, _tracked_name, locked() ? GAME_GREEN : _tracked >= 0 ? GAME_ORANGE : GAME_GREY, true);
 				// and its bounty under it, or that it is clean, and not to be shot
 				char bounty[24];
 				if (_tracked_bounty) snprintf(bounty, sizeof(bounty), "BOUNTY %u.%u CR", (unsigned)(_tracked_bounty / 10), (unsigned)(_tracked_bounty % 10));
