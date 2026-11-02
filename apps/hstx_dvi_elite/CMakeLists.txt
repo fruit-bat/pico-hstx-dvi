@@ -2,6 +2,7 @@ add_executable(hstx_dvi_elite
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_attract.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_chart.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_companion.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_draw.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_hud.c
@@ -10,6 +11,8 @@ add_executable(hstx_dvi_elite
   ${CMAKE_CURRENT_LIST_DIR}/src/el_screen.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_ships.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_space.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_story.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_story_data.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_trade.c
   ${CMAKE_CURRENT_LIST_DIR}/src/galaxy.c
   ${CMAKE_CURRENT_LIST_DIR}/src/ship_model.c

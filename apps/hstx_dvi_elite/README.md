@@ -119,6 +119,29 @@ where it is strong, more police. The more people, the busier it is, and industri
 Hits take your shields down, fore or aft, then your energy, and they build up again slowly. With no energy left the game is over.
 Pirates and Thargoids bring a bounty, shown when you destroy one, some wanted more than others of their type, and the ships destroyed raise your rating, as in the original.
 
+## Stories and companions
+
+Now and then, docking or coming into a system, a story finds you: a basket of lost kittens in space, a princess
+held by the Black Baron, a race between a tortoise and a hare, a Thargoid that wants to go home, a pirate's parrot
+who knows where the gold is, a wedding cake to deliver in one piece, and a trader whose captain has turned into a Thargon.
+Each goes across a few nearby systems, picked when it starts, and has choices that matter. They show as pages that
+pause the game: up and down pick a choice, and fire takes it. Only one goes at a time, and none needs signing up for.
+
+Stories put named items aboard, shown on the inventory, and may leave a ship to disable rather than destroy:
+hit hard, it goes dark and drifts, and leaves what it carried in a canister. A story's canister is taken aboard
+without fuel scoops.
+
+A companion may fly with you, given a passenger cabin, 100 Cr from tech level 1, which takes 5 tonnes of the hold:
+Pip, a nervous navigator who sees pirates further off; Marge, the ship's engineer, who patches the shields once a
+fight; Sly, a retired smuggler, who sells for a tenth more; and Professor Quill, a xenobiologist, who knows things in
+the stories. They talk about how you fly, in cyan above the messages, now and then, and only what matters in a fight.
+What happens changes their mood, which the inventory shows, and their mood when you dock, and your choices in the
+stories, their loyalty. With too little of it they leave a note and go. A kitten or a parrot may come aboard too.
+
+The stories are data, in `src/el_story_data.c`, run by `src/el_story.c`, with the companions in `src/el_companion.c`.
+`host/story_harness.sh` builds a harness on the PC that walks every story through every choice, printing every page,
+line and effect, and checks the text fits; then prints what each companion says, and has Pip leave after rough trips.
+
 ## The controls
 
 A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B; X and A have uses of their own, below.
@@ -231,6 +254,8 @@ host/build/elite_host dock 420 20 frames
 `pod` runs out of energy with an escape pod fitted and food in the hold, escapes, and docks without either.
 `dock` and `crash` launch, then are put on a run at the slot, level or rolled, to dock or hit the station.
 `hyper` jumps from Lave to Diso, then tries to go back without enough fuel.
+`story` has Pip aboard and the lost kittens start: the basket is scooped and its page read.
+`race` has the great race offered, and picks the second choice.
 `station` is put still in front of the slot and shoots the station, which launches Vipers and fires its guns.
 `target` fits everything, puts a Sidewinder ahead a little off the middle, which the sights follow, shoots it, and looks at the inventory.
 `fight` puts a Sidewinder ahead and fires at it, then a Python and fires a missile at it.

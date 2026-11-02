@@ -39,6 +39,10 @@
 // station - starts a game, launches, is put still in front of the slot and
 //           shoots the station, which turns on us, launching Vipers and
 //           firing its guns
+// story   - starts a game, launches with Pip aboard, and the lost kittens
+//           start: a basket ahead, scooped, and its page read
+// race    - starts a game, launches, and the great race is offered, as if
+//           docked; down picks the second choice, and fire takes it
 // trade   - starts a game, and docked, buys food, holding to buy more, and
 //           computers, then a missile, and sells some food, then tries for
 //           a rear pulse laser
@@ -75,6 +79,7 @@ void game_debug_dodo(void);
 void game_debug_galactic(void);
 void game_debug_target(void);
 void game_debug_station(void);
+void game_debug_story(unsigned i, _Bool docked);
 void game_debug_press(uint16_t buttons);
 
 // The buttons, as in el_input.h
@@ -185,6 +190,8 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 460 && f < 463) return D;
 		if (f >= 470 && f < 473) return D;
 		if (f >= 480 && f < 483) return D;
+		// Past the passenger cabin
+		if (f >= 485 && f < 488) return D;
 		if (f >= 490 && f < 493) return R;
 		if (f >= 500 && f < 503) return A;
 		return 0;
@@ -227,6 +234,14 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 205 && f < 400) return A;
 		if (f >= 500 && f < 510) return B;
 		if (f >= 510 && f < 513) return B | A;
+	}
+	if (!strcmp(host_mode, "race")) {
+		if (f >= 250 && f < 253) return D;
+		if (f >= 270 && f < 273) return A;
+	}
+	if (!strcmp(host_mode, "story")) {
+		// Read the page, then go on
+		if (f >= 700 && f < 703) return A;
 	}
 	if (!strcmp(host_mode, "station")) {
 		if (f >= 210 && f < 225) return A;
@@ -298,6 +313,8 @@ void host_frame(uint32_t frame, uint32_t sprites) {
 	if (frame == 480 && !strcmp(host_mode, "fight")) game_debug_pirate("PYTHON");
 	if (frame == 200 && !strcmp(host_mode, "target")) game_debug_target();
 	if (frame == 200 && !strcmp(host_mode, "station")) game_debug_station();
+	if (frame == 200 && !strcmp(host_mode, "story")) game_debug_story(0, false);
+	if (frame == 200 && !strcmp(host_mode, "race")) game_debug_story(2, true);
 	if (frame == 120 && !strcmp(host_mode, "scoop")) game_debug_scoop();
 	if (frame == 180 && !strcmp(host_mode, "overdrive")) game_debug_face_sun();
 	if (frame == 240 && !strcmp(host_mode, "views")) game_debug_chaser("SIDEWINDER");

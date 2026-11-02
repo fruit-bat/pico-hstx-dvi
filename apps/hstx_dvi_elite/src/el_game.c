@@ -26,6 +26,7 @@
 
 #include "el_game.h"
 #include "el_chart.h"
+#include "el_companion.h"
 #include "el_draw.h"
 #include "el_hud.h"
 #include "el_input.h"
@@ -34,6 +35,7 @@
 #include "el_save.h"
 #include "el_ships.h"
 #include "el_space.h"
+#include "el_story.h"
 #include "el_trade.h"
 #include "game_pallet.h"
 #include <ctype.h>
@@ -293,6 +295,20 @@ static uint32_t _hyper_to;
 static bool _hyper_galactic;
 static const char* _message;
 static uint32_t _message_frames;
+// A line said by the companion, the pet or a hail, how long it shows for, and its colour
+#define SAY_FRAMES 240
+static char _say[GAME_TEXT_MAX + 1];
+static uint32_t _say_frames, _say_colour;
+// The page a story shows, with the choice picked, and how long it has shown,
+// so a press meant for flying doesn't choose
+static StoryPage_t _page;
+static bool _page_shown;
+static uint32_t _page_pick, _page_frames;
+#define PAGE_WAIT 30
+// The next jump goes into witchspace, for a story; Marge has patched the
+// shields this fight; there were pirates about, and the shields were low,
+// last time we looked; and the docking computer docked us
+static bool _story_witch, _patched, _pirates_near, _shields_low, _docked_by_computer;
 // Our ship and how we have done
 static float _fore, _aft, _energy;
 static float _laser_temp;
@@ -337,7 +353,9 @@ static float towards(float v, float target, float step) {
 // What the other ships need to know
 static ShipsWorld_t world(void) {
 	const GalaxySystem_t* sys = chart_system(chart_home());
-	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops, _witch, vec_scale(_me.f, _speed) };
+	return (ShipsWorld_t){ &_me, _station.pos, sys->government, sys->economy, sys->population, _offender, cmdr.scoops, _witch,
+		vec_scale(_me.f, _speed), _planet.pos, _planet_radius,
+		story_flag(STORY_FLAG_THARGOID_FRIEND), story_flag(STORY_FLAG_PIRATE_FRIEND) };
 }
 
 // Repaired, as when docked
@@ -411,6 +429,9 @@ static void start(void) {
 	_pitch = 0.0f;
 	_kills = 0;
 	trade_new_commander();
+	story_bind(&cmdr.story);
+	_say_frames = 0;
+	_story_witch = false;
 	trade_arrive(chart_system(chart_home()));
 	chart_set_fuel(cmdr.fuel);
 	refit();
@@ -518,6 +539,11 @@ static void enter_witchspace(void) {
 	dust_init();
 	set_state(STATE_FLYING);
 	message("WITCHSPACE");
+	companion_event(CE_WITCH, false);
+	story_event(STORY_JUMP, 0);
+	story_event(STORY_WITCH, 0);
+	// Friends of the Thargoids, maybe from just now
+	if (story_flag(STORY_FLAG_THARGOID_FRIEND)) ships_calm_aliens();
 }
 
 // Into the next galaxy, after the last the first, at the system nearest
@@ -539,7 +565,9 @@ static void arrive(void) {
 		cmdr.fuel -= chart_distance(_hyper_to);
 		chart_set_fuel(cmdr.fuel);
 	}
-	if (!_witch && !_hyper_galactic && (options_witch() || rand() % WITCH_CHANCE == 0)) {
+	// Into witchspace by chance, from the options, or for a story
+	if (!_witch && !_hyper_galactic && (options_witch() || _story_witch || rand() % WITCH_CHANCE == 0)) {
+		_story_witch = false;
 		enter_witchspace();
 		return;
 	}
@@ -555,6 +583,10 @@ static void arrive(void) {
 	_view = VIEW_FRONT;
 	dust_init();
 	set_state(STATE_FLYING);
+	companion_event(CE_HYPERSPACE, false);
+	if (cmdr.fuel < 15) companion_event(CE_LOW_FUEL, false);
+	story_event(STORY_JUMP, 0);
+	story_event(STORY_ARRIVE, chart_home());
 }
 
 // Saves us, if there is somewhere to, as when docked
@@ -668,7 +700,10 @@ static void touch_station(void) {
 	const bool pointing = dist > 0.0f && -vec_dot(d, _me.f) / dist > DOCK_CONE;
 	const bool level = fabsf(vec_dot(_station.r, _me.u)) < DOCK_LEVEL;
 	// The station we shot at keeps its doors shut
-	if (in_front && pointing && level && !_station_angry) set_state(STATE_DOCKING);
+	if (in_front && pointing && level && !_station_angry) {
+		_docked_by_computer = _docking;
+		set_state(STATE_DOCKING);
+	}
 	else set_state(STATE_DEAD);
 }
 
@@ -771,6 +806,7 @@ static void overdrive(void) {
 		else {
 			_overdrive = true;
 			_over_fuel = 0;
+			companion_event(CE_OVERDRIVE, false);
 		}
 	}
 	if (!_overdrive) return;
@@ -966,6 +1002,7 @@ static void station_hit(void) {
 	_station_gun = STATION_GUN_EVERY;
 	docking_computer(false);
 	message("STATION HOSTILE");
+	companion_event(CE_SHOOT_STATION, true);
 }
 
 // The station after us: Vipers out of the slot, and its guns
@@ -1012,9 +1049,11 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	if (cmdr.targeting && cmdr.laser[_view] != LASER_NONE) _tracked = ships_tracked(&_eye, LASER_RANGE, TRACK_CONE, keep);
 	// Locking on afresh to a new ship
 	if (_tracked < 0 || _tracked != keep) _lock_frames = 0;
-	else if (_lock_frames < TRACK_LOCK_FRAMES) ++_lock_frames;
+	else if (_lock_frames < TRACK_LOCK_FRAMES && ++_lock_frames == TRACK_LOCK_FRAMES && ships[_tracked].role == ROLE_POLICE) {
+		companion_event(CE_LOCK_POLICE, false);
+	}
 	if (_tracked >= 0) {
-		_tracked_name = ships[_tracked].cls->name;
+		_tracked_name = ships[_tracked].label ? ships[_tracked].label : ships[_tracked].cls->name;
 		_tracked_bounty = ships_bounty((uint32_t)_tracked);
 		_tracked_name_frames = TRACK_NAME_FRAMES;
 	}
@@ -1032,6 +1071,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 		_laser_temp = 1.0f;
 		_overheated = true;
 		message("LASER TEMPERATURE");
+		companion_event(CE_LASER_HOT, true);
 	}
 	// The ship the targeting computer follows, else the one in the middle
 	const int32_t i = locked() ? _tracked : ships_in_sights(&_eye, LASER_RANGE);
@@ -1066,6 +1106,7 @@ static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	ships_bomb(_me.pos, BOMB_RANGE, ev);
 	_bomb_flash = BOMB_FLASH;
 	message("ENERGY BOMB USED");
+	companion_event(CE_BOMB, false);
 }
 
 // Out in the pod, looking back at the ship
@@ -1080,6 +1121,7 @@ static void escape(void) {
 	_offender = false;
 	_station_angry = false;
 	trade_escape();
+	companion_event(CE_ESCAPE, true);
 	chart_set_fuel(cmdr.fuel);
 }
 
@@ -1098,21 +1140,68 @@ static void move_pod(void) {
 
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
 static void take(const ShipsEvents_t* ev) {
+	const bool busy = ships_hostile_near(&_me, SCANNER_RANGE);
 	_fore -= ev->fore;
 	_aft -= ev->aft;
+	bool through = false;
 	if (_fore < 0.0f) {
 		_energy += _fore;
 		_fore = 0.0f;
+		through = true;
 	}
 	if (_aft < 0.0f) {
 		_energy += _aft;
 		_aft = 0.0f;
+		through = true;
 	}
-	if (ev->missile) message("INCOMING MISSILE");
+	if (through && (ev->fore > 0.0f || ev->aft > 0.0f)) {
+		companion_event(CE_HULL_HIT, busy);
+		story_event(STORY_HULL_HIT, 0);
+	}
+	if (ev->rammed) companion_event(CE_RAMMED, busy);
+	// Low shields, said once until they are back up; and Marge patches them, once a fight
+	const bool low = _fore < 0.2f || _aft < 0.2f;
+	if (low && !_shields_low) companion_event(CE_SHIELDS_LOW, busy);
+	_shields_low = low;
+	if (!busy) _patched = false;
+	if (low && busy && !_patched && companion() == COMPANION_MARGE) {
+		_fore = fmaxf(_fore, 0.5f);
+		_aft = fmaxf(_aft, 0.5f);
+		_patched = true;
+		companion_event(CE_PATCHED, busy);
+	}
+	// Pirates about: Pip sees them further off
+	const bool pirates = ships_hostile_near(&_me, SCANNER_RANGE * (companion() == COMPANION_PIP ? 2.0f : 1.0f));
+	if (pirates && !_pirates_near) companion_event(CE_PIRATES, false);
+	_pirates_near = pirates;
+	if (ev->missile) {
+		message("INCOMING MISSILE");
+		companion_event(CE_MISSILE_IN, busy);
+	}
+	if (ev->scooped) companion_event(CE_CARGO_SCOOP, busy);
 	for (uint32_t i = 0; i < ev->scooped; ++i) message(trade_scoop(i < ev->aliens));
+	// What the stories wait for
+	for (uint32_t i = 0; i < ev->items_n; ++i) {
+		// In capitals, as messages are
+		static char taken[GAME_TEXT_MAX + 1];
+		const char* name = story_item_name(ev->items[i]);
+		uint32_t k = 0;
+		for (; name[k] && k < GAME_TEXT_MAX; ++k) taken[k] = (char)toupper((unsigned char)name[k]);
+		taken[k] = 0;
+		message(taken);
+		story_event(STORY_SCOOP, ev->items[i]);
+	}
+	for (uint32_t b = 0; b < 8; ++b) {
+		if (ev->disabled & (1u << b)) story_event(STORY_DISABLED, b + 1);
+		if (ev->destroyed & (1u << b)) story_event(STORY_DESTROYED, b + 1);
+		if (ev->escaped & (1u << b)) story_event(STORY_ESCAPED, b + 1);
+		if (ev->near & (1u << b)) story_event(STORY_NEAR, b + 1);
+	}
 	if (ev->smashed) message(cmdr.scoops ? "CARGO LOST" : "NO FUEL SCOOPS");
 	_kills += ev->kills;
 	cmdr.cash += ev->bounty;
+	if (ev->bounty) companion_event(CE_BOUNTY, busy);
+	if (ev->innocent) companion_event(CE_INNOCENT, busy);
 	if (ev->bounty) {
 		static char bounty[24];
 		snprintf(bounty, sizeof(bounty), "BOUNTY %u.%u CR", (unsigned)(ev->bounty / 10), (unsigned)(ev->bounty % 10));
@@ -1145,14 +1234,21 @@ static void heat(void) {
 	_cabin_temp = towards(_cabin_temp, CABIN_COOL + (1.0f - CABIN_COOL) * h, CABIN_CHANGE);
 	if (_cabin_temp > CABIN_TOO_HOT) {
 		_energy -= HEAT_DAMAGE;
-		if (!_message_frames) message("CABIN TEMPERATURE");
+		if (!_message_frames) {
+			message("CABIN TEMPERATURE");
+			companion_event(CE_CABIN_HOT, false);
+			story_event(STORY_SUN, 0);
+		}
 	}
 	if (cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX) {
 		if (++_scoop_frames >= SCOOP_FRAMES) {
 			_scoop_frames = 0;
 			++cmdr.fuel;
 			chart_set_fuel(cmdr.fuel);
-			if (!_message_frames) message("FUEL SCOOPS ON");
+			if (!_message_frames) {
+				message("FUEL SCOOPS ON");
+				companion_event(CE_FUEL_SCOOP, false);
+			}
 		}
 	}
 }
@@ -1206,6 +1302,14 @@ void game_debug_target(void) {
 	trade_max_equipment();
 	const Vec3_t off = vec_add(vec_scale(_me.r, 220.0f), vec_scale(_me.u, 120.0f));
 	ships_debug_place(0, "SIDEWINDER", vec_add(_me.pos, vec_add(vec_scale(_me.f, 3000.0f), off)), vec_scale(_me.f, -1.0f), _me.u, &w);
+}
+
+// For trying the stories on the PC: a cabin and Pip aboard, and story i
+// starting here, as if we had just come in, or docked
+void game_debug_story(uint32_t i, bool docked) {
+	cmdr.cabin = true;
+	if (!companion()) companion_join(COMPANION_PIP);
+	if (story_start(i, chart_home())) story_event(docked ? STORY_DOCK : STORY_ARRIVE, chart_home());
 }
 
 // For trying the galactic hyperdrive on the PC: fits one
@@ -1287,7 +1391,7 @@ static void draw_dashboard(void) {
 		.missiles = cmdr.missiles,
 		.compass = _witch ? (Vec3_t){ 0.0f, 0.0f, 0.0f } : vec_length(station) < SAFE_ZONE * _planet_radius ? station : planet,
 		.scanner_range = SCANNER_RANGE,
-		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown(),
+		.sights = looking_out() && cmdr.laser[_view] != LASER_NONE && _state == STATE_FLYING && !options_shown() && !_page_shown,
 		.sights_off = _sights_off,
 		.locked = locked(),
 		.locking = _tracked >= 0 && !locked(),
@@ -1544,7 +1648,11 @@ static bool next_state(void) {
 	++_state_frames;
 	switch (_state) {
 		case STATE_LAUNCHING:
-			if (_state_frames >= TUNNEL_FRAMES) set_state(STATE_FLYING);
+			if (_state_frames >= TUNNEL_FRAMES) {
+				set_state(STATE_FLYING);
+				companion_event(CE_LAUNCH, false);
+				story_event(STORY_ARRIVE, chart_home());
+			}
 			break;
 		case STATE_DOCKING:
 			if (_state_frames >= TUNNEL_FRAMES) {
@@ -1560,6 +1668,10 @@ static bool next_state(void) {
 				refit();
 				set_state(STATE_DOCKED);
 				save();
+				companion_event(_docked_by_computer ? CE_DOCK_COMPUTER : CE_DOCK, false);
+				companion_dock();
+				_patched = false;
+				story_event(STORY_DOCK, chart_home());
 			}
 			break;
 		case STATE_HYPERSPACE:
@@ -1581,6 +1693,7 @@ static bool next_state(void) {
 // Docked where a commander was saved
 static void load(const Save_t* s) {
 	cmdr = s->cmdr;
+	story_bind(&cmdr.story);
 	memcpy(_name, s->name, sizeof(_name));
 	_kills = s->kills;
 	_offender = s->offender != 0;
@@ -1780,6 +1893,119 @@ static void keyboard(void) {
 }
 #endif
 
+// ----------------------------------------------------------------------------
+// The stories, see el_story.h: what they ask of the game
+
+const GalaxySystem_t* story_host_system(uint32_t i) { return chart_system(i); }
+uint32_t story_host_galaxy(void) { return chart_galaxy(); }
+uint32_t story_host_here(void) { return chart_home(); }
+bool story_host_has_cabin(void) { return cmdr.cabin; }
+uint32_t story_host_cash(void) { return cmdr.cash; }
+
+void story_host_add_cash(int32_t tenths) {
+	cmdr.cash = (int32_t)cmdr.cash + tenths < 0 ? 0u : (uint32_t)((int32_t)cmdr.cash + tenths);
+}
+
+void story_host_offender(bool on) {
+	if (on && !_offender) message("OFFENDER");
+	_offender = on;
+}
+
+// Where a story ship turns up: out of the slot, or ahead of us, coming our way,
+// or for one following us, beside us
+void story_host_spawn(uint32_t id, const StoryShip_t* ship) {
+	const ShipsWorld_t w = world();
+	Vec3_t pos, f;
+	if (ship->at_station) {
+		pos = vec_add(_station.pos, vec_scale(_station.f, _station_model->radius * STATION_POLICE_OUT));
+		f = _station.f;
+	}
+	else if (ship->goal == GOAL_FOLLOW) {
+		pos = vec_add(_me.pos, vec_add(vec_scale(_me.r, 2000.0f), vec_scale(_me.f, -500.0f)));
+		f = _me.f;
+	}
+	else {
+		pos = vec_add(_me.pos, vec_add(vec_scale(_me.f, 6000.0f), vec_scale(_me.r, (float)((int32_t)id * 600 - 900))));
+		f = vec_scale(_me.f, -1.0f);
+	}
+	ships_story_spawn((uint8_t)id, ship->label, ship->cls, ship->goal, ship->disable, ship->drop, pos, f, _me.u, &w);
+}
+
+// A story's canister, ahead, a little off the nose, to fly into
+void story_host_canister(uint32_t item) {
+	ships_story_canister((uint8_t)item, vec_add(_me.pos, vec_add(vec_scale(_me.f, 3000.0f), vec_scale(_me.u, 40.0f))));
+}
+
+void story_host_calm(void) { ships_story_calm(); }
+void story_host_witch(void) { _story_witch = true; }
+
+void story_host_laser(uint32_t laser) {
+	if (cmdr.laser[MOUNT_FRONT] == LASER_NONE || cmdr.laser[MOUNT_FRONT] < (Laser_e)laser) cmdr.laser[MOUNT_FRONT] = (Laser_e)laser;
+}
+
+void story_host_say(Speaker_e who, const char* name, const char* text) {
+	snprintf(_say, sizeof(_say), "%s: %s", name, text);
+	_say_frames = SAY_FRAMES;
+	_say_colour = who == SPEAK_PET ? GAME_GREEN : who == SPEAK_HAIL ? GAME_ORANGE : GAME_CYAN;
+}
+
+// A page: up and down pick a choice, fire takes it, or goes on when there
+// are none; but not straight away, so a press meant for flying doesn't
+static void page_input(uint16_t pressed) {
+	if (++_page_frames < PAGE_WAIT) return;
+	if (_page.choices) {
+		if (pressed & (EL_INP_UP | EL_INP_DOWN)) _page_pick = (_page_pick + 1) % _page.choices;
+		if ((pressed & EL_INP_A) && _page.can[_page_pick]) {
+			story_choose(_page_pick);
+			_page_frames = 0;
+		}
+	}
+	else if (pressed & EL_INP_A) {
+		story_choose(0);
+		_page_frames = 0;
+	}
+}
+
+#define PAGE_W (40 * 8 + 48)
+#define PAGE_LINE 12
+#define PAGE_CHOICE 18
+
+// Where the page goes: its height, top, the left of its text and its choices
+static int32_t page_h(void) {
+	return 24 + (int32_t)_page.lines * PAGE_LINE + 12 + (int32_t)_page.choices * PAGE_CHOICE + 20;
+}
+
+// The panel, first, as what is drawn first is in front, hiding the view
+static void page_panel(void) {
+	const int32_t h = page_h(), top = CENTRE_Y - h / 2;
+	const int32_t x = (GAME_SCREEN_W - PAGE_W) / 2 + 24;
+	const int32_t choices_y = top + 24 + (int32_t)_page.lines * PAGE_LINE + 12;
+	// The mark on the chosen one, in front of the panel, so before it
+	if (_page.choices) screen_select(x, choices_y + PAGE_CHOICE * (int32_t)_page_pick, 30 * 8);
+	if (object_begin()) {
+		const float x0 = (float)(GAME_SCREEN_W - PAGE_W) / 2.0f, x1 = x0 + PAGE_W;
+		add_box(x0, (float)top - 8.0f, x1, (float)(top + h), hstx_dvi_pixel_rgb(36, 109, 219));
+		add_rect(x0, (float)top - 8.0f, x1, (float)(top + h), hstx_dvi_pixel_rgb(0, 0, 0));
+		object_end();
+	}
+}
+
+// and its text, last, as text goes over everything
+static void page_draw(void) {
+	const int32_t n = (int32_t)_page.lines, c = (int32_t)_page.choices;
+	const int32_t h = page_h(), top = CENTRE_Y - h / 2;
+	const int32_t x = (GAME_SCREEN_W - PAGE_W) / 2 + 24;
+	const int32_t choices_y = top + 24 + n * PAGE_LINE + 12;
+	screen_text_centre(top, _page.title, GAME_YELLOW, false);
+	for (int32_t i = 0; i < n; ++i) screen_text(x, top + 24 + i * PAGE_LINE, _page.line[i], GAME_WHITE, false);
+	for (int32_t i = 0; i < c; ++i) {
+		const uint32_t colour = !_page.can[i] ? GAME_GREY : i == (int32_t)_page_pick ? GAME_YELLOW : GAME_WHITE;
+		screen_text(x, choices_y + i * PAGE_CHOICE, _page.choice[i], colour, false);
+	}
+	const bool ready = _page_frames >= PAGE_WAIT;
+	screen_text_centre(top + h - 14, !ready ? "" : c ? "UP AND DOWN PICK, FIRE CHOOSES" : "FIRE TO GO ON", GAME_CYAN, false);
+}
+
 void game_play(void) {
 	start();
 	if (!choose_commander()) return;
@@ -1787,10 +2013,22 @@ void game_play(void) {
 		const uint16_t pressed = game_input_pressed() | _debug_pressed;
 		_debug_pressed = 0;
 		const uint16_t held = game_input_get();
+		// A story's page, when there is one, stops the world, as the options do
+		const bool was_page = _page_shown;
+		_page_shown = !options_shown() && story_page(&_page);
+		if (_page_shown && !was_page) {
+			_page_frames = 0;
+			_page_pick = 0;
+		}
+		if (_page_pick >= _page.choices) _page_pick = 0;
 		if (options_shown()) {
 			if (options_input(pressed)) return;
 		}
+		else if (_page_shown) {
+			page_input(pressed);
+		}
 		else {
+			companion_tick(_state == STATE_FLYING, ships_hostile_near(&_me, SCANNER_RANGE));
 			ShipsEvents_t ev = { 0 };
 			if (pressed & EL_INP_START) options_open(true);
 			// The docking computer, from X or the options; any flying control takes over from it
@@ -1857,6 +2095,7 @@ void game_play(void) {
 		}
 
 		screen_begin();
+		if (_page_shown && !options_shown()) page_panel();
 		draw_dashboard();
 		// The charts and data are always wireframes, to look like data
 		const Style_e chart_style = draw_style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
@@ -1941,10 +2180,19 @@ void game_play(void) {
 			--_message_frames;
 			screen_text_centre(VIEW_BOTTOM - 32, _message, GAME_YELLOW, true);
 		}
-		// Text draws straight into the row, so the options go last, over everything else
+		// What the companion, the pet or a hail says, above the messages
+		if (_say_frames && !_page_shown && !options_shown()) {
+			--_say_frames;
+			screen_text_centre(VIEW_BOTTOM - 52, _say, _say_colour, true);
+		}
+		// Text draws straight into the row, so the options and pages go last, over everything else
 		if (options_shown()) {
 			label = "OPTIONS";
 			options_draw();
+		}
+		else if (_page_shown) {
+			label = "COMMS";
+			page_draw();
 		}
 		screen_end(title, label);
 		++_frame;

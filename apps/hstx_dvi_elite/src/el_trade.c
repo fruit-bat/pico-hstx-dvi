@@ -6,6 +6,7 @@
 // through its mask.
 
 #include "el_trade.h"
+#include "el_companion.h"
 #include "el_draw.h"
 #include "el_input.h"
 #include "el_screen.h"
@@ -68,6 +69,7 @@ static uint32_t _held_frames = 0;
 typedef enum {
 	EQUIP_FUEL = 0,
 	EQUIP_MISSILE,
+	EQUIP_CABIN,
 	EQUIP_CARGO_BAY,
 	EQUIP_ECM,
 	EQUIP_PULSE_LASER,
@@ -92,6 +94,8 @@ typedef struct {
 static const Equip_t _equipment[EQUIPMENT] = {
 	{ "Fuel", 2, 1, LASER_NONE },
 	{ "Missile", 300, 1, LASER_NONE },
+	// Not in the original: room for a companion, from the hold
+	{ "Passenger Cabin", 1000, 1, LASER_NONE },
 	{ "Large Cargo Bay", 4000, 2, LASER_NONE },
 	{ "E.C.M. System", 6000, 3, LASER_NONE },
 	{ "Pulse Laser", 4000, 4, LASER_PULSE },
@@ -108,6 +112,8 @@ static const Equip_t _equipment[EQUIPMENT] = {
 
 #define CARGO_SMALL 20
 #define CARGO_LARGE 35
+// What a passenger cabin takes from the hold
+#define CABIN_TONNES 5
 static uint32_t _item = 0;
 // Where a laser bought goes
 static Mount_e _mount = MOUNT_FRONT;
@@ -120,7 +126,7 @@ static const char* const _mount_names[MOUNTS] = { "Front", "Rear", "Left", "Righ
 #define LIST_LINE 12
 // The inventory's list of equipment, beside the cargo
 #define INVENTORY_EQUIP_X (MARKET_X + 26 * 8)
-#define INVENTORY_EQUIP 13
+#define INVENTORY_EQUIP 14
 
 void trade_commander_start(Commander_t* c) {
 	memset(c, 0, sizeof(*c));
@@ -130,6 +136,7 @@ void trade_commander_start(Commander_t* c) {
 	c->hold = CARGO_SMALL;
 	c->laser[MOUNT_FRONT] = LASER_PULSE;
 	for (uint32_t i = MOUNT_REAR; i < MOUNTS; ++i) c->laser[i] = LASER_NONE;
+	story_reset(&c->story);
 }
 
 void trade_new_commander(void) {
@@ -155,6 +162,7 @@ void trade_max_equipment(void) {
 	cmdr.bomb = true;
 	cmdr.galactic = true;
 	cmdr.targeting = true;
+	cmdr.cabin = true;
 	for (uint32_t i = 0; i < MOUNTS; ++i) cmdr.laser[i] = LASER_MILITARY;
 }
 
@@ -173,6 +181,11 @@ void trade_arrive(const GalaxySystem_t* sys) {
 	_quantity[ALIEN_ITEMS] = 0;
 }
 
+// The tonnes the hold takes, less any cabin
+static uint32_t hold(void) {
+	return cmdr.hold - (cmdr.cabin ? CABIN_TONNES : 0);
+}
+
 // Tonnes in the hold; goods sold by the kg or g take no room
 static uint32_t cargo_tonnes(void) {
 	uint32_t t = 0;
@@ -185,7 +198,7 @@ static uint32_t cargo_tonnes(void) {
 static const char* buy(uint32_t i) {
 	if (!_quantity[i]) return "NONE FOR SALE";
 	if (cmdr.cash < _price[i]) return "NOT ENOUGH CASH";
-	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= cmdr.hold) return "HOLD FULL";
+	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= hold()) return "HOLD FULL";
 	cmdr.cash -= _price[i];
 	--_quantity[i];
 	++cmdr.cargo[i];
@@ -194,7 +207,7 @@ static const char* buy(uint32_t i) {
 
 const char* trade_scoop(bool alien) {
 	const uint32_t i = alien ? ALIEN_ITEMS : (uint32_t)rand() % GOODS;
-	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= cmdr.hold) return "HOLD FULL";
+	if (_goods[i].unit == UNIT_T && cargo_tonnes() >= hold()) return "HOLD FULL";
 	++cmdr.cargo[i];
 	// The name, in capitals, as messages are, with how much
 	static char name[24];
@@ -207,7 +220,8 @@ const char* trade_scoop(bool alien) {
 
 static const char* sell(uint32_t i) {
 	if (!cmdr.cargo[i]) return "NONE IN THE HOLD";
-	cmdr.cash += _price[i];
+	// Sly knows where to get a little more
+	cmdr.cash += _price[i] + (companion() == COMPANION_SLY ? _price[i] / 10u : 0u);
 	++_quantity[i];
 	--cmdr.cargo[i];
 	return NULL;
@@ -256,7 +270,7 @@ void trade_draw_market(void) {
 	}
 	y += 4;
 	cash_line(MARKET_X, y);
-	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)cmdr.hold);
+	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)hold());
 	screen_text(MARKET_X + 30 * 8, y, s, GAME_CYAN, false);
 	screen_text_centre(VIEW_BOTTOM - 12, "RIGHT BUYS  LEFT SELLS", GAME_GREY, false);
 }
@@ -269,7 +283,7 @@ void trade_draw_inventory(void) {
 	y += LIST_LINE;
 	cash_line(MARKET_X, y);
 	y += LIST_LINE;
-	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)cmdr.hold);
+	snprintf(s, sizeof(s), "Hold: %u of %u t", (unsigned)cargo_tonnes(), (unsigned)hold());
 	screen_text(MARKET_X, y, s, GAME_CYAN, false);
 	y += LIST_LINE;
 	snprintf(s, sizeof(s), "Missiles: %u of %u", (unsigned)cmdr.missiles, (unsigned)MISSILES_MAX);
@@ -294,6 +308,28 @@ void trade_draw_inventory(void) {
 		any = true;
 	}
 	if (!any) screen_text(MARKET_X + 16, y, "Empty", GAME_GREY, false);
+	if (!any) y += LIST_LINE;
+	// Who and what the stories have put aboard
+	const char* items[STORY_ITEMS];
+	const uint32_t k = story_item_names(items, STORY_ITEMS);
+	if (!k && !companion_name() && !pet_name()) return;
+	y += 8;
+	screen_text(MARKET_X, y, "ABOARD:", GAME_CYAN, false);
+	y += LIST_LINE + 4;
+	if (companion_name()) {
+		snprintf(s, sizeof(s), "%s (%s)", companion_name(), companion_mood_name());
+		screen_text(MARKET_X + 16, y, s, GAME_GREEN, false);
+		y += LIST_LINE;
+	}
+	if (pet_name()) {
+		snprintf(s, sizeof(s), "A %s", pet_name());
+		screen_text(MARKET_X + 16, y, s, GAME_GREEN, false);
+		y += LIST_LINE;
+	}
+	for (uint32_t i = 0; i < k && y < VIEW_BOTTOM - 12; ++i) {
+		screen_text(MARKET_X + 16, y, items[i], GAME_YELLOW, false);
+		y += LIST_LINE;
+	}
 }
 
 // The equipment sold at a system, by its tech level
@@ -312,6 +348,9 @@ static const char* fit(Equip_e e) {
 			break;
 		case EQUIP_MISSILE:
 			if (cmdr.missiles >= MISSILES_MAX) return "FULL";
+			break;
+		case EQUIP_CABIN:
+			if (cmdr.cabin) return "FITTED";
 			break;
 		case EQUIP_CARGO_BAY:
 			if (cmdr.hold >= CARGO_LARGE) return "FITTED";
@@ -349,6 +388,7 @@ static const char* fit(Equip_e e) {
 	switch (e) {
 		case EQUIP_FUEL: cmdr.fuel = GALAXY_FUEL_MAX; break;
 		case EQUIP_MISSILE: ++cmdr.missiles; break;
+		case EQUIP_CABIN: cmdr.cabin = true; break;
 		case EQUIP_CARGO_BAY: cmdr.hold = CARGO_LARGE; break;
 		case EQUIP_ECM: cmdr.ecm = true; break;
 		case EQUIP_FUEL_SCOOPS: cmdr.scoops = true; break;
@@ -414,6 +454,7 @@ uint32_t trade_equipment_names(const char** names, uint32_t max) {
 		if (n < max && cmdr.laser[i] != LASER_NONE) names[n++] = lasers[i][cmdr.laser[i]];
 	}
 	if (n < max && cmdr.hold >= CARGO_LARGE) names[n++] = "Large Cargo Bay";
+	if (n < max && cmdr.cabin) names[n++] = "Passenger Cabin";
 	if (n < max && cmdr.ecm) names[n++] = "E.C.M. System";
 	if (n < max && cmdr.scoops) names[n++] = "Fuel Scoops";
 	if (n < max && cmdr.pod) names[n++] = "Escape Pod";

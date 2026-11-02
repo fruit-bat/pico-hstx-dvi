@@ -5,6 +5,7 @@
 #pragma once
 
 #include "galaxy.h"
+#include "el_story.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -46,6 +47,8 @@ typedef struct {
 	bool bomb;           // whether we have an energy bomb
 	bool galactic;       // whether we have a galactic hyperdrive
 	bool targeting;      // whether we have a targeting computer
+	bool cabin;          // whether we have a passenger cabin, for a companion
+	StorySave_t story;   // the stories, and who flies with us
 } Commander_t;
 
 extern Commander_t cmdr;

@@ -60,6 +60,14 @@ typedef struct {
 	uint32_t respawn;  // frames until another takes its place, once destroyed
 	int32_t mother;    // for a Thargon, the Thargoid that launched it, or -1
 	uint32_t wanted;   // its bounty, in percent of its class's, as some are wanted more
+	// A ship in a story: its id there, from 1, or 0, what it is called, how
+	// it goes, whether it can be disabled and has been, whether it has come
+	// near us, and the named item it leaves, or 0
+	uint8_t story;
+	uint8_t goal;
+	bool can_disable, disabled, near;
+	uint8_t drop;
+	const char* label;
 } Ship_t;
 
 #define SHIPS 6
@@ -72,6 +80,7 @@ typedef struct {
 	float roll, pitch;
 	bool alien;       // alien items, from a Thargon
 	bool on;
+	uint8_t item;     // a story's named item, or 0
 } Canister_t;
 
 #define CANISTERS 4
@@ -88,6 +97,10 @@ typedef struct {
 	bool scoops;         // whether we have fuel scoops, to pick up canisters
 	bool witch;          // whether we are in witchspace
 	Vec3_t velocity;     // ours, in units a frame
+	Vec3_t planet;       // where the planet is, for racing to
+	float planet_radius;
+	bool aliens_friendly; // Thargoids leave us be, unless shot
+	bool pirates_friendly;
 } ShipsWorld_t;
 
 // What happened to us and the ships this frame
@@ -100,6 +113,12 @@ typedef struct {
 	uint32_t scooped; // canisters we picked up
 	uint32_t aliens;  // of those, alien items
 	uint32_t smashed; // canisters that broke against us
+	// For the stories: the story ships disabled, destroyed, got where they
+	// were going, or came near, a bit for each id from 1, and named items scooped
+	uint8_t disabled, destroyed, escaped, near;
+	uint8_t items[2];
+	uint32_t items_n;
+	bool rammed;      // a ship ran into us
 } ShipsEvents_t;
 
 // New ships for a new system, or Thargoids round us in witchspace
@@ -112,6 +131,17 @@ int32_t ships_in_sights(const Frame_t* me, float range);
 // keeping to the one it followed, keep, while it can; or -1. The station is
 // never one, as it isn't a ship here.
 int32_t ships_tracked(const Frame_t* me, float range, float cone, int32_t keep);
+// A story's ship, id from 1, with a label for the targeting computer, of the
+// class named, going as StoryGoal_e goal, at pos facing f; it replaces one
+// of the same id
+void ships_story_spawn(uint8_t id, const char* label, const char* cls, uint8_t goal, bool can_disable, uint8_t drop,
+	Vec3_t pos, Vec3_t f, Vec3_t u, const ShipsWorld_t* w);
+// The story ships stop fighting
+void ships_story_calm(void);
+// The Thargoids stop fighting, unless shot
+void ships_calm_aliens(void);
+// A canister holding a story's named item, at pos
+void ships_story_canister(uint8_t item, Vec3_t pos);
 // A Viper launched from the station's slot, at frame from, after us; false if
 // there is no room for one
 bool ships_launch_police(const Frame_t* from, const ShipsWorld_t* w);

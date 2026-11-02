@@ -13,6 +13,7 @@
 // it wants to go by a little each frame.
 
 #include "el_ships.h"
+#include "el_story.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +42,14 @@ Canister_t canisters[CANISTERS];
 #define LASER_NEAR 0.25f
 #define LASER_FAR_DAMAGE 0.2f
 #define HOLD_FIRE 0.6f
+// A story ship that can be is disabled below this much of its hull; and it
+// comes near us within this
+#define DISABLED_HULL 0.3f
+#define STORY_NEAR 4000.0f
+// One following us keeps about this far off, and one racing has got there
+// this many planet radii from the planet's middle
+#define FOLLOW_DISTANCE 1500.0f
+#define RACE_DONE 1.4f
 // A ship's bounty is from this to this percent of its class's
 #define WANTED_LOW 60
 #define WANTED_HIGH 160
@@ -257,7 +266,13 @@ static void new_ship(Ship_t* s, const ShipsWorld_t* w) {
 	s->roll = rand_range(-0.01f, 0.01f);
 	s->pitch = rand_range(-0.004f, 0.004f);
 	s->alive = true;
-	s->hostile = s->role == ROLE_PIRATE || s->role == ROLE_THARGOID || (s->role == ROLE_POLICE && w->offender);
+	s->hostile = (s->role == ROLE_PIRATE && !w->pirates_friendly) || (s->role == ROLE_THARGOID && !w->aliens_friendly) ||
+		(s->role == ROLE_POLICE && w->offender);
+	s->story = 0;
+	s->goal = GOAL_FIGHT;
+	s->can_disable = s->disabled = s->near = false;
+	s->drop = 0;
+	s->label = NULL;
 	s->cooldown = s->cls->rate;
 	s->beam = 0;
 	s->retreat = 0;
@@ -286,7 +301,7 @@ void ships_enter(const ShipsWorld_t* w) {
 			new_ship(s, w);
 			s->role = ROLE_THARGOID;
 			set_class(s, &_classes[THARGOID]);
-			s->hostile = true;
+			s->hostile = !w->aliens_friendly;
 			const Vec3_t pos = vec_add(w->me->pos, vec_scale(rand_unit(), rand_range(WITCH_NEAR, WITCH_FAR)));
 			frame_set(&s->fr, pos, vec_unit(vec_sub(w->me->pos, pos)), rand_unit());
 		}
@@ -312,10 +327,30 @@ static void new_canister(Vec3_t pos, Vec3_t drift, bool alien) {
 		frame_set(&c->fr, pos, rand_unit(), rand_unit());
 		c->drift = drift;
 		c->alien = alien;
+		c->item = 0;
 		c->roll = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
 		c->pitch = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
 		return;
 	}
+}
+
+void ships_story_canister(uint8_t item, Vec3_t pos) {
+	// In a space, else in place of an ordinary one
+	Canister_t* c = NULL;
+	for (uint32_t i = 0; i < CANISTERS && !c; ++i) {
+		if (!canisters[i].on) c = &canisters[i];
+	}
+	for (uint32_t i = 0; i < CANISTERS && !c; ++i) {
+		if (!canisters[i].item) c = &canisters[i];
+	}
+	if (!c) c = &canisters[0];
+	c->on = true;
+	frame_set(&c->fr, pos, rand_unit(), rand_unit());
+	c->drift = (Vec3_t){ 0.0f, 0.0f, 0.0f };
+	c->alien = false;
+	c->item = item;
+	c->roll = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
+	c->pitch = rand_range(-CANISTER_SPIN, CANISTER_SPIN);
 }
 
 void ships_debug_canister(Vec3_t pos) {
@@ -341,8 +376,20 @@ void ships_explode(Vec3_t pos, float size) {
 	explode(pos, size);
 }
 
+// A story ship leaves its item, once
+static void drop(Ship_t* s) {
+	if (!s->drop) return;
+	ships_story_canister(s->drop, vec_add(s->fr.pos, vec_scale(s->fr.u, s->model->radius * 1.5f)));
+	s->drop = 0;
+}
+
 static void destroy(Ship_t* s, ShipsEvents_t* ev, bool by_us) {
 	explode(s->fr.pos, s->model->radius);
+	if (s->story) {
+		ev->destroyed |= (uint8_t)(1u << (s->story - 1));
+		drop(s);
+		s->story = 0;
+	}
 	const bool thargon = s->role == ROLE_THARGON;
 	const uint32_t cargo = s->role == ROLE_TRADER ? TRADER_CARGO : s->role == ROLE_PIRATE ? PIRATE_CARGO :
 		thargon ? (s->hostile ? THARGON_ALIEN : THARGON_DEAD_ALIEN) : 0;
@@ -377,8 +424,19 @@ void ships_hit(uint32_t i, float damage, ShipsEvents_t* ev) {
 	Ship_t* s = &ships[i];
 	if (!s->alive) return;
 	// Anyone shot at shoots back, or runs
-	s->hostile = true;
+	s->hostile = !s->disabled;
 	s->energy -= damage;
+	// A story ship that can be is disabled first, and drifts
+	if (s->story && s->can_disable && !s->disabled && s->energy < s->cls->hull * DISABLED_HULL) {
+		s->energy = fmaxf(s->energy, s->cls->hull * 0.1f);
+		s->disabled = true;
+		s->hostile = false;
+		s->goal = GOAL_DRIFT;
+		s->speed *= 0.2f;
+		ev->disabled |= (uint8_t)(1u << (s->story - 1));
+		drop(s);
+		return;
+	}
 	if (s->energy <= 0.0f) destroy(s, ev, true);
 }
 
@@ -493,6 +551,104 @@ static void attack(Ship_t* s, uint32_t i, const ShipsWorld_t* w, ShipsEvents_t* 
 	}
 }
 
+// A story ship going about what it does, when not fighting
+static void story_ship(Ship_t* s, const ShipsWorld_t* w, ShipsEvents_t* ev) {
+	const uint8_t bit = (uint8_t)(1u << (s->story - 1));
+	const Vec3_t to_me = vec_sub(w->me->pos, s->fr.pos);
+	const float d = vec_length(to_me);
+	if (!s->near && d < STORY_NEAR) {
+		s->near = true;
+		ev->near |= bit;
+	}
+	if (s->hostile) return;
+	switch (s->goal) {
+		case GOAL_FIGHT:
+			s->hostile = true;
+			break;
+		case GOAL_RACE: {
+			const Vec3_t to = vec_sub(w->planet, s->fr.pos);
+			const float l = vec_length(to);
+			turn_towards(&s->fr, vec_scale(to, 1.0f / fmaxf(l, 1.0f)), s->cls->turn);
+			s->speed = s->cls->speed;
+			if (l < w->planet_radius * RACE_DONE) {
+				s->alive = false;
+				s->story = 0;
+				ev->escaped |= bit;
+			}
+			break;
+		}
+		case GOAL_DRIFT:
+			s->speed = fminf(s->speed, 2.0f);
+			frame_roll(&s->fr, 0.004f);
+			frame_pitch(&s->fr, 0.002f);
+			frame_tidy(&s->fr);
+			break;
+		case GOAL_FOLLOW: {
+			// To a point beside us, slowing as it gets there
+			const Vec3_t at = vec_add(w->me->pos, vec_add(vec_scale(w->me->r, FOLLOW_DISTANCE), vec_scale(w->me->f, -FOLLOW_DISTANCE * 0.5f)));
+			const Vec3_t to = vec_sub(at, s->fr.pos);
+			const float l = vec_length(to);
+			if (l > 1.0f) turn_towards(&s->fr, vec_scale(to, 1.0f / l), s->cls->turn);
+			s->speed = fminf(s->cls->speed, l * 0.02f + vec_length(w->velocity));
+			break;
+		}
+		case GOAL_WEAVE: {
+			const float t = (float)_frame * 0.03f;
+			frame_roll(&s->fr, 0.03f * sinf(t));
+			frame_pitch(&s->fr, 0.02f * cosf(t * 1.7f));
+			frame_tidy(&s->fr);
+			s->speed = s->cls->speed * 0.4f;
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+void ships_story_spawn(uint8_t id, const char* label, const char* cls, uint8_t goal, bool can_disable, uint8_t item,
+	Vec3_t pos, Vec3_t f, Vec3_t u, const ShipsWorld_t* w) {
+	// In place of one of the same id, else in a space, else in place of an
+	// ordinary ship minding its business
+	Ship_t* s = NULL;
+	for (uint32_t i = 0; i < SHIPS && !s; ++i) {
+		if (ships[i].alive && ships[i].story == id) s = &ships[i];
+	}
+	for (uint32_t i = 0; i < SHIPS && !s; ++i) {
+		if (!ships[i].alive) s = &ships[i];
+	}
+	for (uint32_t i = 0; i < SHIPS && !s; ++i) {
+		if (!ships[i].story && !ships[i].hostile) s = &ships[i];
+	}
+	if (!s) s = &ships[SHIPS - 1];
+	new_ship(s, w);
+	set_class(s, class_named(cls));
+	s->role = s->cls == &_classes[THARGOID] ? ROLE_THARGOID : goal == GOAL_FIGHT ? ROLE_PIRATE : ROLE_TRADER;
+	s->hostile = false;
+	s->story = id;
+	s->goal = goal;
+	s->can_disable = can_disable;
+	s->disabled = goal == GOAL_DRIFT;
+	s->drop = item;
+	s->label = label;
+	frame_set(&s->fr, pos, f, u);
+	s->speed = goal == GOAL_DRIFT ? 1.0f : s->cls->speed * 0.5f;
+}
+
+void ships_calm_aliens(void) {
+	for (uint32_t i = 0; i < SHIPS; ++i) {
+		if (ships[i].alive && (ships[i].role == ROLE_THARGOID || ships[i].role == ROLE_THARGON)) ships[i].hostile = false;
+	}
+}
+
+void ships_story_calm(void) {
+	for (uint32_t i = 0; i < SHIPS; ++i) {
+		Ship_t* s = &ships[i];
+		if (!s->alive || !s->story) continue;
+		s->hostile = false;
+		if (s->goal == GOAL_FIGHT) s->goal = GOAL_IDLE;
+	}
+}
+
 static void move_missiles(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 	for (uint32_t i = 0; i < MISSILES; ++i) {
 		Missile_t* m = &_missiles[i];
@@ -538,8 +694,12 @@ static void move_canisters(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 		const float d = vec_length(to);
 		if (d < model_canister.radius + RAM_MARGIN) {
 			c->on = false;
+			// A story's, taken aboard gently, scoops or not
+			if (c->item) {
+				if (ev->items_n < 2) ev->items[ev->items_n++] = c->item;
+			}
 			// Not well above us, it goes into the scoops
-			if (w->scoops && vec_dot(to, w->me->u) < SCOOP_ABOVE * d) {
+			else if (w->scoops && vec_dot(to, w->me->u) < SCOOP_ABOVE * d) {
 				++ev->scooped;
 				if (c->alien) ++ev->aliens;
 			}
@@ -568,8 +728,12 @@ void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 		if (s->beam) --s->beam;
 		// The police come for us once we are an offender
 		if (s->role == ROLE_POLICE && w->offender) s->hostile = true;
+		if (s->story) story_ship(s, w, ev);
 		if (s->hostile) {
 			attack(s, i, w, ev);
+		}
+		else if (s->story && s->goal != GOAL_IDLE) {
+			// Gone its own way, above
 		}
 		else {
 			frame_roll(&s->fr, s->roll);
@@ -580,9 +744,10 @@ void ships_move(const ShipsWorld_t* w, ShipsEvents_t* ev) {
 		const float d = vec_length(vec_sub(s->fr.pos, w->me->pos));
 		if (d < s->model->radius + RAM_MARGIN) {
 			ev->fore += RAM_DAMAGE;
+			ev->rammed = true;
 			destroy(s, ev, true);
 		}
-		else if (!_witch && d > LEAVE_RANGE && vec_length(vec_sub(s->fr.pos, w->station)) > LEAVE_RANGE) {
+		else if (!_witch && !s->story && d > LEAVE_RANGE && vec_length(vec_sub(s->fr.pos, w->station)) > LEAVE_RANGE) {
 			new_ship(s, w);
 		}
 	}
