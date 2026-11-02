@@ -44,6 +44,11 @@ target_link_libraries(hstx_dvi_cpm
   fatfs
 )
 
+# A USB keyboard, with GAME_USBKBD
+if (GAME_USBKBD)
+  target_link_libraries(hstx_dvi_cpm game_usbkbd)
+endif()
+
 # create map/bin/hex file etc.
 pico_add_extra_outputs(hstx_dvi_cpm)
 

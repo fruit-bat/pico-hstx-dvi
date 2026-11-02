@@ -1,8 +1,10 @@
 // Copyright (c) 2026 fruit-bat
 
 // CP/M 2.2 on the DVI screen, using the CPM-Emulator (a Z80 with an emulated BDOS).
-// The drives are directories on an SD card and, for now, keys come from the USB
-// serial port. Output goes to the screen and to the USB serial port.
+// The drives are directories on an SD card. Keys come from the USB serial port
+// or, built with GAME_USBKBD, from a USB keyboard on the Pico's USB port, with
+// the serial port then on the UART, GPIOs 0 and 1. Output goes to the screen
+// and to the serial port.
 
 // This example requires an external digital video connector connected to
 // GPIOs 12 through 19 (the HSTX-capable GPIOs) with appropriate
@@ -22,7 +24,7 @@
 static vt_emu_t* _emu;
 
 // Output-only stdio driver that echoes stdout to the screen;
-// input still comes from the other enabled drivers (USB)
+// input still comes from the other enabled drivers (USB or the UART)
 static void vt_out_chars(const char *buf, int length) {
     for (int i = 0; i < length; i++) {
         vt_emu_put_ch(_emu, buf[i]);
@@ -41,7 +43,7 @@ int main(void)
 
     _emu = hstx_dvi_vt_emu_get();
 
-    // The screen only mirrors stdout, so leave answering queries to the USB terminal
+    // The screen only mirrors stdout, so leave answering queries to the serial terminal
     vt_emu_set_reply(_emu, NULL, NULL);
 
     vt_driver.out_chars = vt_out_chars;
@@ -51,6 +53,9 @@ int main(void)
 #endif
     stdio_init_all();
     stdio_set_driver_enabled(&vt_driver, true);
+#ifdef GAME_USBKBD
+    usbkbd_init();
+#endif
 
     sleep_ms(2000); // Allow time for initialization
 
