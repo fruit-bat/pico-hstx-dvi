@@ -85,12 +85,12 @@ add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_
 add_subdirectory(hstx_dvi_cpm  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_cpm")
 add_subdirectory(hstx_dvi_android_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_android_test")
 add_subdirectory(hstx_dvi_wireframe_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wireframe_test")
-add_subdirectory(hstx_dvi_elite  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_elite")
+add_subdirectory(hstx_dvi_harmless  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_harmless")
 
 # The games' serial port, moved off the USB port when it is a keyboard's host
 if (GAME_USBKBD)
   foreach(game hstx_dvi_sprite_test hstx_dvi_defender hstx_dvi_wildwood hstx_dvi_manor
-      hstx_dvi_android_test hstx_dvi_wireframe_test hstx_dvi_elite hstx_dvi_cpm)
+      hstx_dvi_android_test hstx_dvi_wireframe_test hstx_dvi_harmless hstx_dvi_cpm)
     pico_enable_stdio_usb(${game} 0)
     pico_enable_stdio_uart(${game} 1)
   endforeach()

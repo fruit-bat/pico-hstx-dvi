@@ -1,4 +1,4 @@
-// Drives the Elite game on the PC, see common/host
+// Drives Harmless on the PC, see common/host
 //
 // attract - nobody touches the buttons
 // options - shows the options on the title and dithers, then starts a game

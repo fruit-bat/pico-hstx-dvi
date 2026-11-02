@@ -1,6 +1,6 @@
 // Copyright (c) 2024 fruit-bat.
 
-// See el_save.h. Each slot is a file, pico_dvi_elite/commander1.dat and so
+// See el_save.h. Each slot is a file, pico_dvi_harmless/commander1.dat and so
 // on, holding a Save_t as it is.
 
 #include "el_save.h"
@@ -79,7 +79,9 @@ int save_error(void) {
 #include "ff.h"
 #include "pico/stdlib.h"
 
-#define SAVE_DIR "/pico_dvi_elite"
+#define SAVE_DIR "/pico_dvi_harmless"
+// Where the saves were before the game was called Harmless, moved on mounting
+#define OLD_DIR "/pico_dvi_elite"
 #define MOUNT_TRIES 5
 #define MOUNT_WAIT_MS 250
 
@@ -98,6 +100,10 @@ bool save_ready(void) {
 		printf("SD card: mount %d\n", (int)r);
 	}
 	if (r == FR_OK) {
+		FILINFO info;
+		if (f_stat(SAVE_DIR, &info) != FR_OK && f_stat(OLD_DIR, &info) == FR_OK) {
+			printf("SD card: rename " OLD_DIR " %d\n", (int)f_rename(OLD_DIR, SAVE_DIR));
+		}
 		r = f_mkdir(SAVE_DIR);
 		printf("SD card: mkdir " SAVE_DIR " %d\n", (int)r);
 		if (r == FR_EXIST) r = FR_OK;
@@ -140,9 +146,9 @@ static bool file_write(const char* name, const void* buf, size_t n) {
 
 #elif defined(EL_HOST_SAVE)
 
-// On the PC, for trying it: the files in pico_dvi_elite where it is run
+// On the PC, for trying it: the files in pico_dvi_harmless where it is run
 
-#define SAVE_DIR "pico_dvi_elite"
+#define SAVE_DIR "pico_dvi_harmless"
 
 bool save_built(void) {
 	return true;

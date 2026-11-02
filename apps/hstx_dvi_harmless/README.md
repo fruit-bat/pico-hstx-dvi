@@ -1,6 +1,6 @@
-# Elite
+# Harmless
 
-A game in the style of Elite, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
+A game in the style of Elite, named after the rating every commander starts with, drawn in 3D with sprites, from the wireframe test. So far you can launch from the space station at Lave,
 fly about, look at the charts of the galaxy and the data on its systems, jump to other systems through hyperspace, fight pirates, dock again, and trade.
 
 ## Between games
@@ -229,8 +229,8 @@ A new commander's name is typed, with Backspace and Enter. Caps Lock, Num Lock a
 
 ## Saving
 
-Built with `-DELITE_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIOs 2 to 5 as for `hstx_dvi_cpm`,
-in the directory `pico_dvi_elite`, as `commander1.dat` to `commander4.dat`, and the options in `settings.dat`,
+Built with `-DHARMLESS_SDCARD=ON`, commanders are saved on an SD card on SPI0, GPIOs 2 to 5 as for `hstx_dvi_cpm`,
+in the directory `pico_dvi_harmless` (an old `pico_dvi_elite` is renamed to it), as `commander1.dat` to `commander4.dat`, and the options in `settings.dat`,
 saved when you leave them and read when it starts.
 Starting a game then shows the four slots: fire plays the commander in one, or a new one if it is empty,
 and select starts a new one in it. Left for 30 seconds, it goes back to the title. A new commander is named first: up and down change the letter, held to go on, left and right
@@ -262,9 +262,9 @@ It is turned on by `HSTX_DVI_SPRITE_TIMING` in `CMakeLists.txt`.
 
 ```sh
 host/build.sh
-host/build/elite_host attract 3600 300 frames
-host/build/elite_host fly 1500 100 frames
-host/build/elite_host dock 420 20 frames
+host/build/harmless_host attract 3600 300 frames
+host/build/harmless_host fly 1500 100 frames
+host/build/harmless_host dock 420 20 frames
 ```
 
 `options` shows the options on the title, then starts a game and waits, which goes back to the title from the commanders.
@@ -287,7 +287,7 @@ host/build/elite_host dock 420 20 frames
 `scoop` is put beside the sun with fuel scoops and an empty tank, fills it, scoops up a canister a little above the nose, shows the inventory, then dives into the sun.
 `trade` buys and sells in the market at Lave, buys a missile, and tries for a rear pulse laser.
 `shipyard` puts every ship on sale, buys an Adder, looks at an Anaconda, and shows the Adder on the status.
-Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_elite` where it is run, and `save` picks slot 2,
+Built with `EL_HOST_SAVE` defined, commanders are saved in `pico_dvi_harmless` where it is run, and `save` picks slot 2,
 names it NAMESON, buys food and launches, saving it, to show in the slot when run again,
 then fills the dashboard in the options, which stays filled when run again.
 See `../common/host` for more on how this works.

@@ -241,7 +241,7 @@ void attract_run(void) {
 				char title[GAME_TEXT_MAX + 1];
 				switch (show) {
 					case SHOW_TITLE:
-						snprintf(title, sizeof(title), "---- E L I T E ----");
+						snprintf(title, sizeof(title), "---- H A R M L E S S ----");
 						draw_title(f);
 						break;
 					case SHOW_GALAXY:

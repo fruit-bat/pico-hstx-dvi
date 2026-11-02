@@ -1,6 +1,6 @@
 // Copyright (c) 2024 fruit-bat.
 
-// A game in the style of Elite, drawn in 3D with sprites on DVI.
+// Harmless: a game in the style of Elite, drawn in 3D with sprites on DVI.
 //
 // This example requires an external digital video connector connected to
 // GPIOs 12 through 19 (the HSTX-capable GPIOs) with appropriate
@@ -43,7 +43,7 @@ int main(void)
 
 	sleep_ms(2000); // Allow time for initialization
 
-	printf("HSTX DVI Elite\n");
+	printf("HSTX DVI Harmless\n");
 	// Whether there is a card to save on, shown on the title, and the options saved on it
 	save_ready();
 	load_settings();

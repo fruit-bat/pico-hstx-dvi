@@ -1,7 +1,7 @@
 // Copyright (c) 2024 fruit-bat.
 
 // Saving commanders, on an SD card when built with EL_SDCARD, in the
-// directory pico_dvi_elite. Without it, or without a card, there is nowhere
+// directory pico_dvi_harmless. Without it, or without a card, there is nowhere
 // to save, and the game goes on without.
 #pragma once
 
