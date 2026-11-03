@@ -234,7 +234,9 @@ void attract_run(void) {
 			for (uint32_t f = 0; f < _show_frames[show]; ++f) {
 				// The charts and data are always wireframes, to look like data
 				const Style_e chart_style = draw_style == STYLE_WIRE ? STYLE_WIRE : STYLE_SOLID;
-				const uint32_t frame = round * 100000u + show * 10000u + f;
+				// Only the last few rounds count, so the frame stays small
+				// enough for the floats made from it to step smoothly
+				const uint32_t frame = (round % 8u) * 100000u + show * 10000u + f;
 				move_objects(frame);
 				screen_begin();
 				draw_dashboard(frame, show == SHOW_PARADE);
