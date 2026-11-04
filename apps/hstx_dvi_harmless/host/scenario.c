@@ -110,6 +110,25 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 100 && f < 103) return A;
 		return 0;
 	}
+	if (!strcmp(host_mode, "soundtest")) {
+		// The options on the title, down to the sound test: the laser, the
+		// hit, then on to the docking tune, and leaving, back to the title tune
+		if (f >= 30 && f < 33) return START;
+		if (f >= 40 && f < 90 && f % 10 < 3) return D;
+		if (f >= 100 && f < 103) return A;
+		if (f >= 140 && f < 143) return R;
+		if (f >= 150 && f < 153) return A;
+		if (f >= 200 && f < 390 && f % 10 < 3) return R;
+		if (f >= 400 && f < 403) return A;
+		if (f >= 900 && f < 903) return START;
+		return 0;
+	}
+	if (!strcmp(host_mode, "gameoptions")) {
+		// Into a game, then the options there
+		if (f >= 30 && f < 33) return A;
+		if (f >= 150 && f < 153) return START;
+		return 0;
+	}
 	if (!strcmp(host_mode, "quill")) {
 		// Into a game, then launch, and take Quill aboard
 		if (f >= 30 && f < 33) return A;

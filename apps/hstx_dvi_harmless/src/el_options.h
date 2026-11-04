@@ -2,6 +2,7 @@
 
 // The options, shown over the screen while everything else waits: the way
 // of drawing the view, dithering, the dashboard, the shape of the screen,
+// the lens, a sound test (left and right pick a sound or tune, fire plays it),
 // and in a game, the docking computer, MAX EQUIP and WITCHSPACE for trying
 // things out, and ending it. They are saved, if there is a card, when left.
 #pragma once

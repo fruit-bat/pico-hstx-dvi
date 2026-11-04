@@ -37,12 +37,72 @@ void sound_hold_level(Sfx_e s, bool on, float level) {
 	game_seq_sound_level(s, (uint8_t)(level * 127.0f));
 }
 
+// The tune the game last asked for, or -1 for none, to go back to after a test
+static int32_t _tune = -1;
+// What the sound test is playing, or -1
+static int32_t _test = -1;
+
 void music_play(Tune_e t) {
-	game_seq_tune(&tune_data[t], FADE_QUICK);
+	_tune = (int32_t)t;
+	if (_test < SFX_SOUNDS) game_seq_tune(&tune_data[t], FADE_QUICK);
 }
 
 void music_stop(uint32_t fade) {
-	game_seq_tune_stop(fade);
+	_tune = -1;
+	if (_test < SFX_SOUNDS) game_seq_tune_stop(fade);
+}
+
+const char* const sound_test_names[SOUND_TESTS] = {
+	[SFX_LASER] = "LASER",
+	[SFX_HIT] = "HIT",
+	[SFX_EXPLOSION] = "EXPLOSION",
+	[SFX_MISSILE] = "MISSILE",
+	[SFX_ECM] = "ECM",
+	[SFX_BOMB] = "ENERGY BOMB",
+	[SFX_SCOOPED] = "SCOOPED",
+	[SFX_CHOOSE] = "CHOOSE",
+	[SFX_PAGE] = "PAGE",
+	[SFX_COUNT] = "COUNTDOWN",
+	[SFX_HYPERSPACE] = "HYPERSPACE",
+	[SFX_TUNNEL] = "TUNNEL",
+	[SFX_DENIED] = "DENIED",
+	[SFX_DEAD] = "DEAD",
+	[SFX_INCOMING] = "INCOMING",
+	[SFX_LOW_ENERGY] = "LOW ENERGY",
+	[SFX_HEAT] = "HEAT",
+	[SFX_SCOOPING] = "FUEL SCOOP",
+	[SFX_OVERDRIVE] = "OVERDRIVE",
+	[SFX_SOUNDS + TUNE_TITLE] = "TITLE TUNE",
+	[SFX_SOUNDS + TUNE_DANUBE] = "DOCKING TUNE",
+};
+
+void sound_test(uint32_t i) {
+	if (i >= SOUND_TESTS) return;
+	// A held sound or a tune, played again, stops
+	const bool again = (int32_t)i == _test && i >= SFX_INCOMING;
+	sound_test_stop();
+	if (again) return;
+	if (i < SFX_SOUNDS) {
+		game_seq_sound(&sound_data[i], i);
+		// Overdrive half way in
+		if (sound_data[i].level != SEQ_LEVEL_NONE) game_seq_sound_level(i, 96);
+	}
+	else {
+		game_seq_tune(&tune_data[i - SFX_SOUNDS], FADE_QUICK);
+	}
+	_test = (int32_t)i;
+}
+
+void sound_test_stop(void) {
+	if (_test < 0) return;
+	const int32_t t = _test;
+	_test = -1;
+	// Those played once are left to finish
+	if (t >= SFX_INCOMING && t < SFX_SOUNDS) game_seq_sound_stop((uint32_t)t);
+	if (t >= SFX_SOUNDS) {
+		if (_tune >= 0) game_seq_tune(&tune_data[_tune], FADE_QUICK);
+		else game_seq_tune_stop(FADE_QUICK);
+	}
 }
 
 void sound_frame(void) {

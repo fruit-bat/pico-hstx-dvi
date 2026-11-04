@@ -56,6 +56,14 @@ void sound_hold(Sfx_e s, bool on);
 void sound_hold_level(Sfx_e s, bool on, float level);
 void music_play(Tune_e t);
 void music_stop(uint32_t fade);
+// The sound test, in the options: every sound, then every tune, by name. A
+// sound played once plays again; a held sound or a tune goes on until
+// played again, another is tried, or the test stops, which puts back the
+// tune that was playing before.
+#define SOUND_TESTS (SFX_SOUNDS + TUNES)
+extern const char* const sound_test_names[SOUND_TESTS];
+void sound_test(uint32_t i);
+void sound_test_stop(void);
 // Once a frame, from screen_end: lets go of what wasn't held this frame
 void sound_frame(void);
 
