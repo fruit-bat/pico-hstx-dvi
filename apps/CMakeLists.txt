@@ -70,6 +70,10 @@ if (GAME_USBKBD)
   add_subdirectory(${PICO_FOLDER}/pico-hid-host "${CMAKE_CURRENT_BINARY_DIR}/pico-hid-host")
 endif()
 
+# Music and sounds for the games, as MIDI to a General MIDI synth such as a
+# SAM2695 or a VS1053b, on UART1's TX, GPIO 8, which is then no button's
+option(GAME_MIDI "Play the games' music and sounds on a MIDI synth on GPIO 8" ON)
+
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
 
 add_subdirectory(hstx_dvi_hello_world  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_hello_world")

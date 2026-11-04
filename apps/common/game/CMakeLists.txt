@@ -11,12 +11,23 @@ target_sources(game_common INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/game_fx.c
   ${CMAKE_CURRENT_LIST_DIR}/game_hiscore.c
   ${CMAKE_CURRENT_LIST_DIR}/game_initials.c
+  ${CMAKE_CURRENT_LIST_DIR}/game_seq.c
+  ${CMAKE_CURRENT_LIST_DIR}/game_synth.c
 )
 
 target_include_directories(game_common INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
 if (GAME_BUTTONS)
   target_compile_definitions(game_common INTERFACE GAME_BUTTONS=1)
+endif()
+
+if (GAME_MIDI)
+  target_compile_definitions(game_common INTERFACE
+    GAME_MIDI=1
+    GAME_MIDI_UART=uart1
+    GAME_MIDI_TX_GPIO=8
+  )
+  target_link_libraries(game_common INTERFACE hardware_uart hardware_irq)
 endif()
 
 if (GAME_NESPAD)
