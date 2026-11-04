@@ -5,6 +5,7 @@
 
 #include "el_save.h"
 #include "el_draw.h"
+#include "el_sound.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -240,6 +241,7 @@ typedef struct {
 	uint32_t hud_filled;
 	uint32_t wide;
 	uint32_t lens;    // added later, so older settings are without it
+	uint32_t music;   // added later still
 } Settings_t;
 
 void load_settings(void) {
@@ -247,6 +249,7 @@ void load_settings(void) {
 	Settings_t t;
 	size_t n = 0;
 	t.lens = LENS_NORMAL;
+	t.music = 1;
 	if (!file_read(SETTINGS_FILE, &t, sizeof(t), &n) || n < offsetof(Settings_t, lens) || n > sizeof(t)) return;
 	if (t.magic != SETTINGS_MAGIC || t.size != n || t.style >= STYLE_COUNT) return;
 	draw_style = (Style_e)t.style;
@@ -254,12 +257,14 @@ void load_settings(void) {
 	draw_hud_filled = t.hud_filled != 0;
 	draw_aspect = t.wide ? ASPECT_16_9 : ASPECT_4_3;
 	draw_set_lens((Lens_e)t.lens);
+	sound_set_music(t.music != 0);
 }
 
 void save_settings(void) {
 	if (!_card) return;
 	const Settings_t t = {
-		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9, (uint32_t)draw_lens
+		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9, (uint32_t)draw_lens,
+		sound_music()
 	};
 	file_write(SETTINGS_FILE, &t, sizeof(t));
 }

@@ -20,6 +20,7 @@ typedef enum {
 	OPTION_HUD,
 	OPTION_SCREEN,
 	OPTION_LENS,
+	OPTION_MUSIC,
 	OPTION_SOUND,
 	OPTION_DOCK,
 	// For trying things out, until the game is finished
@@ -126,6 +127,9 @@ bool options_input(uint16_t pressed) {
 		case OPTION_LENS:
 			if (change) draw_set_lens((Lens_e)((draw_lens + LENS_COUNT + change) % LENS_COUNT));
 			break;
+		case OPTION_MUSIC:
+			if (change) sound_set_music(!sound_music());
+			break;
 		case OPTION_SOUND:
 			if (change) {
 				sound_test_stop();
@@ -195,6 +199,7 @@ void options_draw(void) {
 			case OPTION_HUD: line(s, sizeof(s), "DASHBOARD", draw_hud_filled ? "FILLED" : "LINES", true); break;
 			case OPTION_SCREEN: line(s, sizeof(s), "SCREEN", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3", true); break;
 			case OPTION_LENS: line(s, sizeof(s), "LENS", lens_names[draw_lens], true); break;
+			case OPTION_MUSIC: line(s, sizeof(s), "MUSIC", sound_music() ? "ON" : "OFF", true); break;
 			case OPTION_SOUND: line(s, sizeof(s), "SOUND", sound_test_names[_sound], true); break;
 			case OPTION_DOCK: line(s, sizeof(s), "DOCKING", "(FIRE)", false); break;
 			case OPTION_WITCH: line(s, sizeof(s), "WITCHSPACE", _witch ? "NEXT JUMP" : "(FIRE)", false); break;

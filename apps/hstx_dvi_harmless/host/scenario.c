@@ -111,11 +111,13 @@ uint32_t host_input(uint32_t f) {
 		return 0;
 	}
 	if (!strcmp(host_mode, "soundtest")) {
-		// The options on the title, down to the sound test: the laser, the
-		// hit, then on to the docking tune, and leaving, back to the title tune
+		// The options on the title, music off, down to the sound test: the
+		// laser, the hit, then on to the docking tune, and leaving, to quiet
 		if (f >= 30 && f < 33) return START;
 		if (f >= 40 && f < 90 && f % 10 < 3) return D;
-		if (f >= 100 && f < 103) return A;
+		if (f >= 90 && f < 93) return R;
+		if (f >= 96 && f < 99) return D;
+		if (f >= 110 && f < 113) return A;
 		if (f >= 140 && f < 143) return R;
 		if (f >= 150 && f < 153) return A;
 		if (f >= 200 && f < 390 && f % 10 < 3) return R;

@@ -41,15 +41,29 @@ void sound_hold_level(Sfx_e s, bool on, float level) {
 static int32_t _tune = -1;
 // What the sound test is playing, or -1
 static int32_t _test = -1;
+static bool _music = true;
 
 void music_play(Tune_e t) {
 	_tune = (int32_t)t;
-	if (_test < SFX_SOUNDS) game_seq_tune(&tune_data[t], FADE_QUICK);
+	if (_music && _test < SFX_SOUNDS) game_seq_tune(&tune_data[t], FADE_QUICK);
 }
 
 void music_stop(uint32_t fade) {
 	_tune = -1;
 	if (_test < SFX_SOUNDS) game_seq_tune_stop(fade);
+}
+
+bool sound_music(void) {
+	return _music;
+}
+
+void sound_set_music(bool on) {
+	if (on == _music) return;
+	_music = on;
+	// A tune being tried goes on, and what comes back after it is decided then
+	if (_test >= SFX_SOUNDS) return;
+	if (on && _tune >= 0) game_seq_tune(&tune_data[_tune], FADE_QUICK);
+	else if (!on) game_seq_tune_stop(FADE_QUICK);
 }
 
 const char* const sound_test_names[SOUND_TESTS] = {
@@ -100,7 +114,7 @@ void sound_test_stop(void) {
 	// Those played once are left to finish
 	if (t >= SFX_INCOMING && t < SFX_SOUNDS) game_seq_sound_stop((uint32_t)t);
 	if (t >= SFX_SOUNDS) {
-		if (_tune >= 0) game_seq_tune(&tune_data[_tune], FADE_QUICK);
+		if (_music && _tune >= 0) game_seq_tune(&tune_data[_tune], FADE_QUICK);
 		else game_seq_tune_stop(FADE_QUICK);
 	}
 }

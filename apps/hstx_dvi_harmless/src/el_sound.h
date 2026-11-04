@@ -54,8 +54,12 @@ void sound_play(Sfx_e s);
 void sound_hold(Sfx_e s, bool on);
 // Held, with a level from 0 to 1
 void sound_hold_level(Sfx_e s, bool on, float level);
+// The game's tune: played only while music is on
 void music_play(Tune_e t);
 void music_stop(uint32_t fade);
+// Music on or off, an option: the sounds play either way
+bool sound_music(void);
+void sound_set_music(bool on);
 // The sound test, in the options: every sound, then every tune, by name. A
 // sound played once plays again; a held sound or a tune goes on until
 // played again, another is tried, or the test stops, which puts back the
