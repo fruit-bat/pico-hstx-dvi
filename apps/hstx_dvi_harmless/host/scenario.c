@@ -44,6 +44,11 @@
 //           start: a basket ahead, scooped, and its page read
 // race    - starts a game, launches, and the great race is offered, as if
 //           docked; down picks the second choice, and fire takes it
+// quill   - starts a game, docked, with the Thargoid going home and nobody
+//           aboard, and launches: Quill knocks before the tunnel, and is
+//           welcomed aboard, then the Thargoid follows us out
+// clear   - built with EL_HOST_SAVE, after save: on the commanders, goes to
+//           slot 2's CLEAR, asks, says NO, asks again, and says YES
 // trade   - starts a game, and docked, buys food, holding to buy more, and
 //           computers, then a missile, and sells some food, then tries for
 //           a rear pulse laser
@@ -68,6 +73,7 @@
 #include "host.h"
 
 void game_debug_approach(float roll);
+void game_debug_quill(void);
 void game_debug_pirate(const char* name);
 void game_debug_chaser(const char* name);
 void game_debug_scoop(void);
@@ -102,6 +108,14 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 50 && f < 53) return R;
 		if (f >= 70 && f < 73) return START;
 		if (f >= 100 && f < 103) return A;
+		return 0;
+	}
+	if (!strcmp(host_mode, "quill")) {
+		// Into a game, then launch, and take Quill aboard
+		if (f >= 30 && f < 33) return A;
+		if (f == 60) game_debug_quill();
+		if (f >= 90 && f < 93) return A;
+		if (f >= 150 && f < 153) return A;
 		return 0;
 	}
 	// Into a game, and launch
@@ -151,6 +165,16 @@ uint32_t host_input(uint32_t f) {
 		if (f >= 250 && f < 253) return D;
 		if (f >= 260 && f < 263) return R;
 		if (f >= 270 && f < 273) return START;
+		return 0;
+	}
+	if (!strcmp(host_mode, "clear")) {
+		if (f >= 50 && f < 53) return D;
+		if (f >= 60 && f < 63) return R;
+		if (f >= 70 && f < 73) return A;
+		if (f >= 80 && f < 83) return A;
+		if (f >= 90 && f < 93) return A;
+		if (f >= 100 && f < 103) return R;
+		if (f >= 110 && f < 113) return A;
 		return 0;
 	}
 	if (!strcmp(host_mode, "shipyard")) {

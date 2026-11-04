@@ -144,6 +144,15 @@ static bool file_write(const char* name, const void* buf, size_t n) {
 	return r == FR_OK && c == FR_OK && put == n;
 }
 
+// Gone already is as good as deleted
+static bool file_delete(const char* name) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
+	const FRESULT r = f_unlink(path);
+	printf("SD card: delete %s %d\n", path, (int)r);
+	return r == FR_OK || r == FR_NO_FILE;
+}
+
 #elif defined(EL_HOST_SAVE)
 
 // On the PC, for trying it: the files in pico_dvi_harmless where it is run
@@ -181,6 +190,15 @@ static bool file_write(const char* name, const void* buf, size_t n) {
 	return fclose(f) == 0 && put == n;
 }
 
+static bool file_delete(const char* name) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
+	FILE* f = fopen(path, "rb");
+	if (!f) return true;
+	fclose(f);
+	return remove(path) == 0;
+}
+
 #endif
 
 #if defined(EL_SDCARD) || defined(EL_HOST_SAVE)
@@ -194,6 +212,12 @@ bool save_read(uint32_t slot, Save_t* s) {
 	slot_name(name, sizeof(name), slot);
 	size_t n = 0;
 	return file_read(name, &_read, sizeof(_read), &n) && save_good(s, n);
+}
+
+bool save_delete(uint32_t slot) {
+	char name[20];
+	slot_name(name, sizeof(name), slot);
+	return file_delete(name);
 }
 
 bool save_write(uint32_t slot, Save_t* s) {
@@ -259,6 +283,11 @@ bool save_read(uint32_t slot, Save_t* s) {
 bool save_write(uint32_t slot, Save_t* s) {
 	(void)slot;
 	(void)s;
+	return false;
+}
+
+bool save_delete(uint32_t slot) {
+	(void)slot;
 	return false;
 }
 

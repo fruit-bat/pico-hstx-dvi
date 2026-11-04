@@ -139,10 +139,14 @@ static bool pick_places(const Story_t* st, uint32_t here, uint8_t place[STORY_PL
 // Moving through a story
 
 static bool matches(const StoryExit_t* x, const StoryProgress_t* p, StoryEvent_e ev, uint32_t arg) {
-	if (x->ev != ev) return false;
+	const bool here = x->ev == STORY_HERE && (ev == STORY_ARRIVE || ev == STORY_DEPART);
+	if (x->ev != ev && !here) return false;
 	switch (ev) {
 		case STORY_DOCK:
 		case STORY_ARRIVE:
+		case STORY_LAUNCH:
+		case STORY_DEPART:
+		case STORY_APPROACH:
 			if (x->place == PLACE_ANY) break;
 			if (p->galaxy != story_host_galaxy() || p->place[x->place] != arg) return false;
 			break;
@@ -488,7 +492,16 @@ uint32_t story_hints(char (*line)[STORY_HINT_MAX], uint32_t max) {
 				else snprintf(l, STORY_HINT_MAX, "DOCK ANYWHERE");
 				break;
 			case STORY_ARRIVE:
+			case STORY_HERE:
 				if (place) snprintf(l, STORY_HINT_MAX, "GO TO %s", place);
+				else continue;
+				break;
+			case STORY_LAUNCH:
+				if (place) snprintf(l, STORY_HINT_MAX, "LAUNCH FROM %s", place);
+				else snprintf(l, STORY_HINT_MAX, "LAUNCH");
+				break;
+			case STORY_APPROACH:
+				if (place) snprintf(l, STORY_HINT_MAX, "FLY TO THE STATION AT %s", place);
 				else continue;
 				break;
 			case STORY_SCOOP: snprintf(l, STORY_HINT_MAX, "SCOOP %s", x->arg ? story_items[x->arg].name : "SOMETHING"); break;
@@ -613,6 +626,15 @@ bool story_holds(uint32_t i, const StoryIf_t* w) {
 	return holds(w, &_s->story[i]);
 }
 
+void story_debug_step(uint32_t i, uint32_t step) {
+	if (i < story_data_count && step < story_data[i].n) _s->story[i].step = (uint8_t)step;
+}
+
+bool story_at_place(StoryEvent_e ev) {
+	return ev == STORY_DOCK || ev == STORY_ARRIVE || ev == STORY_LAUNCH || ev == STORY_DEPART ||
+		ev == STORY_APPROACH || ev == STORY_HERE;
+}
+
 uint32_t story_waits(uint32_t i, StoryEvent_e* ev, uint32_t* arg, uint32_t max) {
 	const StoryProgress_t* p = &_s->story[i];
 	const StoryStep_t* s = &story_data[i].steps[p->status == STORY_GOING ? p->step : 0];
@@ -620,7 +642,7 @@ uint32_t story_waits(uint32_t i, StoryEvent_e* ev, uint32_t* arg, uint32_t max) 
 	for (uint32_t k = 0; k < s->n && n < max; ++k) {
 		const StoryExit_t* x = &s->exits[k];
 		ev[n] = (StoryEvent_e)x->ev;
-		if (x->ev == STORY_DOCK || x->ev == STORY_ARRIVE) arg[n] = x->place == PLACE_ANY ? 0xffffffffu : p->place[x->place];
+		if (story_at_place(ev[n])) arg[n] = x->place == PLACE_ANY ? 0xffffffffu : p->place[x->place];
 		else arg[n] = x->arg;
 		++n;
 	}
