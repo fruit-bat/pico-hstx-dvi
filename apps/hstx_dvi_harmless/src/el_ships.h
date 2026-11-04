@@ -161,6 +161,10 @@ bool ships_fire_missile(const Frame_t* me, uint32_t target);
 void ships_ecm(void);
 // The energy bomb: every ship within range of me destroyed, by us, and the missiles flying
 void ships_bomb(Vec3_t me, float range, ShipsEvents_t* ev);
+// Whether a missile is coming for us
+bool ships_missile_coming(void);
+// How many things have blown up since last asked
+uint32_t ships_explosions(void);
 // Whether a hostile ship is on the scanner, or a missile is coming for us
 bool ships_hostile_near(const Frame_t* me, float range);
 // For trying things on the PC: puts a ship of the named type at pos, facing

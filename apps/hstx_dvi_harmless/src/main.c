@@ -21,6 +21,7 @@
 #include "el_save.h"
 #include "el_screen.h"
 #include "el_space.h"
+#include "el_sound.h"
 
 int main(void)
 {
@@ -40,6 +41,8 @@ int main(void)
 
 	// Initialize the HSTX DVI sprite system
 	hstx_dvi_sprite_init_all();
+	// After the display has set the clocks, which the MIDI UART's baud rate comes from
+	sound_init();
 
 	sleep_ms(2000); // Allow time for initialization
 

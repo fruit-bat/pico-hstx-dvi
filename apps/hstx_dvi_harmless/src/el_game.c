@@ -34,6 +34,7 @@
 #include "el_screen.h"
 #include "el_save.h"
 #include "el_ships.h"
+#include "el_sound.h"
 #include "el_space.h"
 #include "el_story.h"
 #include "el_trade.h"
@@ -63,6 +64,8 @@
 #define CABIN_COOL 0.1f
 #define CABIN_CHANGE 0.004f
 #define CABIN_TOO_HOT 0.85f
+// The alarm sounds with less energy than this
+#define LOW_ENERGY 0.25f
 #define HEAT_DAMAGE 0.004f
 // Hot enough for the fuel scoops, which take a tenth of a light year this often
 #define SCOOP_HEAT 0.35f
@@ -335,6 +338,10 @@ static float _fore, _aft, _energy;
 static float _laser_temp;
 static float _cabin_temp;
 static uint32_t _scoop_frames;
+// Taking fuel from the sun this frame
+static bool _scooping;
+// The docking computer's music playing
+static bool _danube;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
 // The ship the targeting computer follows, or -1, and how far off the
@@ -472,6 +479,7 @@ static void start(void) {
 }
 
 static void message(const char* m);
+static void refuse(const char* m);
 
 // Back to full speed at once; a jump counting down from the overdrive is
 // called off
@@ -487,6 +495,11 @@ static void overdrive_off(void) {
 }
 
 static void set_state(State_e state) {
+	if (state != _state) {
+		if (state == STATE_LAUNCHING || state == STATE_DOCKING) sound_play(SFX_TUNNEL);
+		else if (state == STATE_HYPERSPACE) sound_play(SFX_HYPERSPACE);
+		else if (state == STATE_DEAD) sound_play(SFX_DEAD);
+	}
 	_state = state;
 	_state_frames = 0;
 	overdrive_off();
@@ -502,6 +515,12 @@ static void set_state(State_e state) {
 static void message(const char* m) {
 	_message = m;
 	_message_frames = MESSAGE_FRAMES;
+}
+
+// A message for what can't be done, with a buzz
+static void refuse(const char* m) {
+	message(m);
+	sound_play(SFX_DENIED);
 }
 
 // Whether we are too close to something to go into hyperspace, or the
@@ -523,11 +542,11 @@ static bool mass_locked(float planet) {
 static void start_hyperspace(bool galactic) {
 	if (_hyper_frames) return;
 	if (galactic && !cmdr.galactic) {
-		message("NO GALACTIC HYPERDRIVE");
+		refuse("NO GALACTIC HYPERDRIVE");
 		return;
 	}
 	if (mass_locked(LOCK_PLANET)) {
-		message("MASS LOCKED");
+		refuse("MASS LOCKED");
 		return;
 	}
 	_hyper_galactic = galactic;
@@ -538,11 +557,11 @@ static void start_hyperspace(bool galactic) {
 	}
 	const uint32_t to = chart_selected();
 	if (to == chart_home() && !_witch) {
-		message("WE ARE HERE");
+		refuse("WE ARE HERE");
 		return;
 	}
 	if (chart_distance(to) > cmdr.fuel) {
-		message("OUT OF RANGE");
+		refuse("OUT OF RANGE");
 		return;
 	}
 	_hyper_to = to;
@@ -862,8 +881,8 @@ static void overdrive(void) {
 	if (!_overdrive && (_over_hold >= OVERDRIVE_WAIT || _over_ask)) {
 		_over_hold = 0;
 		_over_ask = false;
-		if (mass_locked(OVERDRIVE_LOCK_PLANET)) message("MASS LOCKED");
-		else if (!cmdr.fuel) message("NO FUEL");
+		if (mass_locked(OVERDRIVE_LOCK_PLANET)) refuse("MASS LOCKED");
+		else if (!cmdr.fuel) refuse("NO FUEL");
 		else {
 			_overdrive = true;
 			_over_fuel = 0;
@@ -873,14 +892,14 @@ static void overdrive(void) {
 	if (!_overdrive) return;
 	if (mass_locked(OVERDRIVE_LOCK_PLANET)) {
 		overdrive_off();
-		message("MASS LOCKED");
+		refuse("MASS LOCKED");
 		return;
 	}
 	if (++_over_fuel >= OVERDRIVE_FUEL_FRAMES) {
 		_over_fuel = 0;
 		if (!cmdr.fuel) {
 			overdrive_off();
-			message("NO FUEL");
+			refuse("NO FUEL");
 			return;
 		}
 		--cmdr.fuel;
@@ -892,15 +911,15 @@ static void overdrive(void) {
 // The docking computer, on or off, if we have one
 static void docking_computer(bool on) {
 	if (on && !cmdr.docking) {
-		message("NO DOCKING COMPUTER");
+		refuse("NO DOCKING COMPUTER");
 		return;
 	}
 	if (on && _witch) {
-		message("NO STATION");
+		refuse("NO STATION");
 		return;
 	}
 	if (on && _station_angry) {
-		message("DOCKING REFUSED");
+		refuse("DOCKING REFUSED");
 		return;
 	}
 	if (on == _docking || _state != STATE_FLYING) return;
@@ -1010,7 +1029,7 @@ static void fly(uint8_t held) {
 	if (faster && _overdrive && _over >= 1.0f && !_hyper_tried && !_hyper_frames) {
 		if (++_hyper_hold >= HYPERDRIVE_WAIT) {
 			_hyper_tried = true;
-			if (chart_selected() == chart_home() && !_witch) message("NO HYPERSPACE COORDINATES");
+			if (chart_selected() == chart_home() && !_witch) refuse("NO HYPERSPACE COORDINATES");
 			else start_hyperspace(false);
 		}
 	}
@@ -1034,9 +1053,12 @@ static void fly(uint8_t held) {
 static void fire_missile(void) {
 	look();
 	const int32_t target = ships_nearest_ahead(looking_out() ? &_eye : &_me);
-	if (!cmdr.missiles) message("NO MISSILES");
-	else if (target < 0) message("NO TARGET");
-	else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
+	if (!cmdr.missiles) refuse("NO MISSILES");
+	else if (target < 0) refuse("NO TARGET");
+	else if (ships_fire_missile(&_me, (uint32_t)target)) {
+		--cmdr.missiles;
+		sound_play(SFX_MISSILE);
+	}
 }
 
 // The ECM, which blows up the missiles flying
@@ -1044,9 +1066,10 @@ static void ecm(void) {
 	if (cmdr.ecm) {
 		ships_ecm();
 		message("E.C.M.");
+		sound_play(SFX_ECM);
 	}
 	else {
-		message("NO E.C.M.");
+		refuse("NO E.C.M.");
 	}
 }
 
@@ -1138,6 +1161,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	_laser_wait = l->every;
 	_laser_beam = LASER_SEEN;
 	_laser_temp += l->heat;
+	sound_play(SFX_LASER);
 	if (_laser_temp >= 1.0f) {
 		_laser_temp = 1.0f;
 		_overheated = true;
@@ -1164,7 +1188,7 @@ static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	const bool now = KEY_PRESSED(HID_KEY_TAB);
 	if (!(pressed & EL_INP_BOMB) && !now) return;
 	if (!cmdr.bomb) {
-		message("NO ENERGY BOMB");
+		refuse("NO ENERGY BOMB");
 		return;
 	}
 	if (!_bomb_frames) _bomb_frames = BOMB_WINDOW;
@@ -1177,6 +1201,7 @@ static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	ships_bomb(_me.pos, BOMB_RANGE, ev);
 	_bomb_flash = BOMB_FLASH;
 	message("ENERGY BOMB USED");
+	sound_play(SFX_BOMB);
 	companion_event(CE_BOMB, false);
 }
 
@@ -1212,6 +1237,8 @@ static void move_pod(void) {
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
 static void take(const ShipsEvents_t* ev) {
 	const bool busy = ships_hostile_near(&_me, SCANNER_RANGE);
+	if (ev->fore > 0.0f || ev->aft > 0.0f) sound_play(SFX_HIT);
+	if (ev->scooped || ev->items_n) sound_play(SFX_SCOOPED);
 	// A tougher ship's shields take more
 	_fore -= ev->fore / trade_hull()->toughness;
 	_aft -= ev->aft / trade_hull()->toughness;
@@ -1312,7 +1339,8 @@ static void heat(void) {
 			story_event(STORY_SUN, 0);
 		}
 	}
-	if (cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX) {
+	_scooping = cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX;
+	if (_scooping) {
 		if (++_scoop_frames >= SCOOP_FRAMES) {
 			_scoop_frames = 0;
 			++cmdr.fuel;
@@ -2143,6 +2171,7 @@ static void page_input(uint16_t pressed) {
 	if (_page.choices) {
 		if (pressed & (EL_INP_UP | EL_INP_DOWN)) _page_pick = (_page_pick + 1) % _page.choices;
 		if ((pressed & EL_INP_A) && _page.can[_page_pick]) {
+			sound_play(SFX_CHOOSE);
 			story_choose(_page_pick);
 			_page_frames = 0;
 			_page_fire = true;
@@ -2278,6 +2307,8 @@ static void draw_log(void) {
 void game_play(void) {
 	start();
 	if (!choose_commander()) return;
+	music_stop(FADE_SLOW);
+	_danube = false;
 	for (;;) {
 		uint16_t pressed = game_input_pressed() | _debug_pressed;
 		_debug_pressed = 0;
@@ -2287,6 +2318,7 @@ void game_play(void) {
 		const bool was_page = _page_shown;
 		_page_shown = !options_shown() && story_page(&_page);
 		if (_page_shown && !was_page) {
+			sound_play(SFX_PAGE);
 			_page_frames = 0;
 			_page_pick = 0;
 		}
@@ -2346,7 +2378,10 @@ void game_play(void) {
 					else if (_view == VIEW_EQUIPMENT) m = trade_equipment_input(pressed, chart_system(chart_home()));
 				else if (_view == VIEW_SHIPYARD) m = trade_shipyard_input(pressed, chart_system(chart_home()));
 					else move_cursor(held);
-					if (m) message(m);
+					if (m) {
+						message(m);
+						sound_play(SFX_CHOOSE);
+					}
 					chart_set_fuel(cmdr.fuel);
 					// Only from the status, so not by mistake on the charts
 					if ((pressed & EL_INP_A) && _view == VIEW_FRONT) launch();
@@ -2360,8 +2395,11 @@ void game_play(void) {
 					if ((pressed & EL_INP_A) && (held & EL_INP_B) && _view == VIEW_GALAXY) start_hyperspace(true);
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
-						if (mass_locked(LOCK_PLANET)) message("MASS LOCKED");
+						if (mass_locked(LOCK_PLANET)) refuse("MASS LOCKED");
 						else set_state(STATE_HYPERSPACE);
+					}
+					else if (_hyper_frames && _hyper_frames % 60 == 0) {
+						sound_play(SFX_COUNT);
 					}
 					story_flying();
 					fire(held, pressed, &ev);
@@ -2369,6 +2407,12 @@ void game_play(void) {
 					station_attack(&ev);
 					fly(held);
 					heat();
+					// The alarms and the engines, while they are so
+					sound_hold(SFX_INCOMING, ships_missile_coming());
+					sound_hold(SFX_LOW_ENERGY, _energy < LOW_ENERGY);
+					sound_hold(SFX_HEAT, _cabin_temp > CABIN_TOO_HOT);
+					sound_hold(SFX_SCOOPING, _scooping);
+					sound_hold_level(SFX_OVERDRIVE, _overdrive, 0.5f + 0.5f * _over);
 					break;
 				case STATE_DEAD:
 					_speed = 0.0f;
@@ -2383,6 +2427,12 @@ void game_play(void) {
 			}
 			move_world(&ev);
 			if (_state == STATE_FLYING) take(&ev);
+			if (ships_explosions()) sound_play(SFX_EXPLOSION);
+			// The docking computer flies to music, which fades as we go in
+			const bool danube = _docking && _state == STATE_FLYING;
+			if (danube && !_danube) music_play(TUNE_DANUBE);
+			else if (!danube && _danube) music_stop(FADE_SLOW);
+			_danube = danube;
 			if (next_state()) return;
 		}
 
