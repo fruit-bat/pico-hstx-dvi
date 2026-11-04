@@ -80,10 +80,16 @@ static void __not_in_flash_func(build_sprite_lines)() {
 	}
 }
 
+// Set by the renderer once it has started the display
+static volatile bool _display_started;
+
 void __not_in_flash_func(hstx_dvi_sprite_render_loop)() {
 
     hstx_dvi_init(hstx_dvi_row_fifo_get_row_fetcher());
     timing_init();
+    __dmb();
+    _display_started = true;
+    __sev();
 
     while(true) {
         hstx_dvi_sprite_render_frame();
@@ -137,8 +143,10 @@ void __not_in_flash_func(hstx_dvi_sprite_init_all)() {
 	clear_sprite_collisions(&_spriteCollisionsFrame);
 	clear_sprite_collisions(&_spriteCollisions);
 
-	// Start the renderer
+	// Start the renderer, and wait for it to start the display, which sets the
+	// clocks: anything set up after, such as a UART's baud rate, needs them
 	multicore_launch_core1(hstx_dvi_sprite_render_loop);
+	while (!_display_started) __wfe();
 }
 
 void __not_in_flash_func(clear_sprite_id_row)() {
