@@ -33,6 +33,7 @@
 #define BEND 0xe0
 #define CC_VOLUME 7
 #define CC_EXPRESSION 11
+#define CC_SOUND_OFF 120
 #define CC_RESET 121
 #define CC_NOTES_OFF 123
 
@@ -327,9 +328,16 @@ static bool on_timer(repeating_timer_t* t) {
 }
 #endif
 
-// What the synth is told first: General MIDI on, which resets everything,
-// then the sounds' bend range and volume
+// What the synth is told first: everything silenced on every channel, as a
+// synth without a reset line may still be playing from before the Pico
+// started, then General MIDI on, which resets everything, then the sounds'
+// bend range and volume
 static void setup(void) {
+	for (uint8_t c = 0; c < 16; ++c) {
+		send(CONTROL | c, CC_SOUND_OFF, 0);
+		send(CONTROL | c, CC_NOTES_OFF, 0);
+		send(CONTROL | c, CC_RESET, 0);
+	}
 	static const uint8_t gm_on[] = { 0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7 };
 	game_synth_sysex(gm_on, sizeof(gm_on));
 	for (uint32_t i = 0; i < SOUNDS; ++i) {
