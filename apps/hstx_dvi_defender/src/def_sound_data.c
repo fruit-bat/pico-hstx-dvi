@@ -12,10 +12,10 @@
 
 // A zap, down, short enough for the next of a burst, four frames on
 static const SeqStep_t _laser[] = {
-	PROG(GM_SAW_LEAD), BEND(110), ON(0, 84, 90), SWEEP(0, 40, 7), OFF(7, 84), END(1)
+	PROG(GM_SAW_LEAD), BEND(110), ON(0, 84, 50), SWEEP(0, 40, 7), OFF(7, 84), END(1)
 };
 static const SeqStep_t _explode[] = {
-	PROG(GM_GUNSHOT), BEND(72), ON(0, 40, 120), SWEEP(0, 40, 40), ON(4, 33, 100), OFF(40, 40), OFF(0, 33), END(6)
+	PROG(GM_GUNSHOT), BEND(72), ON(0, 40, 127), SWEEP(0, 40, 40), ON(4, 33, 100), OFF(40, 40), OFF(0, 33), END(6)
 };
 static const SeqStep_t _enemy_fire[] = {
 	PROG(GM_SQUARE_LEAD), BEND(64), ON(0, 79, 55), SWEEP(0, 88, 6), OFF(6, 79), END(1)
@@ -89,7 +89,7 @@ static const SeqStep_t _planet[] = {
 };
 // Held: a low rush, the loop only waiting
 static const SeqStep_t _thrust[] = {
-	PROG(GM_BREATH_NOISE), BEND(64), CC(11, 100), ON(0, 40, 80), MARK, LOOP(240)
+	PROG(GM_BREATH_NOISE), BEND(64), CC(11, 120), ON(0, 40, 80), MARK, LOOP(240)
 };
 
 const SeqSound_t def_sound_data[DEF_SFX_SOUNDS] = {
