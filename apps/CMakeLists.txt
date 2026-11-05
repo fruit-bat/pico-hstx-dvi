@@ -43,12 +43,12 @@ add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-
 include(${PICO_FOLDER}/pimoroni-pico/drivers/fatfs/fatfs.cmake)
 include(${PICO_FOLDER}/pimoroni-pico/drivers/sdcard/sdcard.cmake)
 
-# Buttons on GPIOs for the games, each to ground. Turned off, the GPIOs are
-# left free for other things, and only a pad is read, e.g. cmake -DGAME_BUTTONS=OFF ..
-option(GAME_BUTTONS "Read buttons on GPIOs in the games" ON)
+# Buttons on GPIOs for the games, each to ground, as well as the pads, e.g.
+# cmake -DGAME_BUTTONS=ON .. Off, the GPIOs are left free for other things.
+option(GAME_BUTTONS "Read buttons on GPIOs in the games" OFF)
 
-# NES or SNES gamepads for the games, as well as the buttons, e.g. cmake -DGAME_NESPAD=ON ..
-option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" OFF)
+# NES or SNES gamepads for the games, using pico-nespad, e.g. cmake -DGAME_NESPAD=OFF ..
+option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" ON)
 if (GAME_NESPAD)
   add_subdirectory(${PICO_FOLDER}/pico-nespad "${CMAKE_CURRENT_BINARY_DIR}/pico-nespad")
 endif()

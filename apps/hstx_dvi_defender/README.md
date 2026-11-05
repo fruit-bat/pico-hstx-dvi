@@ -10,26 +10,25 @@ A side scrolling shoot 'em up in the style of the 1981 arcade classic, using spr
 
 ## Controls
 
-Buttons connect the GPIO to ground (internal pull ups are used).
+NES or SNES gamepads (see the top README): D-pad for the directions, A to fire and B for a smart bomb.
+
+Built with `-DGAME_BUTTONS=ON`, buttons work as well, each connecting its GPIO to ground (internal pull ups are used):
 
 | GPIO | Button     |
 |------|------------|
-| 6    | Left       |
-| 7    | Right      |
-| 8    | Up         |
-| 9    | Down       |
-| 10   | Fire       |
-| 11   | Smart bomb |
+| 2    | Left       |
+| 3    | Right      |
+| 4    | Up         |
+| 5    | Down       |
+| 6    | Fire       |
+| 7    | Smart bomb |
 
 - Left and right turn the ship and thrust that way.
 - Up and down together jump into hyperspace.
 - Fire lets off a burst of three shots. Hold it for another burst after a short pause, or press it again for one straight away.
 - Fire or smart bomb starts a game.
 
-GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
-The first button GPIO can be changed with `DEF_INP_GPIO_START` in CMakeLists.txt.
-
-Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad for the directions, A to fire and B for a smart bomb.
+They stay clear of GPIO 8, the MIDI synth's. The first button GPIO can be changed with `DEF_INP_GPIO_START` in CMakeLists.txt.
 
 ## The game
 
@@ -46,6 +45,14 @@ Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as
 ## Between games
 
 The title with the enemies materialising, a demo game played by the Pico, and the hall of fame.
+
+## Music and sounds
+
+With a General MIDI synth such as a SAM2695 on GPIO 8 (see the top README), there are sounds
+for everything that happens, in the demo game too, a tune on the title and the hall of fame,
+a fanfare at the start of each wave, a few notes at the end of a game, and another tune while
+putting in initials. There is no music while playing. They are in `src/def_sound_data.c`, and
+`../common/tools/render_sounds.sh` renders each to a MIDI file to listen to.
 
 ## How it is drawn
 

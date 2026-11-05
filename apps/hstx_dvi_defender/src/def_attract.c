@@ -1,4 +1,5 @@
 #include "def_attract.h"
+#include "def_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "def_input.h"
 #include "def_world.h"
@@ -51,13 +52,14 @@ static void attract_init(void) {
 
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	def_wait_for_frame();
 	game_fx_update();
 	return is_def_input_play(game_input_pressed());
 }
 
 bool def_attract_title(void) {
 	attract_init();
+	game_music_play(DEF_TUNE_TITLE);
 	char t[GAME_TEXT_MAX];
 
 	// Each letter of the title separately, so they can be different colours
@@ -126,6 +128,8 @@ static uint32_t rank_colour(const uint32_t rank) {
 
 bool def_attract_hiscores(int32_t highlight) {
 	attract_init();
+	// After a new high score its tune goes on
+	if (highlight < 0) game_music_play(DEF_TUNE_TITLE);
 	char rows[GAME_HISCORE_COUNT][GAME_TEXT_MAX];
 	game_text_set(&_text[0], "HALL OF FAME", 3);
 	for (uint32_t i = 0; i < GAME_HISCORE_COUNT; ++i) {
@@ -162,6 +166,7 @@ bool def_attract_game_over(void) {
 	if (rank < 0) return false;
 
 	attract_init();
+	game_music_play(DEF_TUNE_HISCORE);
 	char t[GAME_TEXT_MAX];
 	game_text_set(&_text[0], "NEW HIGH SCORE", 3);
 	snprintf(t, sizeof(t), "SCORE %07lu   %s PLACE", (unsigned long)score, game_hiscore_rank_name(rank));
@@ -173,7 +178,7 @@ bool def_attract_game_over(void) {
 	GameInitials_t g;
 	game_initials_reset(&g);
 	for (uint32_t frame = 0; frame < DEF_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		def_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();

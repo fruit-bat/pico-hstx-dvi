@@ -14,21 +14,21 @@ cmake ..                       # or e.g. cmake -DPICO_BOARD=pico2_w ..
 make -j
 ```
 
-The games can also read NES or SNES gamepads, alongside the buttons, with
-[pico-nespad](https://github.com/fruit-bat/pico-nespad) checked out next to this project:
-
-```sh
-cmake -DGAME_NESPAD=ON ..
-```
-
+The games are played with NES or SNES gamepads, read with
+[pico-nespad](https://github.com/fruit-bat/pico-nespad) checked out next to this project.
 Both pads control the game. They share CLK on GPIO 26 and LATCH on GPIO 27, with DATA
 from pad 1 on GPIO 20 and pad 2 on GPIO 21 (see `apps/common/game/CMakeLists.txt`).
 
-The buttons on GPIOs can be left out, to free the GPIOs for other things, leaving only the pads:
+Buttons on GPIOs, each to ground, can be read as well. They are off unless asked for,
+leaving the GPIOs free for other things; each game's README says which GPIOs they use:
 
 ```sh
-cmake -DGAME_NESPAD=ON -DGAME_BUTTONS=OFF ..
+cmake -DGAME_BUTTONS=ON ..     # and -DGAME_NESPAD=OFF for buttons alone
 ```
+
+The games play music and sounds as MIDI, at 31250 baud on GPIO 8 (UART1's TX), to a
+General MIDI synth such as a SAM2695, which is then no button's. This can be left out with
+`-DGAME_MIDI=OFF`.
 
 ## CP/M (hstx_dvi_cpm)
 

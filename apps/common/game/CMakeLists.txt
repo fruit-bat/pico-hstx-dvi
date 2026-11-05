@@ -12,7 +12,10 @@ target_sources(game_common INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/game_hiscore.c
   ${CMAKE_CURRENT_LIST_DIR}/game_initials.c
   ${CMAKE_CURRENT_LIST_DIR}/game_seq.c
+  ${CMAKE_CURRENT_LIST_DIR}/game_sound.c
   ${CMAKE_CURRENT_LIST_DIR}/game_synth.c
+  ${CMAKE_CURRENT_LIST_DIR}/game_synth_uart.c
+  ${CMAKE_CURRENT_LIST_DIR}/game_synth_file.c
 )
 
 target_include_directories(game_common INTERFACE ${CMAKE_CURRENT_LIST_DIR})

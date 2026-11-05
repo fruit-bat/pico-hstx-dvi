@@ -9,6 +9,7 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "def_sound.h"
 #include "app_led.h"
 #include "hstx_dvi_sprite.h"
 #include "pico/stdio.h"
@@ -56,6 +57,8 @@ int main(void)
 
 	// Initialize the HSTX DVI sprite system
 	hstx_dvi_sprite_init_all();
+	// After the display has set the clocks, which the MIDI UART's baud rate comes from
+	def_sound_init();
 
 	sleep_ms(2000); // Allow time for initialization
 

@@ -1,4 +1,5 @@
 #include "def_game.h"
+#include "def_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "def_input.h"
 #include "def_world.h"
@@ -88,6 +89,7 @@ static void wave_start(void) {
 	clear_messages();
 	set_message(0, t, 2);
 	_message_timer = DEF_GAME_MESSAGE_FRAMES;
+	game_music_play(DEF_TUNE_WAVE);
 }
 
 static void draw_messages(void) {
@@ -134,12 +136,13 @@ static bool wave_end(const bool demo) {
 
 	uint32_t shown = 0;
 	for (uint32_t frame = 0; frame < DEF_GAME_WAVE_END_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		def_wait_for_frame();
 		if (demo && is_def_input_play(game_input_pressed())) return true;
 		// The humanoids are counted up one at a time
 		if (frame >= 60 && shown < humans && (frame % 12) == 0) {
 			++shown;
 			def_hud_add_score(bonus);
+			game_sound_play(DEF_SFX_BONUS);
 		}
 		game_fx_update();
 		game_spr_begin();
@@ -169,6 +172,7 @@ static void wave_update(void) {
 		else if (def_enemy_count(DEF_ENEMY_BAITER) < DEF_GAME_MAX_BAITERS) {
 			const int32_t side = (game_rand() & 1) ? 1 : -1;
 			def_enemy_spawn(DEF_ENEMY_BAITER, def_wrap(def_player_x() + side * DEF_PX(500)), DEF_PX(def_player_y()));
+			game_sound_play(DEF_SFX_BAITER);
 			_baiter_timer = _wave > 6 ? 300 : 600 - _wave * 50;
 		}
 	}
@@ -177,6 +181,7 @@ static void wave_update(void) {
 		def_world_destroy_planet();
 		def_enemy_mutate_all();
 		game_fx_flash(30);
+		game_sound_play(DEF_SFX_PLANET);
 		clear_messages();
 		set_message(0, "PLANET DESTROYED", 2);
 		_message_timer = DEF_GAME_MESSAGE_FRAMES;
@@ -191,6 +196,8 @@ static bool game_run(const bool demo) {
 	game_fx_init();
 	def_world_init();
 	def_player_init();
+	// No music while playing, only the jingles
+	game_music_stop(GAME_FADE_QUICK);
 	_wave = 1;
 	wave_start();
 	if (demo) game_input_pressed();
@@ -198,7 +205,7 @@ static bool game_run(const bool demo) {
 	uint8_t last = 0;
 	uint32_t over = 0;
 	for (uint32_t frame = 0; ; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		def_wait_for_frame();
 
 		uint8_t input;
 		if (demo) {
@@ -222,6 +229,7 @@ static bool game_run(const bool demo) {
 			if (over == 0) {
 				clear_messages();
 				set_message(0, "GAME OVER", 3);
+				game_music_play(DEF_TUNE_GAME_OVER);
 			}
 			if (++over >= DEF_GAME_OVER_FRAMES) return false;
 		}

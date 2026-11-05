@@ -16,7 +16,7 @@ extern "C" {
 
 // Left, right, up, down, fire and smart bomb on consecutive GPIOs from here
 #ifndef DEF_INP_GPIO_START
-#define DEF_INP_GPIO_START 6
+#define DEF_INP_GPIO_START 2
 #endif
 #define DEF_INP_GPIO_COUNT 6
 

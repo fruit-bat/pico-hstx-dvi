@@ -14,7 +14,7 @@ Hazel the witch wanders a wood full of animals, and gets on by helping them rath
 
 ## Controls
 
-Buttons connect the GPIO to ground (internal pull ups are used).
+Built with `-DGAME_BUTTONS=ON`, buttons connect the GPIO to ground (internal pull ups are used).
 
 | GPIO | Button  |
 |------|---------|
@@ -32,7 +32,7 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `WW_INP_GPIO_START` in CMakeLists.txt.
 
-Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad to walk, A to cast and B to tiptoe.
+NES or SNES gamepads work as well (see the top README): D-pad to walk, A to cast and B to tiptoe.
 
 ## The game
 

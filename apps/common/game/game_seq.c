@@ -226,6 +226,9 @@ static void tune_begin(const SeqTune_t* t) {
 		player_start(&_tracks[i], t->tracks[i].steps, c);
 	}
 	send_volumes();
+	// Its first steps now, so a step's wait counts from here, and a tune
+	// that loops starts again exactly as long as it is after it started
+	for (uint32_t i = 0; i < t->n; ++i) player_tick(&_tracks[i]);
 }
 
 static void tune_end(void) {
@@ -324,8 +327,9 @@ static bool on_timer(repeating_timer_t* t) {
 }
 #endif
 
-void game_seq_init(void) {
-	// General MIDI on, which resets everything
+// What the synth is told first: General MIDI on, which resets everything,
+// then the sounds' bend range and volume
+static void setup(void) {
 	static const uint8_t gm_on[] = { 0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7 };
 	game_synth_sysex(gm_on, sizeof(gm_on));
 	for (uint32_t i = 0; i < SOUNDS; ++i) {
@@ -339,7 +343,31 @@ void game_seq_init(void) {
 		send(CONTROL | c, 100, 127);
 		send(CONTROL | c, CC_VOLUME, _sound);
 	}
+}
+
+void game_seq_init(void) {
+	setup();
 #ifndef GAME_HOST
 	add_repeating_timer_us(-(1000000 / SEQ_HZ), on_timer, NULL, &_timer);
 #endif
+}
+
+void game_seq_synth(uint32_t i) {
+	LOCK();
+	if (i != game_synth_driver()) {
+		// Everything let go on the old, and the sounds forgotten
+		for (uint32_t c = 0; c < 16; ++c) notes_off((uint8_t)c);
+		for (uint32_t c = 0; c < SOUNDS; ++c) _sounds[c].s = NULL;
+		game_synth_select(i);
+		setup();
+		// The tune from the start, so the new synth hears its instruments
+		if (_tune) {
+			const uint32_t level = _level, fade = _fade;
+			tune_begin(_tune);
+			_level = level;
+			_fade = fade;
+			send_volumes();
+		}
+	}
+	UNLOCK();
 }

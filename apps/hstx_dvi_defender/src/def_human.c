@@ -1,4 +1,5 @@
 #include "def_human.h"
+#include "def_sound.h"
 #include "def_world.h"
 #include "game_render.h"
 #include "game_pallet.h"
@@ -82,6 +83,7 @@ static void land(DefHuman_t* h, const uint32_t points) {
 	h->y = standing_y(h->x);
 	def_hud_add_score(points);
 	game_fx_popup(h->x, (h->y >> DEF_FP) - 12, points);
+	game_sound_play(DEF_SFX_RESCUE);
 }
 
 void __not_in_flash_func(def_human_update)(uint32_t frame) {
@@ -101,6 +103,7 @@ void __not_in_flash_func(def_human_update)(uint32_t frame) {
 				h->y += h->vy;
 				if (def_player_hit(h->x, h->y >> DEF_FP, DEF_HUMAN_W, DEF_HUMAN_H)) {
 					h->state = DEF_HS_CAUGHT;
+					game_sound_play(DEF_SFX_CATCH);
 					def_hud_add_score(DEF_HUMAN_CATCH_SCORE);
 					game_fx_popup(h->x, (h->y >> DEF_FP) - 12, DEF_HUMAN_CATCH_SCORE);
 				}
@@ -199,6 +202,7 @@ void def_human_release(int32_t i) {
 	if (h->state != DEF_HS_CARRIED && h->state != DEF_HS_CAUGHT) return;
 	h->state = DEF_HS_FALLING;
 	h->vy = 0;
+	game_sound_play(DEF_SFX_FALL);
 	h->fall_y = h->y >> DEF_FP;
 }
 
@@ -207,6 +211,7 @@ void def_human_kill(int32_t i) {
 	DefHuman_t* h = &_humans[i];
 	if (h->state == DEF_HS_DEAD) return;
 	h->state = DEF_HS_DEAD;
+	game_sound_play(DEF_SFX_HUMAN_DIE);
 	game_fx_explode(def_wrap(h->x + DEF_PX(DEF_HUMAN_W >> 1)), h->y + DEF_PX(DEF_HUMAN_H >> 1), GAME_PINK, 20, DEF_PX(2));
 }
 

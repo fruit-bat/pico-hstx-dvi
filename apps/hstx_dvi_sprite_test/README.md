@@ -15,7 +15,7 @@ An invaders game. The library's pixel perfect sprite collisions decide what hits
 
 ## Controls
 
-Buttons connect the GPIO to ground (internal pull ups are used).
+Built with `-DGAME_BUTTONS=ON`, buttons connect the GPIO to ground (internal pull ups are used).
 
 | GPIO | Button |
 |------|--------|
@@ -27,7 +27,7 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `INV_INP_GPIO_START` in CMakeLists.txt.
 
-Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad left and right, A or B to fire and Start to start.
+NES or SNES gamepads work as well (see the top README): D-pad left and right, A or B to fire and Start to start.
 
 ## The game
 

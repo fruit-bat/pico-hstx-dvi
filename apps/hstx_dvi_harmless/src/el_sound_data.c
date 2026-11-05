@@ -5,79 +5,51 @@
 // so a bend's step is three eighths of a semitone.
 
 #include "el_sound.h"
-#include "game_seq.h"
-
-#define PROG(p) { 0, SEQ_PROGRAM, p, 0 }
-#define CC(c, v) { 0, SEQ_CC, c, v }
-#define CC_AFTER(w, c, v) { w, SEQ_CC, c, v }
-#define ON(w, n, v) { w, SEQ_ON, n, v }
-#define OFF(w, n) { w, SEQ_OFF, n, 0 }
-#define BEND(b) { 0, SEQ_BEND, b, 0 }
-#define SWEEP(w, to, t) { w, SEQ_SWEEP, to, t }
-#define REST(w) { w, SEQ_REST, 0, 0 }
-#define MARK { 0, SEQ_MARK, 0, 0 }
-#define LOOP(w) { w, SEQ_LOOP, 0, 0 }
-#define END(w) { w, SEQ_END, 0, 0 }
-
-// General MIDI's instruments
-#define GLOCKENSPIEL 9
-#define VIBRAPHONE 11
-#define CELESTA 8
-#define SYNTH_BASS 38
-#define SYNTH_BASS_2 39
-#define DISTORTION_GUITAR 30
-#define SQUARE_LEAD 80
-#define SAW_LEAD 81
-#define WARM_PAD 89
-#define CRYSTAL 98
-#define ATMOSPHERE 99
-#define SCI_FI 103
-#define REVERSE_CYMBAL 119
-#define GUNSHOT 127
+#include "game_seq_steps.h"
 
 // ----------------------------------------------------------------------------
 // Sounds
 
 static const SeqStep_t _laser[] = {
-	PROG(SAW_LEAD), BEND(96), ON(0, 76, 110), SWEEP(0, 24, 10), OFF(10, 76), END(2)
+	PROG(GM_SAW_LEAD), BEND(96), ON(0, 76, 110), SWEEP(0, 24, 10), OFF(10, 76), END(2)
 };
 static const SeqStep_t _hit[] = {
-	PROG(DISTORTION_GUITAR), BEND(64), ON(0, 28, 100), ON(0, 35, 100), SWEEP(0, 40, 14), OFF(14, 28), OFF(0, 35), END(4)
+	PROG(GM_DISTORTION_GUITAR), BEND(64), ON(0, 28, 100), ON(0, 35, 100), SWEEP(0, 40, 14), OFF(14, 28), OFF(0, 35), END(4)
 };
 static const SeqStep_t _explosion[] = {
-	PROG(GUNSHOT), BEND(64), ON(0, 30, 127), SWEEP(0, 10, 60), ON(8, 26, 110), OFF(62, 30), OFF(0, 26), END(10)
+	PROG(GM_GUNSHOT), BEND(64), ON(0, 30, 127), SWEEP(0, 10, 60), ON(8, 26, 110), OFF(62, 30), OFF(0, 26), END(10)
 };
 static const SeqStep_t _missile[] = {
-	PROG(SAW_LEAD), BEND(20), ON(0, 48, 100), SWEEP(0, 110, 50), OFF(50, 48), END(10)
+	PROG(GM_SAW_LEAD), BEND(20), ON(0, 48, 100), SWEEP(0, 110, 50), OFF(50, 48), END(10)
 };
 static const SeqStep_t _ecm[] = {
-	PROG(SQUARE_LEAD), ON(0, 84, 100),
+	PROG(GM_SQUARE_LEAD), ON(0, 84, 100),
 	SWEEP(0, 100, 6), SWEEP(6, 28, 6), SWEEP(6, 100, 6), SWEEP(6, 28, 6),
 	SWEEP(6, 100, 6), SWEEP(6, 28, 6), SWEEP(6, 100, 6), SWEEP(6, 28, 6),
 	OFF(6, 84), END(4)
 };
 static const SeqStep_t _bomb[] = {
-	PROG(REVERSE_CYMBAL), ON(0, 60, 127), OFF(150, 60), END(20)
+	PROG(GM_REVERSE_CYMBAL), ON(0, 60, 127), OFF(150, 60), END(20)
 };
 static const SeqStep_t _scooped[] = {
-	PROG(VIBRAPHONE), ON(0, 79, 100), OFF(8, 79), ON(0, 84, 100), OFF(14, 84), END(20)
+	PROG(GM_VIBRAPHONE), ON(0, 79, 100), OFF(8, 79), ON(0, 84, 100), OFF(14, 84), END(20)
 };
 static const SeqStep_t _choose[] = {
-	PROG(GLOCKENSPIEL), ON(0, 88, 90), OFF(10, 88), END(20)
+	PROG(GM_GLOCKENSPIEL), ON(0, 88, 90), OFF(10, 88), END(20)
 };
 static const SeqStep_t _page[] = {
-	PROG(GLOCKENSPIEL), ON(0, 79, 90), OFF(8, 79), ON(0, 84, 90), OFF(8, 84), ON(0, 91, 90), OFF(20, 91), END(20)
+	PROG(GM_GLOCKENSPIEL), ON(0, 79, 90), OFF(8, 79), ON(0, 84, 90), OFF(8, 84), ON(0, 91, 90), OFF(20, 91), END(20)
 };
 static const SeqStep_t _count[] = {
-	PROG(SQUARE_LEAD), ON(0, 81, 100), OFF(10, 81), END(2)
+	PROG(GM_SQUARE_LEAD), ON(0, 81, 100), OFF(10, 81), END(2)
 };
 static const SeqStep_t _hyperspace[] = {
-	PROG(SCI_FI), BEND(10), ON(0, 48, 127), SWEEP(0, 127, 180), OFF(200, 48), END(40)
+	PROG(GM_SCI_FI), BEND(10), ON(0, 48, 127), SWEEP(0, 127, 180), OFF(200, 48), END(40)
 };
 // Engines, a low hum bent up two seconds, then dying away for a second as
 // it rises a little more, turned down rather than let go, which is abrupt
 static const SeqStep_t _tunnel[] = {
-	PROG(SYNTH_BASS_2), BEND(48), CC(11, 127), ON(0, 26, 110), ON(0, 33, 90), SWEEP(0, 96, 240),
+	PROG(GM_SYNTH_BASS_2), BEND(48), CC(11, 127), ON(0, 26, 110), ON(0, 33, 90), SWEEP(0, 96, 240),
 	REST(240), SWEEP(0, 104, 120),
 	CC_AFTER(10, 11, 107), CC_AFTER(10, 11, 88), CC_AFTER(10, 11, 71), CC_AFTER(10, 11, 56),
 	CC_AFTER(10, 11, 43), CC_AFTER(10, 11, 32), CC_AFTER(10, 11, 22), CC_AFTER(10, 11, 14),
@@ -85,27 +57,27 @@ static const SeqStep_t _tunnel[] = {
 	OFF(0, 26), OFF(0, 33), END(10)
 };
 static const SeqStep_t _denied[] = {
-	PROG(SQUARE_LEAD), ON(0, 40, 90), OFF(16, 40), END(2)
+	PROG(GM_SQUARE_LEAD), ON(0, 40, 90), OFF(16, 40), END(2)
 };
 static const SeqStep_t _dead[] = {
-	PROG(GUNSHOT), BEND(64), ON(0, 30, 127), SWEEP(0, 0, 120), ON(10, 26, 127), ON(14, 22, 127),
+	PROG(GM_GUNSHOT), BEND(64), ON(0, 30, 127), SWEEP(0, 0, 120), ON(10, 26, 127), ON(14, 22, 127),
 	OFF(100, 30), OFF(0, 26), OFF(0, 22), END(30)
 };
 static const SeqStep_t _incoming[] = {
-	PROG(SQUARE_LEAD), MARK, ON(0, 88, 100), OFF(12, 88), ON(6, 88, 100), OFF(12, 88), LOOP(30)
+	PROG(GM_SQUARE_LEAD), MARK, ON(0, 88, 100), OFF(12, 88), ON(6, 88, 100), OFF(12, 88), LOOP(30)
 };
 static const SeqStep_t _low_energy[] = {
-	PROG(SQUARE_LEAD), MARK, ON(0, 69, 100), OFF(30, 69), LOOP(30)
+	PROG(GM_SQUARE_LEAD), MARK, ON(0, 69, 100), OFF(30, 69), LOOP(30)
 };
 static const SeqStep_t _heat[] = {
-	PROG(SQUARE_LEAD), MARK, ON(0, 93, 80), OFF(6, 93), LOOP(54)
+	PROG(GM_SQUARE_LEAD), MARK, ON(0, 93, 80), OFF(6, 93), LOOP(54)
 };
 // Held on, the loop only waiting
 static const SeqStep_t _scooping[] = {
-	PROG(ATMOSPHERE), ON(0, 52, 70), MARK, LOOP(240)
+	PROG(GM_ATMOSPHERE), ON(0, 52, 70), MARK, LOOP(240)
 };
 static const SeqStep_t _overdrive[] = {
-	PROG(SYNTH_BASS_2), BEND(64), ON(0, 28, 110), MARK, LOOP(240)
+	PROG(GM_SYNTH_BASS_2), BEND(64), ON(0, 28, 110), MARK, LOOP(240)
 };
 
 const SeqSound_t sound_data[SFX_SOUNDS] = {
@@ -132,10 +104,6 @@ const SeqSound_t sound_data[SFX_SOUNDS] = {
 
 // ----------------------------------------------------------------------------
 // Tunes
-
-// A note d long, let go a little before, so the same again is heard
-#define NOTE(n, d, v) ON(0, n, v), OFF((d) - 4, n), REST(4)
-#define CHORD(a, b, c, d, v) ON(0, a, v), ON(0, b, v), ON(0, c, v), OFF(d, a), OFF(0, b), OFF(0, c)
 
 // The Blue Danube, Johann Strauss II, 1866: our own arrangement of its first
 // waltz, in D, a beat B ticks
@@ -164,7 +132,7 @@ const SeqSound_t sound_data[SFX_SOUNDS] = {
 	REST(B), M(h2), M(h2)
 
 static const SeqStep_t _danube_tune[] = {
-	PROG(CRYSTAL), CC(11, 110),
+	PROG(GM_CRYSTAL), CC(11, 110),
 	WALTZ(D4, FS4, A4, A5, FS5),
 	WALTZ(D4, FS4, A4, A5, G5),
 	WALTZ(CS4, E4, B4, B5, G5),
@@ -205,19 +173,19 @@ static const SeqStep_t _danube_tune[] = {
 	E, E, A, D
 
 static const SeqStep_t _danube_pad[] = {
-	PROG(WARM_PAD), CC(11, 100),
+	PROG(GM_WARM_PAD), CC(11, 100),
 	BARS(PD, PA, PG, PE),
 	END(0)
 };
 
 static const SeqStep_t _danube_arp[] = {
-	PROG(CRYSTAL), CC(11, 80),
+	PROG(GM_CRYSTAL), CC(11, 80),
 	BARS(AD, AA, AG, AE),
 	END(0)
 };
 
 static const SeqStep_t _danube_bass[] = {
-	PROG(SYNTH_BASS), CC(11, 100),
+	PROG(GM_SYNTH_BASS_1), CC(11, 100),
 	BARS(RD, RA, RG, RE),
 	END(0)
 };
@@ -238,14 +206,14 @@ static const SeqTrack_t _danube[] = {
 #define ROOT(n) NOTE(n, 2 * Q, 90), NOTE(n, 2 * Q, 80)
 
 static const SeqStep_t _title_pad[] = {
-	PROG(WARM_PAD), CC(11, 100),
+	PROG(GM_WARM_PAD), CC(11, 100),
 	PAD(50, 53, 57), PAD(46, 50, 53), PAD(53, 57, 60), PAD(48, 52, 55),
 	PAD(50, 53, 57), PAD(46, 50, 53), PAD(53, 57, 60), PAD(48, 52, 55),
 	END(0)
 };
 
 static const SeqStep_t _title_arp[] = {
-	PROG(CRYSTAL), CC(11, 90),
+	PROG(GM_CRYSTAL), CC(11, 90),
 	ARP(62, 65, 69, 74, 69, 65, 62, 65),
 	ARP(58, 62, 65, 70, 65, 62, 58, 62),
 	ARP(60, 65, 69, 72, 69, 65, 60, 65),
@@ -258,7 +226,7 @@ static const SeqStep_t _title_arp[] = {
 };
 
 static const SeqStep_t _title_bass[] = {
-	PROG(SYNTH_BASS), CC(11, 100),
+	PROG(GM_SYNTH_BASS_1), CC(11, 100),
 	ROOT(38), ROOT(34), ROOT(41), ROOT(36),
 	ROOT(38), ROOT(34), ROOT(41), ROOT(36),
 	END(0)

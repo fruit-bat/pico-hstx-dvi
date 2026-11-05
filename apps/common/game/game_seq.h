@@ -78,6 +78,9 @@ void game_seq_sound_level(uint32_t id, uint8_t level);
 void game_seq_tune(const SeqTune_t* t, uint32_t fade);
 // Fades out over fade ticks, or stops at once
 void game_seq_tune_stop(uint32_t fade);
+// Plays on another of the synth's drivers (game_synth.h) from now on, telling
+// it all it needs, and starting the tune playing again
+void game_seq_synth(uint32_t i);
 // From 0 to 127
 void game_seq_volume(uint8_t music, uint8_t sounds);
 

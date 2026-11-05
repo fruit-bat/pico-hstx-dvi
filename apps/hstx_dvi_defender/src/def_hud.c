@@ -1,4 +1,5 @@
 #include "def_hud.h"
+#include "def_sound.h"
 #include "game_render.h"
 #include "game_pallet.h"
 #include "def_player.h"
@@ -44,6 +45,7 @@ void __not_in_flash_func(def_hud_add_score)(uint32_t points) {
 		_next_bonus += DEF_HUD_BONUS;
 		if (_lives < DEF_HUD_MAX) ++_lives;
 		if (_smart < DEF_HUD_MAX) ++_smart;
+		game_sound_play(DEF_SFX_EXTRA_LIFE);
 	}
 }
 
