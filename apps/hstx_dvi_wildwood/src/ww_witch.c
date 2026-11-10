@@ -1,4 +1,5 @@
 #include "ww_witch.h"
+#include "ww_sound.h"
 #include "ww_input.h"
 #include "ww_world.h"
 #include "ww_art.h"
@@ -252,6 +253,7 @@ static void cast(void) {
 	_bvy = dy * s;
 	_blife = WW_BOLT_FRAMES;
 	_cast = WW_CAST_FRAMES;
+	game_sound_play(WW_SFX_CAST);
 	ww_world_burst(_bx >> GAME_FP, _by >> GAME_FP, GAME_COLOUR_RANDOM, 8, GAME_PX(1));
 }
 
@@ -379,6 +381,7 @@ bool ww_witch_hurt(int32_t x, int32_t y) {
 	_ky = WW_WITCH_KNOCK * dy / d;
 	ww_world_burst(_x >> GAME_FP, (_y >> GAME_FP) - 20, GAME_PINK, 10, GAME_PX(2));
 	if (_hearts) --_hearts;
+	game_sound_play(_hearts ? WW_SFX_HURT : WW_SFX_DIZZY);
 	if (!_hearts) {
 		_dizzy = WW_WITCH_DIZZY_FRAMES;
 		_bolt = false;

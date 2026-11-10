@@ -1,4 +1,5 @@
 #include "ww_animal.h"
+#include "ww_sound.h"
 #include "ww_art.h"
 #include "ww_world.h"
 #include "ww_witch.h"
@@ -741,6 +742,7 @@ static void reunite(WwAnimal_t* owlet, WwAnimal_t* owl) {
 	owlet->vx = owlet->vy = 0;
 	hearts(owl, 24);
 	say(owl, "MY BABY! THANK YOU!", GAME_PINK);
+	game_sound_play(WW_SFX_REUNITE);
 	points(owl, 500);
 	++_helped;
 	if (owl->flags & WW_AF_PIECE) ww_items_award_piece(WW_PIECE_HELP, owl->x >> GAME_FP, (owl->y >> GAME_FP) - 20);
@@ -806,6 +808,7 @@ static void update_one(WwAnimal_t* a, uint32_t frame) {
 				set_mood(a, WW_MOOD_GRUMPY);
 				a->flags |= WW_AF_SPOKE;
 				say(a, a->type == WW_BEAR ? "ROAR! WHO WOKE ME?" : "HEY! I WAS ASLEEP!", GAME_RED);
+				game_sound_play(WW_SFX_WAKE);
 				a->stun = WW_STUN_FRAMES;
 			}
 			break;
@@ -847,6 +850,7 @@ static void update_one(WwAnimal_t* a, uint32_t frame) {
 			if (ww_witch_alive() && ww_witch_overlaps((a->x >> GAME_FP) - 12, (a->y >> GAME_FP) - 20, (a->x >> GAME_FP) + 12, a->y >> GAME_FP)) {
 				a->mood = WW_MOOD_FOLLOW;
 				say(a, "TAKE ME TO MUMMY!", GAME_YELLOW);
+				game_sound_play(WW_SFX_FOUND);
 				hearts(a, 8);
 			}
 			break;
@@ -882,6 +886,7 @@ static void calmed(WwAnimal_t* a) {
 	a->joy = WW_JOY_FRAMES;
 	a->timer = 0;
 	hearts(a, 16);
+	game_sound_play(WW_SFX_HAPPY);
 	if (a == &_wolf_animal) {
 		_wolf_calm = true;
 		say(a, "THE MOON... SO PRETTY...", GAME_CYAN);
@@ -901,6 +906,7 @@ static void healed(WwAnimal_t* a) {
 	a->joy = WW_JOY_FRAMES;
 	a->timer = 0;
 	hearts(a, 16);
+	game_sound_play(WW_SFX_HAPPY);
 	say(a, "THANK YOU!", GAME_PINK);
 	points(a, in->heal_score);
 	++_helped;
@@ -920,6 +926,7 @@ bool ww_animal_spell(int32_t x, int32_t y) {
 				if (--a->need == 0) healed(a);
 				else {
 					say(a, "A LITTLE BETTER...", GAME_WHITE);
+					game_sound_play(WW_SFX_BETTER);
 					hearts(a, 4);
 				}
 				break;
@@ -927,6 +934,7 @@ bool ww_animal_spell(int32_t x, int32_t y) {
 				if (a == &_wolf_animal && !ww_hud_charm_whole()) {
 					// Only the whole moon charm will calm him, but it does make him back off
 					say(a, "YELP!", GAME_WHITE);
+					game_sound_play(WW_SFX_YELP);
 					a->stun = WW_WOLF_STUN;
 					a->vx = game_sign(ax - ww_witch_x()) * GAME_PX(3);
 					a->vy = game_sign(ay - ww_witch_y()) * GAME_PX(3);
@@ -936,6 +944,7 @@ bool ww_animal_spell(int32_t x, int32_t y) {
 				if (a->need == 0) calmed(a);
 				else {
 					say(a, "HMPH!", GAME_WHITE);
+					game_sound_play(WW_SFX_BETTER);
 					a->stun = WW_STUN_FRAMES;
 					a->vx = game_sign(ax - ww_witch_x()) * GAME_PX(2);
 					a->vy = game_sign(ay - ww_witch_y()) * GAME_PX(2);
@@ -945,6 +954,7 @@ bool ww_animal_spell(int32_t x, int32_t y) {
 				set_mood(a, WW_MOOD_GRUMPY);
 				a->flags |= WW_AF_SPOKE;
 				say(a, a->type == WW_BEAR ? "ROAR! WHO WOKE ME?" : "HEY! I WAS ASLEEP!", GAME_RED);
+				game_sound_play(WW_SFX_WAKE);
 				a->stun = WW_STUN_FRAMES;
 				break;
 			case WW_MOOD_HAPPY:
@@ -954,9 +964,11 @@ bool ww_animal_spell(int32_t x, int32_t y) {
 				}
 				a->joy = WW_JOY_FRAMES / 2;
 				hearts(a, 6);
+				game_sound_play(WW_SFX_FRIEND);
 				break;
 			default:
 				hearts(a, 6);
+				game_sound_play(WW_SFX_FRIEND);
 				break;
 		}
 		return true;
@@ -979,6 +991,7 @@ void ww_animal_wolf_spawn(int32_t x, int32_t y, uint32_t night) {
 	_wolf_calm = false;
 	gather_here();
 	game_fx_implode(GAME_PX(x), GAME_PX(y + WW_HUD_H - 10), GAME_BLUE, 24, 30);
+	game_sound_play(WW_SFX_WOLF);
 }
 
 bool ww_animal_wolf_here(void) {

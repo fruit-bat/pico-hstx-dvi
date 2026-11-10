@@ -10,6 +10,7 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "mm_sound.h"
 #include "app_led.h"
 #include "hstx_dvi_sprite.h"
 #include "pico/stdio.h"
@@ -62,6 +63,7 @@ int main(void)
 
 	// Initialize the HSTX DVI sprite system
 	hstx_dvi_sprite_init_all();
+	mm_sound_init();
 
 	sleep_ms(2000); // Allow time for initialization
 

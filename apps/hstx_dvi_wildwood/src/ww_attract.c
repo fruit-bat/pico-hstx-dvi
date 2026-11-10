@@ -1,4 +1,5 @@
 #include "ww_attract.h"
+#include "ww_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "ww_input.h"
 #include "ww_witch.h"
@@ -82,7 +83,7 @@ static void attract_init(void) {
 
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	ww_wait_for_frame();
 	game_fx_update();
 	return is_ww_input_play(game_input_pressed());
 }
@@ -126,6 +127,7 @@ bool ww_attract_title(void) {
 
 	const int32_t tx = (GAME_SCREEN_W - WW_ATTRACT_TITLE_LEN * 32) >> 1;
 	const int32_t ax = 120;
+	game_music_play(WW_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < WW_ATTRACT_TITLE_FRAMES; ++frame) {
 		if (attract_frame()) return true;
 
@@ -192,6 +194,8 @@ bool ww_attract_hiscores(int32_t highlight) {
 	game_text_set(&_text[11], "PRESS FIRE TO PLAY", 2);
 
 	const uint32_t frames = highlight >= 0 ? WW_ATTRACT_HIGHLIGHT_FRAMES : WW_ATTRACT_HISCORE_FRAMES;
+	// After putting in initials, their tune goes on
+	if (highlight < 0) game_music_play(WW_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < frames; ++frame) {
 		if (attract_frame()) return true;
 
@@ -230,8 +234,9 @@ bool ww_attract_game_over(void) {
 
 	GameInitials_t g;
 	game_initials_reset(&g);
+	game_music_play(WW_TUNE_HISCORE);
 	for (uint32_t frame = 0; frame < WW_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		ww_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();

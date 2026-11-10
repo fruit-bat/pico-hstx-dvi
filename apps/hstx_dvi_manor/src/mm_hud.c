@@ -1,4 +1,5 @@
 #include "mm_hud.h"
+#include "mm_sound.h"
 #include "mm_witch.h"
 #include "mm_thing.h"
 #include "mm_camera.h"
@@ -51,7 +52,10 @@ void mm_hud_add_score(uint32_t points) {
 	_score += points;
 	while (_score >= _next_bonus) {
 		_next_bonus += MM_HUD_BONUS;
-		if (_lives < MM_HUD_MAX_LIVES) ++_lives;
+		if (_lives < MM_HUD_MAX_LIVES) {
+			++_lives;
+			game_sound_play(MM_SFX_EXTRA_LIFE);
+		}
 	}
 }
 

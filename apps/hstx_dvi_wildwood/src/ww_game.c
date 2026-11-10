@@ -1,4 +1,5 @@
 #include "ww_game.h"
+#include "ww_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "ww_input.h"
 #include "ww_world.h"
@@ -79,6 +80,7 @@ static void night_start(void) {
 	set_message(1, "FIND THE MOON CHARM", 2);
 	set_message(2, "HEAL  CALM  HELP  HUSH", 2);
 	_message_timer = WW_GAME_MESSAGE_FRAMES;
+	game_music_play(WW_TUNE_NIGHT);
 }
 
 static void change_room(int32_t dir) {
@@ -91,6 +93,7 @@ static void change_room(int32_t dir) {
 	enter_room(next);
 	const int32_t x = ww_witch_x(), y = ww_witch_y() + WW_HUD_H - 50;
 	if (explored) ww_hud_add_score(WW_EXPLORE_POINTS);
+	if (crept || wolf) game_sound_play(WW_SFX_SNEAK);
 	if (crept) {
 		ww_hud_add_score(WW_CREPT_POINTS * crept);
 		ww_hud_say(x, y, "SHHH... CREPT PAST", GAME_CYAN);
@@ -132,6 +135,7 @@ static void wolf_update(void) {
 	++_room_frames;
 	if (_room_frames + WW_WOLF_WARNING == delay) {
 		ww_hud_say(WW_ROOM_W / 2, WW_HUD_H + 8, "AWOOOOO!", GAME_BLUE);
+		game_sound_play(WW_SFX_HOWL);
 	}
 	if (_room_frames >= delay) wolf_arrives();
 }
@@ -169,22 +173,26 @@ static bool night_end(const bool demo) {
 	snprintf(t, sizeof(t), "NIGHT %lu IS OVER", (unsigned long)_night);
 	set_message(1, t, 2);
 	_message_timer = 0;
+	game_music_play(WW_TUNE_NIGHT_END);
 
 	for (uint32_t frame = 0; frame < 480; ++frame, ++_frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		ww_wait_for_frame();
 		if (demo && is_ww_input_play(game_input_pressed())) return true;
 		if (frame == 120) {
 			ww_hud_add_score(night_bonus);
+			game_sound_play(WW_SFX_BONUS);
 			snprintf(t, sizeof(t), "NIGHT BONUS %lu", (unsigned long)night_bonus);
 			set_message(2, t, 2);
 		}
 		if (frame == 240) {
 			ww_hud_add_score(hearts * WW_HEART_POINTS);
+			game_sound_play(WW_SFX_BONUS);
 			snprintf(t, sizeof(t), "HEARTS %lu X %u", (unsigned long)hearts, WW_HEART_POINTS);
 			set_message(2, t, 2);
 		}
 		if (frame == 360) {
 			ww_hud_add_score(helped * WW_HELPED_POINTS);
+			game_sound_play(WW_SFX_BONUS);
 			snprintf(t, sizeof(t), "FRIENDS HELPED %lu X %u", (unsigned long)helped, WW_HELPED_POINTS);
 			set_message(2, t, 2);
 		}
@@ -219,7 +227,7 @@ static bool game_run(const bool demo) {
 	uint8_t last = 0;
 	uint32_t over = 0;
 	for (uint32_t frame = 0; ; ++frame, ++_frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		ww_wait_for_frame();
 
 		uint8_t input;
 		if (demo) {
@@ -255,6 +263,7 @@ static bool game_run(const bool demo) {
 				clear_messages();
 				set_message(0, "GAME OVER", 3);
 				set_message(1, "SWEET DREAMS", 2);
+				game_music_play(WW_TUNE_GAME_OVER);
 				over = 1;
 			}
 			else {
@@ -271,7 +280,11 @@ static bool game_run(const bool demo) {
 			if (night_end(demo)) return true;
 		}
 
-		if (_message_timer && --_message_timer == 0) clear_messages();
+		if (_message_timer && --_message_timer == 0) {
+			clear_messages();
+			// The night's tune is over, so on to the quiet one
+			game_music_play(WW_TUNE_PLAY);
+		}
 		if (demo && !_message_timer) {
 			clear_messages();
 			if ((frame >> 5) & 1) set_message(2, "DEMO - PRESS FIRE", 2);

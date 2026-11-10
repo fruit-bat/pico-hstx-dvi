@@ -1,4 +1,5 @@
 #include "ww_hud.h"
+#include "ww_sound.h"
 #include "ww_witch.h"
 #include "ww_world.h"
 #include "ww_art.h"
@@ -135,7 +136,10 @@ void ww_hud_add_score(uint32_t points) {
 	_score += points;
 	while (_score >= _next_bonus) {
 		_next_bonus += WW_HUD_BONUS;
-		if (_lives < WW_HUD_MAX_LIVES) ++_lives;
+		if (_lives < WW_HUD_MAX_LIVES) {
+			++_lives;
+			game_sound_play(WW_SFX_EXTRA_LIFE);
+		}
 	}
 }
 

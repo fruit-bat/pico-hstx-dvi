@@ -1,4 +1,5 @@
 #include "ww_items.h"
+#include "ww_sound.h"
 #include "ww_world.h"
 #include "ww_witch.h"
 #include "ww_hud.h"
@@ -152,6 +153,7 @@ void ww_items_award_piece(uint32_t piece, int32_t x, int32_t y) {
 	p->y0 = y - 8 + WW_HUD_H;
 	ww_hud_add_score(WW_PIECE_POINTS);
 	ww_hud_say(x, y + WW_HUD_H - 30, "A PIECE OF THE MOON CHARM!", GAME_YELLOW);
+	game_sound_play(WW_SFX_PIECE);
 	ww_world_burst(x, y, GAME_YELLOW, 24, GAME_PX(3));
 }
 
@@ -169,6 +171,7 @@ void ww_items_update(uint32_t frame) {
 		if (!p->life) continue;
 		if (--p->life == 0) {
 			ww_hud_add_piece(i);
+			if (ww_hud_charm_whole()) game_sound_play(WW_SFX_CHARM);
 			int32_t hx, hy;
 			ww_hud_piece_pos(i, &hx, &hy);
 			game_fx_explode(GAME_PX(hx + 8), GAME_PX(hy + 8), GAME_YELLOW, 16, GAME_PX(2));
@@ -180,6 +183,7 @@ void ww_items_update(uint32_t frame) {
 	if (in_flower(f) && ww_witch_overlaps(f->x - 7, f->y - 12, f->x + 7, f->y)) {
 		const uint32_t e = flower_effect(f);
 		ww_witch_effect(e);
+		game_sound_play(e == WW_EFFECT_MUDDLE ? WW_SFX_MUDDLE : WW_SFX_FLOWER);
 		f->regrow = frame + WW_FLOWER_REGROW;
 		ww_hud_add_score(WW_FLOWER_POINTS);
 		ww_hud_say(f->x, f->y + WW_HUD_H - 40, _effect_words[e], _effect_colours[e][0]);

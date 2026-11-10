@@ -1,4 +1,5 @@
 #include "mm_attract.h"
+#include "mm_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "mm_input.h"
 #include "mm_game.h"
@@ -97,7 +98,7 @@ static void attract_init(void) {
 
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	mm_wait_for_frame();
 	game_fx_update();
 	return is_mm_input_play(game_input_pressed());
 }
@@ -157,10 +158,11 @@ bool mm_attract_title(void) {
 	game_text_set(&_text[16], "UP+CAST CASTS UP  DOWN+JUMP DROPS DOWN", 1);
 
 	mm_game_tour_start();
+	game_music_play(MM_TUNE_TITLE);
 	uint32_t stop = 0;
 	const int32_t tx = (GAME_SCREEN_W - MM_ATTRACT_TITLE_LEN * 32) >> 1;
 	for (uint32_t frame = 0; frame < MM_ATTRACT_TITLE_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 		if (is_mm_input_play(game_input_pressed())) return true;
 		// Drifts round the house, a few seconds at each place
 		if (frame % 100 == 99) stop = (stop + 1) % MM_ATTRACT_TOUR_STOPS;
@@ -240,6 +242,8 @@ bool mm_attract_hiscores(int32_t highlight) {
 	game_text_set(&_text[11], "PRESS JUMP TO PLAY", 2);
 
 	const uint32_t frames = highlight >= 0 ? MM_ATTRACT_HIGHLIGHT_FRAMES : MM_ATTRACT_HISCORE_FRAMES;
+	// After putting in initials, their tune goes on
+	if (highlight < 0) game_music_play(MM_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < frames; ++frame) {
 		if (attract_frame()) return true;
 
@@ -278,8 +282,9 @@ bool mm_attract_game_over(void) {
 
 	GameInitials_t g;
 	game_initials_reset(&g);
+	game_music_play(MM_TUNE_HISCORE);
 	for (uint32_t frame = 0; frame < MM_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();

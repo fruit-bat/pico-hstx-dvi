@@ -1,4 +1,5 @@
 #include "mm_map.h"
+#include "mm_sound.h"
 #include "mm_thing.h"
 #include "game_fx.h"
 #include "game_pallet.h"
@@ -259,6 +260,7 @@ static void sparkle(int32_t cx, int32_t cy, uint32_t colour) {
 static void set_group(uint32_t g, bool open) {
 	if (_group[g].open == open) return;
 	_group[g].open = open;
+	if (open) game_sound_play(MM_SFX_GATE);
 	for (int32_t cy = 0; cy < MM_MAP_H; ++cy) {
 		for (int32_t cx = 0; cx < MM_MAP_W; ++cx) {
 			if (_kind[cy][cx] != MM_C_GATE || _cell_group[cy][cx] != g) continue;
