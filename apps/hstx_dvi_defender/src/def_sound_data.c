@@ -14,8 +14,10 @@
 static const SeqStep_t _laser[] = {
 	PROG(GM_SAW_LEAD), BEND(110), ON(0, 84, 50), SWEEP(0, 40, 7), OFF(7, 84), END(1)
 };
+// Four at once, as loud as a sound gets: everything is already at full velocity
 static const SeqStep_t _explode[] = {
-	PROG(GM_GUNSHOT), BEND(72), ON(0, 40, 127), SWEEP(0, 40, 40), ON(4, 33, 100), OFF(40, 40), OFF(0, 33), END(6)
+	PROG(GM_GUNSHOT), BEND(72), ON(0, 40, 127), ON(0, 36, 127), SWEEP(0, 40, 40), ON(4, 33, 127), ON(0, 28, 127),
+	OFF(40, 40), OFF(0, 36), OFF(0, 33), OFF(0, 28), END(6)
 };
 static const SeqStep_t _enemy_fire[] = {
 	PROG(GM_SQUARE_LEAD), BEND(64), ON(0, 79, 55), SWEEP(0, 88, 6), OFF(6, 79), END(1)

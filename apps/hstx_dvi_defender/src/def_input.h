@@ -13,15 +13,18 @@ extern "C" {
 #define DEF_INP_BIT_D 8
 #define DEF_INP_BIT_F 16
 #define DEF_INP_BIT_B 32 // Smart bomb
+#define DEF_INP_BIT_START 64 // The settings, between games: on a pad only
 
 // Left, right, up, down, fire and smart bomb on consecutive GPIOs from here
 #ifndef DEF_INP_GPIO_START
 #define DEF_INP_GPIO_START 2
 #endif
 #define DEF_INP_GPIO_COUNT 6
+// And start, from a pad
+#define DEF_INP_PAD_COUNT 7
 
 // The gamepad buttons for each input bit
-#define DEF_INP_PAD_MAP { GAME_PAD_LEFT, GAME_PAD_RIGHT, GAME_PAD_UP, GAME_PAD_DOWN, GAME_PAD_A, GAME_PAD_B }
+#define DEF_INP_PAD_MAP { GAME_PAD_LEFT, GAME_PAD_RIGHT, GAME_PAD_UP, GAME_PAD_DOWN, GAME_PAD_A, GAME_PAD_B, GAME_PAD_START }
 
 __force_inline bool is_def_input_play(const uint8_t input) {
 	return (input & (DEF_INP_BIT_F | DEF_INP_BIT_B)) != 0;

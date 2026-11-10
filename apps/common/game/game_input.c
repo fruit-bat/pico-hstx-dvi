@@ -49,6 +49,10 @@ void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map) {
 
 void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map, uint32_t pad_count) {
 #ifdef GAME_BUTTONS
+#ifdef GAME_HOST
+	// On the PC the buttons are pretend, so a scenario can press a pad's too
+	if (pad_count > count) count = pad_count;
+#endif
 	_first = first;
 	_mask = (1u << count) - 1;
 #ifdef GAME_MIDI

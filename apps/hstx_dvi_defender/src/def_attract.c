@@ -11,6 +11,7 @@
 #include "game_hiscore.h"
 #include "game_initials.h"
 #include "game_util.h"
+#include "game_options.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -50,11 +51,29 @@ static void attract_init(void) {
 	game_input_pressed();
 }
 
+static void settings_back(uint32_t frame) {
+	def_world_draw_stars(frame, frame);
+}
+
+// Start shows the settings, and the screen goes on after
+static void settings(void) {
+	static const GameOptions_t o = {
+		DEF_INP_BIT_U, DEF_INP_BIT_D, DEF_INP_BIT_L, DEF_INP_BIT_R, DEF_INP_BIT_F, DEF_INP_BIT_B, DEF_INP_BIT_START,
+		def_wait_for_frame, settings_back
+	};
+	game_options_run(&o);
+}
+
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
 	def_wait_for_frame();
 	game_fx_update();
-	return is_def_input_play(game_input_pressed());
+	const uint16_t pressed = game_input_pressed();
+	if (pressed & DEF_INP_BIT_START) {
+		settings();
+		return false;
+	}
+	return is_def_input_play(pressed);
 }
 
 bool def_attract_title(void) {
@@ -70,6 +89,7 @@ bool def_attract_title(void) {
 	game_text_set(&_text[8], "DEFEND THE HUMANOIDS", 1);
 	game_text_set(&_text[9], "PRESS FIRE TO START", 2);
 	game_text_set(&_text[10], "RP2350 HSTX DVI SPRITES", 1);
+	game_text_set(&_text[12], "START FOR SETTINGS", 1);
 
 	// Where the middle of each enemy in the roll call goes
 	int32_t rx[DEF_ATTRACT_ROLL_COUNT];
@@ -107,6 +127,7 @@ bool def_attract_title(void) {
 			game_spr_text(&_scores[i], rx[i] - (game_text_width(&_scores[i]) >> 1), ry[i] + 36, game_pallet(GAME_YELLOW));
 		}
 		if ((frame >> 5) & 1) game_spr_text_centre(&_text[9], 410, game_pallet(GAME_YELLOW));
+		game_spr_text_centre(&_text[12], 436, game_pallet(GAME_CYAN));
 		game_spr_text_centre(&_text[10], GAME_SCREEN_H - 20, game_pallet(GAME_GREY));
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame < DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP + DEF_ATTRACT_MATERIALISE) continue;

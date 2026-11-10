@@ -47,8 +47,8 @@ int main(void)
 	stdio_init_all();
 	app_led_on();
 
-	static const uint16_t pad_map[DEF_INP_GPIO_COUNT] = DEF_INP_PAD_MAP;
-	game_input_init(DEF_INP_GPIO_START, DEF_INP_GPIO_COUNT, pad_map);
+	static const uint16_t pad_map[DEF_INP_PAD_COUNT] = DEF_INP_PAD_MAP;
+	game_input_init_pad(DEF_INP_GPIO_START, DEF_INP_GPIO_COUNT, pad_map, DEF_INP_PAD_COUNT);
 	game_pallet_init();
 	game_hiscore_init(def_hiscore_defaults());
 	game_fx_set_view(def_world_fx_view());

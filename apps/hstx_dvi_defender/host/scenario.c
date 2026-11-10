@@ -5,6 +5,8 @@
 // idle    - starts a game and sits at the top of the screen
 // planet  - as play, but all the humanoids are killed at frame 900
 // manual  - starts a game and flies about a bit
+// settings - opens the settings on the title, plays a sound, turns the music
+//            off and goes back
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -25,7 +27,7 @@ static uint32_t _reversals = 0;
 static int32_t _last_y = 0;
 static int32_t _last_dy = 0;
 
-// Buttons as the game sees them: L R U D F B from bit 0
+// Buttons as the game sees them: L R U D F B and start from bit 0
 uint32_t host_input(uint32_t f) {
 	if (!strcmp(host_mode, "play") || !strcmp(host_mode, "planet")) {
 		// Start a game from the title, then let the demo player drive
@@ -43,6 +45,13 @@ uint32_t host_input(uint32_t f) {
 		if (f > 300 && f < 500) return 2 | ((f & 8) ? 16 : 0);
 		if (f >= 500 && f < 540) return 1;
 		if (f == 600) return 32;
+	}
+	if (!strcmp(host_mode, "settings")) {
+		// One frame each: start, down to the sounds, right twice, fire, up to the music, right, start
+		static const uint16_t at[][2] = {
+			{ 100, 64 }, { 160, 8 }, { 200, 2 }, { 220, 2 }, { 240, 16 }, { 330, 4 }, { 360, 2 }, { 420, 64 },
+		};
+		for (uint32_t i = 0; i < sizeof(at) / sizeof(at[0]); ++i) if (f == at[i][0]) return at[i][1];
 	}
 	return 0;
 }

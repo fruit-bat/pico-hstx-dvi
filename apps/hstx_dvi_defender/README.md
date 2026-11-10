@@ -11,6 +11,7 @@ A side scrolling shoot 'em up in the style of the 1981 arcade classic, using spr
 ## Controls
 
 NES or SNES gamepads (see the top README): D-pad for the directions, A to fire and B for a smart bomb.
+Start, on the title or the hall of fame, opens the settings: music on or off, and a sound test.
 
 Built with `-DGAME_BUTTONS=ON`, buttons work as well, each connecting its GPIO to ground (internal pull ups are used):
 
@@ -73,9 +74,10 @@ host/build/defender_host play 6000 300 frames
 
 The arguments are the mode, how many frames to run, how often to save one and where to put them.
 The modes are `attract` (no buttons pressed), `play` (a game driven by the demo player),
-`idle` (a game where the ship sits at the top), `planet` (as play, but all the humanoids are lost)
-and `manual` (a game with a little scripted flying). The score, lives and enemy counts are printed
-every 10 seconds of game time.
+`idle` (a game where the ship sits at the top), `planet` (as play, but all the humanoids are lost),
+`manual` (a game with a little scripted flying) and `settings` (opens the settings on the title,
+tries a sound and turns the music off). The score, lives and enemy counts are printed every 10
+seconds of game time.
 
 Each saved frame is about 1MB, so keep the gap between them large on long runs.
 
