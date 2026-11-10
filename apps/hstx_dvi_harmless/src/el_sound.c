@@ -28,7 +28,7 @@ const char* const sound_test_names[SOUND_TESTS] = {
 	[SFX_SCOOPING] = "FUEL SCOOP",
 	[SFX_OVERDRIVE] = "OVERDRIVE",
 	[SFX_SOUNDS + TUNE_TITLE] = "TITLE TUNE",
-	[SFX_SOUNDS + TUNE_DANUBE] = "DOCKING TUNE",
+	[SFX_SOUNDS + TUNE_DOCKING] = "DOCKING TUNE",
 };
 
 const GameSounds_t game_sounds = { sound_data, SFX_SOUNDS, tune_data, TUNES, sound_test_names };

@@ -341,7 +341,7 @@ static uint32_t _scoop_frames;
 // Taking fuel from the sun this frame
 static bool _scooping;
 // The docking computer's music playing
-static bool _danube;
+static bool _waltz;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
 // The ship the targeting computer follows, or -1, and how far off the
@@ -2308,7 +2308,7 @@ void game_play(void) {
 	start();
 	if (!choose_commander()) return;
 	music_stop(FADE_SLOW);
-	_danube = false;
+	_waltz = false;
 	for (;;) {
 		uint16_t pressed = game_input_pressed() | _debug_pressed;
 		_debug_pressed = 0;
@@ -2429,10 +2429,10 @@ void game_play(void) {
 			if (_state == STATE_FLYING) take(&ev);
 			if (ships_explosions()) sound_play(SFX_EXPLOSION);
 			// The docking computer flies to music, which fades as we go in
-			const bool danube = _docking && _state == STATE_FLYING;
-			if (danube && !_danube) music_play(TUNE_DANUBE);
-			else if (!danube && _danube) music_stop(FADE_SLOW);
-			_danube = danube;
+			const bool waltz = _docking && _state == STATE_FLYING;
+			if (waltz && !_waltz) music_play(TUNE_DOCKING);
+			else if (!waltz && _waltz) music_stop(FADE_SLOW);
+			_waltz = waltz;
 			if (next_state()) return;
 		}
 

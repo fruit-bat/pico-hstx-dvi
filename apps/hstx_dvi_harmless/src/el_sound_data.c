@@ -105,96 +105,107 @@ const SeqSound_t sound_data[SFX_SOUNDS] = {
 // ----------------------------------------------------------------------------
 // Tunes
 
-// The Blue Danube, Johann Strauss II, 1866: our own arrangement of its first
-// waltz, in D, a beat B ticks
-#define B 40
+// The docking computer's waltz: our own, in D major, three beats of B ticks
+// a bar, 32 bars. A flute, doubled an octave up on the crystal, over an
+// electric piano's two chords to a bar, a soft pad and the bass on the
+// first beat. The first half goes from D to A and back, the second wanders
+// through G and B minor before coming home.
+#define B 44
 
-#define D4 62
-#define FS4 66
-#define A4 69
-#define CS4 61
-#define E4 64
-#define G4 67
-#define B4 71
-#define D5 74
-#define E5 76
-#define FS5 78
-#define G5 79
-#define A5 81
-#define B5 83
-#define D6 86
+#define W_G4 67
+#define W_A4 69
+#define W_B4 71
+#define W_C5 72
+#define W_CS5 73
+#define W_D5 74
+#define W_E5 76
+#define W_FS5 78
+#define W_G5 79
+#define W_A5 81
+#define W_B5 83
+#define W_C6 84
+#define W_D6 86
 
-#define M(n) NOTE(n, B, 100)
-// Up to a long note, then twice an octave or so up, after a beat's rest
-#define WALTZ(n1, n2, n3, h1, h2) \
-	M(n1), M(n1), M(n2), NOTE(n3, 3 * B, 100), \
-	REST(B), M(h1), M(h1), \
-	REST(B), M(h2), M(h2)
+// The tune, a note at a time, for N(note, beats)
+#define W_MELODY(N) \
+	N(W_A4, 1), N(W_D5, 1), N(W_FS5, 1),  N(W_A5, 2), N(W_FS5, 1), \
+	N(W_G5, 1), N(W_FS5, 1), N(W_E5, 1),  N(W_E5, 3), \
+	N(W_G4, 1), N(W_CS5, 1), N(W_E5, 1),  N(W_G5, 2), N(W_E5, 1), \
+	N(W_FS5, 1), N(W_E5, 1), N(W_D5, 1),  N(W_D5, 3), \
+	N(W_A4, 1), N(W_D5, 1), N(W_FS5, 1),  N(W_A5, 2), N(W_D6, 1), \
+	N(W_D6, 1), N(W_B5, 1), N(W_G5, 1),   N(W_B5, 3), \
+	N(W_A5, 1), N(W_FS5, 1), N(W_D5, 1),  N(W_E5, 2), N(W_D5, 1), \
+	N(W_E5, 1), N(W_CS5, 1), N(W_A4, 1),  N(W_D5, 3), \
+	N(W_D5, 2), N(W_B4, 1),               N(W_G5, 3), \
+	N(W_E5, 2), N(W_C5, 1),               N(W_A5, 2), N(W_FS5, 1), \
+	N(W_FS5, 1), N(W_A5, 1), N(W_C6, 1),  N(W_B5, 3), \
+	N(W_G5, 1), N(W_E5, 1), N(W_B4, 1),   N(W_CS5, 2), N(W_E5, 1), \
+	N(W_FS5, 2), N(W_A5, 1),              N(W_D6, 2), N(W_B5, 1), \
+	N(W_G5, 2), N(W_E5, 1),               N(W_A5, 1), N(W_G5, 1), N(W_E5, 1), \
+	N(W_FS5, 1), N(W_A5, 1), N(W_D6, 1),  N(W_D6, 2), N(W_B5, 1), \
+	N(W_A5, 1), N(W_G5, 1), N(W_CS5, 1),  N(W_D5, 3)
 
-static const SeqStep_t _danube_tune[] = {
-	PROG(GM_CRYSTAL), CC(11, 110),
-	WALTZ(D4, FS4, A4, A5, FS5),
-	WALTZ(D4, FS4, A4, A5, G5),
-	WALTZ(CS4, E4, B4, B5, G5),
-	WALTZ(CS4, E4, B4, B5, FS5),
-	WALTZ(D4, FS4, A4, D6, A5),
-	WALTZ(D4, FS4, A4, D6, B5),
-	M(E4), M(E4), M(G4), NOTE(B4, 3 * B, 100),
-	M(A4), M(FS5), M(E5), NOTE(D5, 3 * B, 100),
+#define W_LEAD(n, q) NOTE(n, (q) * B, 95)
+#define W_HIGH(n, q) NOTE((n) + 12, (q) * B, 50)
+
+// A bar of each chord, for C(a, b, c), and the bass's note for it
+#define W_BARS(C) \
+	C(62, 66, 69), C(62, 66, 69), C(61, 64, 67), C(61, 64, 67), \
+	C(61, 64, 67), C(61, 64, 67), C(62, 66, 69), C(62, 66, 69), \
+	C(62, 66, 69), C(62, 66, 69), C(62, 67, 71), C(62, 67, 71), \
+	C(62, 66, 69), C(62, 64, 68), C(61, 64, 67), C(62, 66, 69), \
+	C(62, 67, 71), C(62, 67, 71), C(60, 64, 67), C(60, 66, 69), \
+	C(60, 66, 69), C(62, 67, 71), C(64, 67, 71), C(61, 64, 67), \
+	C(62, 66, 69), C(62, 66, 71), C(64, 67, 71), C(61, 64, 67), \
+	C(62, 66, 69), C(62, 67, 71), C(61, 64, 67), C(62, 66, 69)
+// The root, or the fifth when a chord goes on
+#define W_ROOTS(R) \
+	R(38), R(45), R(45), R(40), R(45), R(40), R(38), R(45), \
+	R(38), R(45), R(43), R(38), R(38), R(40), R(45), R(38), \
+	R(43), R(38), R(48), R(38), R(45), R(43), R(40), R(45), \
+	R(38), R(47), R(40), R(45), R(38), R(43), R(45), R(38)
+
+// Oom, pah, pah
+#define W_PAH(a, b, c) REST(B), CHORD(a, b, c, B - 6, 60), REST(6), CHORD(a, b, c, B - 6, 55), REST(6)
+#define W_PAD(a, b, c) CHORD(a, b, c, 3 * B - 8, 45), REST(8)
+#define W_OOM(r) NOTE(r, B, 95), REST(2 * B)
+
+static const SeqStep_t _docking_lead[] = {
+	PROG(GM_FLUTE), CC(11, 105),
+	W_MELODY(W_LEAD),
 	END(0)
 };
 
-// Played like the title: the tune on the crystal, over a warm pad, a softer
-// crystal arpeggio in eighths, and a synth bass, a bar to a chord
-#define W_E8(n) ON(0, n, 60), OFF(B / 2 - 4, n), REST(4)
-#define W_PAD(a, b, c) CHORD(a, b, c, 3 * B - 8, 70), REST(8)
-#define W_ARP(a, b, c, d) W_E8(a), W_E8(b), W_E8(c), W_E8(d), W_E8(c), W_E8(b)
-#define W_ROOT(n) NOTE(n, 2 * B, 90), NOTE(n, B, 70)
-
-// The chords: D, A seventh, G, E minor
-#define PD W_PAD(57, 62, 66)
-#define PA W_PAD(55, 61, 64)
-#define PG W_PAD(55, 59, 62)
-#define PE W_PAD(55, 59, 64)
-#define AD W_ARP(50, 57, 62, 66)
-#define AA W_ARP(49, 55, 61, 67)
-#define AG W_ARP(43, 55, 59, 62)
-#define AE W_ARP(52, 59, 64, 67)
-#define RD W_ROOT(38)
-#define RA W_ROOT(33)
-#define RG W_ROOT(43)
-#define RE W_ROOT(40)
-
-// Its 28 bars' chords, for each part
-#define BARS(D, A, G, E) \
-	D, D, D, D, D, D, A, A, \
-	A, A, A, A, A, A, A, D, \
-	D, D, D, D, D, D, D, G, \
-	E, E, A, D
-
-static const SeqStep_t _danube_pad[] = {
-	PROG(GM_WARM_PAD), CC(11, 100),
-	BARS(PD, PA, PG, PE),
-	END(0)
-};
-
-static const SeqStep_t _danube_arp[] = {
+static const SeqStep_t _docking_high[] = {
 	PROG(GM_CRYSTAL), CC(11, 80),
-	BARS(AD, AA, AG, AE),
+	W_MELODY(W_HIGH),
 	END(0)
 };
 
-static const SeqStep_t _danube_bass[] = {
-	PROG(GM_SYNTH_BASS_1), CC(11, 100),
-	BARS(RD, RA, RG, RE),
+static const SeqStep_t _docking_pah[] = {
+	PROG(GM_ELECTRIC_PIANO_2), CC(11, 90),
+	W_BARS(W_PAH),
 	END(0)
 };
 
-static const SeqTrack_t _danube[] = {
-	{ 0, _danube_tune },
-	{ 1, _danube_pad },
-	{ 2, _danube_arp },
-	{ 3, _danube_bass },
+static const SeqStep_t _docking_pad[] = {
+	PROG(GM_WARM_PAD), CC(11, 75),
+	W_BARS(W_PAD),
+	END(0)
+};
+
+static const SeqStep_t _docking_bass[] = {
+	PROG(GM_ACOUSTIC_BASS), CC(11, 105),
+	W_ROOTS(W_OOM),
+	END(0)
+};
+
+static const SeqTrack_t _docking[] = {
+	{ 0, _docking_lead },
+	{ 1, _docking_high },
+	{ 2, _docking_pah },
+	{ 3, _docking_pad },
+	{ 4, _docking_bass },
 };
 
 // The title: our own, slow, in D minor, four beats of Q ticks a bar, a pad,
@@ -240,5 +251,5 @@ static const SeqTrack_t _title[] = {
 
 const SeqTune_t tune_data[TUNES] = {
 	[TUNE_TITLE] = { _title, 3, true },
-	[TUNE_DANUBE] = { _danube, 4, true },
+	[TUNE_DOCKING] = { _docking, 5, true },
 };
