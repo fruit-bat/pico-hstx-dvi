@@ -38,7 +38,7 @@ static uint32_t _message_timer = 0;
 static GameText_t _message[3];
 
 static void set_message(const uint32_t line, const char* s, const uint32_t scale) {
-	game_text_set(&_message[line], s, scale);
+	game_text_set(&_message[line], s, scale == 2 ? GAME_TEXT_BIG : scale);
 }
 
 static void clear_messages(void) {
@@ -228,7 +228,7 @@ static bool game_run(const bool demo) {
 			if (demo) return false;
 			if (over == 0) {
 				clear_messages();
-				set_message(0, "GAME OVER", 3);
+				set_message(0, "GAME OVER", 2);
 				game_music_play(DEF_TUNE_GAME_OVER);
 			}
 			if (++over >= DEF_GAME_OVER_FRAMES) return false;

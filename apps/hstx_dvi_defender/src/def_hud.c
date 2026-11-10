@@ -80,7 +80,7 @@ bool def_hud_use_smart_bomb(void) {
 void def_hud_draw(uint32_t wave, bool in_game) {
 	char t[GAME_TEXT_MAX];
 	snprintf(t, sizeof(t), "%7lu", (unsigned long)(_score % 10000000));
-	game_text_set(&_score_text, t, 2);
+	game_text_set(&_score_text, t, GAME_TEXT_BIG);
 	game_spr_text(&_score_text, 16, 6, game_pallet(GAME_CYAN));
 
 	const uint32_t top = game_hiscore_top();

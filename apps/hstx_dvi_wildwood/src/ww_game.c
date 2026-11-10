@@ -37,7 +37,7 @@ static GameText_t _message[3];
 static uint32_t _frame = 0;
 
 static void set_message(const uint32_t line, const char* s, const uint32_t scale) {
-	game_text_set(&_message[line], s, scale);
+	game_text_set(&_message[line], s, scale == 2 ? GAME_TEXT_BIG : scale);
 }
 
 static void clear_messages(void) {
