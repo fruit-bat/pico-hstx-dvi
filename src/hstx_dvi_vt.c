@@ -9,6 +9,7 @@
 #include <string.h>
 #include "vt_emu.h"
 #include "vt_pallet.h"
+#include "vt_charmap.h"
 
 // The smallest cell, the 8x8 font unscaled, sets how many characters there
 // can be on the display
@@ -28,8 +29,8 @@
 #define CAP_COLS MIN(CHAR_COLS, VT_SCREEN_MAX_COLS)
 
 // The font in use is copied into RAM, so core 1 never waits for the flash:
-// up to 95 characters of 16x32
-#define FONT_RAM_BYTES (95 * 32 * 2)
+// up to ASCII and the extras, at 16x32
+#define FONT_RAM_BYTES ((HSTX_DVI_FONT_ASCII + HSTX_DVI_FONT_EXTRAS) * 32 * 2)
 #define CELL_W_MAX 32
 
 static hstx_dvi_pixel_t _pallet[256];
@@ -43,8 +44,27 @@ typedef struct {
 } vt_font_use_t;
 static vt_font_use_t _want;
 static volatile uint32_t _want_seq = 0;
-// What fits with it, for core 0
+// What fits with it, and whether it has the extras, for core 0
 static uint32_t _fit_cols, _fit_rows;
+static bool _extras = false;
+// Whether a resize request picks the font
+static bool _auto = false;
+
+// The fonts tried for a resize request, biggest first, the first that fits
+// the size asked for being used
+typedef struct {
+    const hstx_dvi_font_t* font;
+    uint8_t sx, sy;
+} vt_auto_font_t;
+static const vt_auto_font_t _auto_fonts[] = {
+    { &hstx_dvi_font_terminus_16x32, 2, 2 },
+    { &hstx_dvi_font_terminus_12x24, 2, 2 },
+    { &hstx_dvi_font_terminus_16x32, 1, 1 },
+    { &hstx_dvi_font_terminus_12x24, 1, 1 },
+    { &hstx_dvi_font_terminus_8x16, 1, 1 },
+    { &hstx_dvi_font_terminus_8x14, 1, 1 },
+    { &hstx_dvi_font_8x8, 1, 1 },
+};
 
 // The font in use, core 1's
 static uint8_t __attribute__((aligned(4))) _font_ram[FONT_RAM_BYTES];
@@ -79,14 +99,55 @@ static void vt_reply_cb(void *ctx, const vt_char_t *s, uint32_t n) {
     for (uint32_t i = 0; i < n; ++i) putchar_raw(s[i]);
 }
 
+static uint32_t font_bytes(const hstx_dvi_font_t* f) {
+    return (uint32_t)f->count * f->h * ((f->w + 7) >> 3);
+}
+
+// Asks core 1 for the font, without resizing the terminal
+static bool use_font(const hstx_dvi_font_t* font, uint32_t sx, uint32_t sy) {
+    if (!font || sx < 1 || sx > 2 || sy < 1 || sy > 2) return false;
+    const uint32_t cw = font->w * sx;
+    if (cw & 3 || cw > CELL_W_MAX || font_bytes(font) > FONT_RAM_BYTES) return false;
+    if (font != _want.font || sx != _want.sx || sy != _want.sy) {
+        _want.font = font;
+        _want.sx = sx;
+        _want.sy = sy;
+        __dmb();
+        ++_want_seq;
+    }
+    _fit_cols = MIN(MODE_H_ACTIVE_PIXELS / cw, CAP_COLS);
+    _fit_rows = MIN(MODE_V_ACTIVE_LINES / (font->h * sy), CAP_ROWS);
+    _extras = hstx_dvi_font_has_extras(font);
+    vt_emu_set_cell_size(&vt_emu, cw, font->h * sy);
+    return true;
+}
+
 // The host asked for a new size (ESC [ 8 ; h ; w t): allow it, within what
-// fits with the font in use
+// fits with the font in use, or first pick the biggest font it fits with
 static void vt_resize_req_cb(void *ctx, vt_coord_t w, vt_coord_t h) {
+    if (_auto) {
+        for (uint32_t i = 0; i < sizeof(_auto_fonts) / sizeof(_auto_fonts[0]); ++i) {
+            const vt_auto_font_t* a = &_auto_fonts[i];
+            if ((uint32_t)w * a->font->w * a->sx <= MODE_H_ACTIVE_PIXELS
+                && (uint32_t)h * a->font->h * a->sy <= MODE_V_ACTIVE_LINES) {
+                use_font(a->font, a->sx, a->sy);
+                break;
+            }
+        }
+    }
     vt_emu_resize((vt_emu_t*)ctx, MIN(w, _fit_cols), MIN(h, _fit_rows));
 }
 
-static uint32_t font_bytes(const hstx_dvi_font_t* f) {
-    return (uint32_t)f->count * f->h * ((f->w + 7) >> 3);
+// Unicode to the glyphs in the cells: ASCII as it is, and the extras, if the
+// font has them, as 128 on. Anything else as near as ASCII gets.
+static vt_char_t vt_charmap_cb(uint32_t cp) {
+    if (cp >= 0x20 && cp < 0x7f) return (vt_char_t)cp;
+    if (_extras) {
+        for (uint32_t i = 0; i < HSTX_DVI_FONT_EXTRAS; ++i) {
+            if (hstx_dvi_font_extras[i] == cp) return (vt_char_t)(128 + i);
+        }
+    }
+    return vt_charmap_ascii(cp);
 }
 
 // Core 1 takes up the font asked for, if it has changed
@@ -110,19 +171,13 @@ static void __not_in_flash_func(take_font)(void) {
 }
 
 bool hstx_dvi_vt_set_font(const hstx_dvi_font_t* font, uint32_t sx, uint32_t sy) {
-    if (!font || sx < 1 || sx > 2 || sy < 1 || sy > 2) return false;
-    const uint32_t cw = font->w * sx;
-    if (cw & 3 || cw > CELL_W_MAX || font_bytes(font) > FONT_RAM_BYTES) return false;
-    _want.font = font;
-    _want.sx = sx;
-    _want.sy = sy;
-    __dmb();
-    ++_want_seq;
-    _fit_cols = MIN(MODE_H_ACTIVE_PIXELS / cw, CAP_COLS);
-    _fit_rows = MIN(MODE_V_ACTIVE_LINES / (font->h * sy), CAP_ROWS);
-    vt_emu_set_cell_size(&vt_emu, cw, font->h * sy);
+    if (!use_font(font, sx, sy)) return false;
     vt_emu_resize(&vt_emu, _fit_cols, _fit_rows);
     return true;
+}
+
+void hstx_dvi_vt_set_font_auto(bool on) {
+    _auto = on;
 }
 
 uint32_t hstx_dvi_vt_cols(void) {
@@ -159,6 +214,7 @@ void hstx_dvi_vt_init() {
     vt_emu_init_cap(&vt_emu, (vt_cell_t*)_screen, CAP_COLS, CAP_ROWS, CAP_COLS, CAP_ROWS);
     vt_emu_set_reply(&vt_emu, vt_reply_cb, NULL);
     vt_emu_set_resize_req(&vt_emu, vt_resize_req_cb, &vt_emu);
+    vt_emu_set_charmap(&vt_emu, vt_charmap_cb);
     hstx_dvi_vt_set_font(&hstx_dvi_font_8x8, 1, 1);
     // Core 1 isn't running yet, so take it up here
     take_font();
@@ -233,7 +289,9 @@ void __not_in_flash_func(hstx_dvi_vt_render_frame)(uint32_t frame_index) {
                 m = 0xffffffffu;
             }
             else {
-                uint32_t e = (uint32_t)vt_cell_get_char(s) - _first;
+                // ASCII, then the extras for 128 on
+                const uint32_t c = vt_cell_get_char(s);
+                uint32_t e = c < 128 ? c - _first : c - 128 + HSTX_DVI_FONT_ASCII;
                 if (e >= _count) e = '?' - _first;
                 m = glyph_bits(&_font_ram[(e * _fh + gy) * _bpr]);
             }

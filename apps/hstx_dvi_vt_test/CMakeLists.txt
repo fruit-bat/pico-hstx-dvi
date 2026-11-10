@@ -8,6 +8,8 @@ add_executable(hstx_dvi_vt_test
 set(VT_FONT "8x8" CACHE STRING "The virtual terminal's font: 8x8, terminus_8x14, terminus_8x16, terminus_12x24, terminus_16x32 or vga_8x16")
 set(VT_SCALE_X 1 CACHE STRING "The virtual terminal's font drawn this many times as wide, 1 or 2")
 set(VT_SCALE_Y 1 CACHE STRING "The virtual terminal's font drawn this many times as tall, 1 or 2")
+# Whether the host asking for a size (pico_term.py -s 80x24) picks the font
+option(VT_FONT_AUTO "The virtual terminal picks the biggest font that fits a size asked for" ON)
 
 target_compile_definitions(hstx_dvi_vt_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
@@ -15,6 +17,7 @@ target_compile_definitions(hstx_dvi_vt_test PRIVATE
   VT_FONT="${VT_FONT}"
   VT_SCALE_X=${VT_SCALE_X}
   VT_SCALE_Y=${VT_SCALE_Y}
+  $<$<BOOL:${VT_FONT_AUTO}>:VT_FONT_AUTO=1>
 )
 
 target_link_libraries(hstx_dvi_vt_test

@@ -130,11 +130,29 @@ cmake -DVT_FONT=8x8 -DVT_SCALE_X=2 -DVT_SCALE_Y=2 ..     # 40x30
 | `terminus_16x32` | 40x15           | 20x7         |
 
 The terminal is as big as fits, and `pico_term.py` asks the Pico for its size, so it needs no changes.
-From code, `hstx_dvi_vt_set_font()` (in `src/hstx_dvi_vt.h`) changes the font at any time, resizing the
-terminal to suit.
+
+A size can also be asked for, and the Pico then picks the biggest font it fits with (Terminus, once or
+twice as big, else the 8x8 font), and shows the rest of the screen blank:
+
+```sh
+apps/hstx_dvi_vt_test/pico_term.py -s 80x24 -- vim   # Terminus 8x16
+apps/hstx_dvi_vt_test/pico_term.py -s 53x20          # Terminus 12x24
+apps/hstx_dvi_vt_test/pico_term.py -s 20x10          # Terminus 12x24, twice as big
+```
+
+This is what any program asking with `ESC [ 8 ; rows ; cols t` gets. It can be turned off with
+`-DVT_FONT_AUTO=OFF`, when the font stays as built and the size is cut down to what fits.
+
+All but the 8x8 font have line drawing (as UTF-8 or the DEC set), double and rounded box lines, blocks,
+arrows, curly quotes and dashes, and Latin-1's accented letters, so menus, `mc`, `htop` and the like
+draw proper boxes. The 8x8 font, ASCII only, shows them as near as it can (`+`, `-`, `|`, `#`...).
+
+From code, `hstx_dvi_vt_set_font()` and `hstx_dvi_vt_set_font_auto()` (in `src/hstx_dvi_vt.h`) change the
+font at any time, resizing the terminal to suit.
 
 The bigger fonts are Terminus, by Dimitar Zhekov, under the SIL Open Font License 1.1, and the IBM PC's
 VGA font, both from the Linux console fonts. [`tools/psf2c.py`](tools/psf2c.py) turns such fonts into C
-(see the top of `src/hstx_dvi_fonts.c` for how they were made). A font can be up to 16 pixels wide and
-32 tall, and its width times its scale has to be a multiple of 4.
+(see the top of `src/hstx_dvi_fonts.c` for how they were made), with the 128 extra glyphs for character
+codes 128 to 255, drawing the few simple shapes (half blocks, the diamond, scan lines) a font lacks. A
+font can be up to 16 pixels wide and 32 tall, and its width times its scale has to be a multiple of 4.
 
