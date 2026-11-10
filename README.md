@@ -71,7 +71,8 @@ it says so and restarts on a key press.
 
 ## Using the virtual terminal (hstx_dvi_vt_test)
 
-`hstx_dvi_vt_test` turns the Pico into an 80x60 terminal on the DVI screen. It shows what arrives on
+`hstx_dvi_vt_test` turns the Pico into a terminal on the DVI screen, 80x60 with the 8x8 font, or other
+sizes with bigger fonts (below). It shows what arrives on
 the USB serial port and sends its replies (e.g. cursor position and size reports) back the same way.
 It has no keyboard of its own, so programs run on the PC and are typed into from there.
 
@@ -109,3 +110,31 @@ python3 -c "import serial,time; s=serial.Serial('/dev/ttyACM0'); s.write(b'\x1b[
 ```
 
 (this one needs pyserial).
+
+### Fonts and sizes
+
+The terminal's font is chosen when it is built, and it can be drawn twice as wide, twice as tall or both:
+
+```sh
+cmake -DVT_FONT=terminus_8x16 ..                         # 80x30
+cmake -DVT_FONT=8x8 -DVT_SCALE_X=2 -DVT_SCALE_Y=2 ..     # 40x30
+```
+
+| Font             | Size at 640x480 | Twice as big |
+|------------------|-----------------|--------------|
+| `8x8` (default)  | 80x60           | 40x30 (and 80x30 only twice as tall) |
+| `terminus_8x14`  | 80x34           | 40x17        |
+| `terminus_8x16`  | 80x30           | 40x15        |
+| `vga_8x16`       | 80x30           | 40x15        |
+| `terminus_12x24` | 53x20           | 26x10        |
+| `terminus_16x32` | 40x15           | 20x7         |
+
+The terminal is as big as fits, and `pico_term.py` asks the Pico for its size, so it needs no changes.
+From code, `hstx_dvi_vt_set_font()` (in `src/hstx_dvi_vt.h`) changes the font at any time, resizing the
+terminal to suit.
+
+The bigger fonts are Terminus, by Dimitar Zhekov, under the SIL Open Font License 1.1, and the IBM PC's
+VGA font, both from the Linux console fonts. [`tools/psf2c.py`](tools/psf2c.py) turns such fonts into C
+(see the top of `src/hstx_dvi_fonts.c` for how they were made). A font can be up to 16 pixels wide and
+32 tall, and its width times its scale has to be a multiple of 4.
+

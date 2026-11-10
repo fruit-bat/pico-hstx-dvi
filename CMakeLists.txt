@@ -19,6 +19,8 @@ add_library(pico_hstx_dvi_vt INTERFACE)
 
 target_sources(pico_hstx_dvi_vt INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_vt.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_font.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/hstx_dvi_fonts.c
 )
 target_link_libraries(pico_hstx_dvi_vt INTERFACE pico_vtlib)
 
