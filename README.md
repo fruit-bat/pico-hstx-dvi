@@ -147,6 +147,44 @@ All but the 8x8 font have line drawing (as UTF-8 or the DEC set), double and rou
 arrows, curly quotes and dashes, and Latin-1's accented letters, so menus, `mc`, `htop` and the like
 draw proper boxes. The 8x8 font, ASCII only, shows them as near as it can (`+`, `-`, `|`, `#`...).
 
+#### Choosing fonts: quality against memory
+
+Each larger font can be left out of the build, to save flash and RAM. They are all in by default:
+
+| CMake option (default `ON`)    | Font             | Flash   | Gives                          |
+|--------------------------------|------------------|---------|--------------------------------|
+| `HSTX_DVI_FONT_TERMINUS_8X14`  | `terminus_8x14`  | 3.0 KB  | 80x34                          |
+| `HSTX_DVI_FONT_TERMINUS_8X16`  | `terminus_8x16`  | 3.5 KB  | 80x30, 80x24                   |
+| `HSTX_DVI_FONT_VGA_8X16`       | `vga_8x16`       | 3.5 KB  | 80x30, in the PC's look        |
+| `HSTX_DVI_FONT_TERMINUS_12X24` | `terminus_12x24` | 10.5 KB | 53x20, and 26x10 twice as big  |
+| `HSTX_DVI_FONT_TERMINUS_16X32` | `terminus_16x32` | 13.9 KB | 40x15, and 20x7 twice as big   |
+
+The 8x8 font is always there (0.8 KB, ASCII only), so with every option `OFF` the terminal is as it was
+before the larger fonts came along. The terminal also keeps a copy of the font in use in RAM, sized for
+the biggest font built:
+
+| Biggest font built          | RAM for the font |
+|-----------------------------|------------------|
+| `terminus_16x32`            | 13.9 KB          |
+| `terminus_12x24`            | 10.5 KB          |
+| an 8x16                     | 3.5 KB           |
+| `terminus_8x14`             | 3.0 KB           |
+| only the 8x8 font           | 0.7 KB           |
+
+For example:
+
+```sh
+cmake -DHSTX_DVI_FONT_TERMINUS_16X32=OFF ..         # all but the biggest: saves 14 KB flash, 3.5 KB RAM
+cmake -DHSTX_DVI_FONT_TERMINUS_12X24=OFF -DHSTX_DVI_FONT_TERMINUS_16X32=OFF \
+      -DHSTX_DVI_FONT_VGA_8X16=OFF ..               # 80-column line drawing only: 6.5 KB flash, 3.5 KB RAM
+```
+
+The options apply to every app using the terminal (the VT test, CP/M and Lisp). The automatic choice
+only picks from the fonts built (using `vga_8x16` for 8x16 if `terminus_8x16` is left out), and
+`hstx_dvi_font_find()` doesn't find the others. Choosing one that isn't built for `VT_FONT` stops CMake
+with an error. Outside CMake, define `HSTX_DVI_FONT_TERMINUS_16X32=0` and the like (see
+`src/hstx_dvi_font.h`).
+
 From code, `hstx_dvi_vt_set_font()` and `hstx_dvi_vt_set_font_auto()` (in `src/hstx_dvi_vt.h`) change the
 font at any time, resizing the terminal to suit.
 

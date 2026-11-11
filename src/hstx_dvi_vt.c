@@ -29,8 +29,8 @@
 #define CAP_COLS MIN(CHAR_COLS, VT_SCREEN_MAX_COLS)
 
 // The font in use is copied into RAM, so core 1 never waits for the flash:
-// up to ASCII and the extras, at 16x32
-#define FONT_RAM_BYTES ((HSTX_DVI_FONT_ASCII + HSTX_DVI_FONT_EXTRAS) * 32 * 2)
+// room for the biggest font built (see hstx_dvi_font.h)
+#define FONT_RAM_BYTES HSTX_DVI_FONT_MAX_BYTES
 #define CELL_W_MAX 32
 
 static hstx_dvi_pixel_t _pallet[256];
@@ -51,18 +51,32 @@ static bool _extras = false;
 static bool _auto = false;
 
 // The fonts tried for a resize request, biggest first, the first that fits
-// the size asked for being used
+// the size asked for being used: those built
 typedef struct {
     const hstx_dvi_font_t* font;
     uint8_t sx, sy;
 } vt_auto_font_t;
 static const vt_auto_font_t _auto_fonts[] = {
+#if HSTX_DVI_FONT_TERMINUS_16X32
     { &hstx_dvi_font_terminus_16x32, 2, 2 },
+#endif
+#if HSTX_DVI_FONT_TERMINUS_12X24
     { &hstx_dvi_font_terminus_12x24, 2, 2 },
+#endif
+#if HSTX_DVI_FONT_TERMINUS_16X32
     { &hstx_dvi_font_terminus_16x32, 1, 1 },
+#endif
+#if HSTX_DVI_FONT_TERMINUS_12X24
     { &hstx_dvi_font_terminus_12x24, 1, 1 },
+#endif
+#if HSTX_DVI_FONT_TERMINUS_8X16
     { &hstx_dvi_font_terminus_8x16, 1, 1 },
+#elif HSTX_DVI_FONT_VGA_8X16
+    { &hstx_dvi_font_vga_8x16, 1, 1 },
+#endif
+#if HSTX_DVI_FONT_TERMINUS_8X14
     { &hstx_dvi_font_terminus_8x14, 1, 1 },
+#endif
     { &hstx_dvi_font_8x8, 1, 1 },
 };
 

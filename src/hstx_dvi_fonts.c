@@ -33,6 +33,7 @@ const uint16_t hstx_dvi_font_extras[HSTX_DVI_FONT_EXTRAS] = {
 	0x00f8, 0x00f9, 0x00fa, 0x00fb, 0x00fc, 0x00fd, 0x00fe, 0x00ff, // øùúûüýþÿ
 };
 
+#if HSTX_DVI_FONT_TERMINUS_8X14
 // Terminus, Dimitar Zhekov, SIL Open Font License 1.1
 // 8x14, from Lat15-Terminus14.psf.gz
 static const uint8_t _terminus_8x14_bits[] = {
@@ -262,7 +263,9 @@ static const uint8_t _terminus_8x14_bits[] = {
 };
 // Drawn by psf2c.py, as the font has none: ◆⎺⎻⎼⎽▀▄▌▐▓
 const hstx_dvi_font_t hstx_dvi_font_terminus_8x14 = { "terminus_8x14", 8, 14, 32, 223, _terminus_8x14_bits };
+#endif // HSTX_DVI_FONT_TERMINUS_8X14
 
+#if HSTX_DVI_FONT_TERMINUS_8X16
 // Terminus, Dimitar Zhekov, SIL Open Font License 1.1
 // 8x16, from Lat15-Terminus16.psf.gz
 static const uint8_t _terminus_8x16_bits[] = {
@@ -492,7 +495,9 @@ static const uint8_t _terminus_8x16_bits[] = {
 };
 // Drawn by psf2c.py, as the font has none: ◆⎺⎻⎼⎽▀▄▌▐▓
 const hstx_dvi_font_t hstx_dvi_font_terminus_8x16 = { "terminus_8x16", 8, 16, 32, 223, _terminus_8x16_bits };
+#endif // HSTX_DVI_FONT_TERMINUS_8X16
 
+#if HSTX_DVI_FONT_TERMINUS_12X24
 // Terminus, Dimitar Zhekov, SIL Open Font License 1.1
 // 12x24, from Lat15-Terminus24x12.psf.gz
 static const uint8_t _terminus_12x24_bits[] = {
@@ -722,7 +727,9 @@ static const uint8_t _terminus_12x24_bits[] = {
 };
 // Drawn by psf2c.py, as the font has none: ◆⎺⎻⎼⎽▀▄▌▐▓
 const hstx_dvi_font_t hstx_dvi_font_terminus_12x24 = { "terminus_12x24", 12, 24, 32, 223, _terminus_12x24_bits };
+#endif // HSTX_DVI_FONT_TERMINUS_12X24
 
+#if HSTX_DVI_FONT_TERMINUS_16X32
 // Terminus, Dimitar Zhekov, SIL Open Font License 1.1
 // 16x32, from Lat15-Terminus32x16.psf.gz
 static const uint8_t _terminus_16x32_bits[] = {
@@ -952,7 +959,9 @@ static const uint8_t _terminus_16x32_bits[] = {
 };
 // Drawn by psf2c.py, as the font has none: ◆⎺⎻⎼⎽▀▄▌▐▓
 const hstx_dvi_font_t hstx_dvi_font_terminus_16x32 = { "terminus_16x32", 16, 32, 32, 223, _terminus_16x32_bits };
+#endif // HSTX_DVI_FONT_TERMINUS_16X32
 
+#if HSTX_DVI_FONT_VGA_8X16
 // The IBM PC's VGA font
 // 8x16, from Lat15-VGA16.psf.gz
 static const uint8_t _vga_8x16_bits[] = {
@@ -1182,3 +1191,4 @@ static const uint8_t _vga_8x16_bits[] = {
 };
 // Drawn by psf2c.py, as the font has none: ◆⎺⎻⎼⎽▀▄▌▐▓
 const hstx_dvi_font_t hstx_dvi_font_vga_8x16 = { "vga_8x16", 8, 16, 32, 223, _vga_8x16_bits };
+#endif // HSTX_DVI_FONT_VGA_8X16

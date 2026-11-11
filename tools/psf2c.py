@@ -7,9 +7,10 @@ top bit. The few simple shapes a font lacks are drawn.
 
   tools/psf2c.py out.c NAME=file.psf.gz[:note] ...
 
-Each NAME becomes `const hstx_dvi_font_t hstx_dvi_font_NAME`. The note, if
-given, goes in a comment above it, e.g. where the font came from and its
-licence.
+Each NAME becomes `const hstx_dvi_font_t hstx_dvi_font_NAME`, built only if
+HSTX_DVI_FONT_NAME (in capitals) is 1, as hstx_dvi_font.h defaults it to, so
+it can be left out to save flash. The note, if given, goes in a comment above
+it, e.g. where the font came from and its licence.
 """
 import gzip
 import shlex
@@ -151,6 +152,7 @@ def main():
         def glyph(cp):
             return glyphs[table[cp]][:h * bpr] if cp in table else None
 
+        out.append(f'#if HSTX_DVI_FONT_{name.upper()}')
         if note:
             out.append(f'// {note}')
         out.append(f'// {w}x{h}, from {path.rsplit("/", 1)[-1]}')
@@ -170,6 +172,7 @@ def main():
             out.append(f'// Drawn by psf2c.py, as the font has none: {"".join(drawn)}')
         count = LAST - FIRST + 1 + len(EXTRAS)
         out.append(f'const hstx_dvi_font_t hstx_dvi_font_{name} = {{ "{name}", {w}, {h}, {FIRST}, {count}, _{name}_bits }};')
+        out.append(f'#endif // HSTX_DVI_FONT_{name.upper()}')
         out.append('')
     open(sys.argv[1], 'w').write('\n'.join(out))
 
