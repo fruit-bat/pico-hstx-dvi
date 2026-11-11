@@ -511,7 +511,8 @@ static void __attribute__((noinline)) monitor_check(uint64_t cycles) {
     _last_t = now;
     _last_c = cycles;
 
-    // The settings key, or a key for CP/M read ahead
+    // CP/M's output so far, and the settings key, or a key for CP/M read ahead
+    conctrl_flush();
     conctrl_status();
 
     _in_monitor = false;
@@ -520,10 +521,15 @@ static void __attribute__((noinline)) monitor_check(uint64_t cycles) {
     _check_at = _step ? 0 : cycles + (khz ? khz : CHECK_CYCLES_FAST);
 }
 
-void cpm_settings_monitor(void*, Z80& cpu, uint8_t* memory, uint64_t cycles) {
+uint32_t cpm_settings_monitor(void*, Z80& cpu, uint8_t* memory, uint64_t cycles) {
     _cycles = cycles;
-    if (cycles < _check_at) return;
-    _cpu = &cpu;
-    _mem = memory;
-    monitor_check(cycles);
+    if (cycles >= _check_at) {
+        _cpu = &cpu;
+        _mem = memory;
+        monitor_check(cycles);
+        // Stepping: one instruction
+        if (!_check_at) return 0;
+    }
+    // Up to the next look at the time and keys
+    return (uint32_t)(_check_at - cycles);
 }

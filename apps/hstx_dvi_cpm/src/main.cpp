@@ -109,13 +109,16 @@ int main(void)
         }
         catch (const CpmRestart&) {
             // From the settings screen
+            conctrl_flush();
             printf("\nRestarting CP/M\n");
             continue;
         }
         catch (const std::exception& e) {
+            conctrl_flush();
             printf("\n%s\n", e.what());
         }
         catch (...) {
+            conctrl_flush();
             printf("\nEmulator error\n");
         }
         printf("Press a key to restart CP/M\n");

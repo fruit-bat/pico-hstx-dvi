@@ -26,9 +26,27 @@ inline bool conctrl_waiting = false;
 
 inline void conctrl_init() {}
 
-// CP/M sends its own CR LF, so no translation
+// The SDK's raw write to all the stdio drivers (putchar_raw() is one byte of it)
+extern "C" int stdio_put_string(const char* s, int len, bool newline, bool cr_translation);
+
+// CP/M's output, kept to go to stdio (the screen and serial port) many bytes
+// at a time, as each write costs much the same whatever its length (the USB
+// one runs the USB stack and flushes). It goes when CP/M looks for a key,
+// when full, and every millisecond or so (cpm_settings.cpp).
+inline char conctrl_out[256];
+inline uint32_t conctrl_out_n = 0;
+
+inline void conctrl_flush() {
+    if (conctrl_out_n) {
+        // CP/M sends its own CR LF, so no translation
+        stdio_put_string(conctrl_out, (int)conctrl_out_n, false, false);
+        conctrl_out_n = 0;
+    }
+}
+
 inline void conctrl_putc(const char c) {
-    putchar_raw(c);
+    conctrl_out[conctrl_out_n++] = c;
+    if (conctrl_out_n == sizeof(conctrl_out)) conctrl_flush();
 }
 
 #ifdef GAME_USBKBD
@@ -67,8 +85,10 @@ inline int conctrl_usb_key() {
 }
 #endif
 
-// The next key from the keyboard or the serial port, or -1
+// The next key from the keyboard or the serial port, or -1, CP/M's output
+// having gone first
 inline int conctrl_poll_raw() {
+    conctrl_flush();
 #ifdef GAME_USBKBD
     const int k = conctrl_usb_key();
     if (k >= 0) return k;

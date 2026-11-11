@@ -47,9 +47,9 @@ and screen pass Ctrl-\\ on as it is (their own commands are on Ctrl-T, Ctrl-A...
 The screen is drawn on the terminal's alternate screen, so whatever CP/M had on the screen comes back as
 it was. It is only on the DVI screen, not the serial port. It shows:
 
-- **The Z80's speed.** **+** and **-** choose from unlimited (as fast as the Pico goes, the default),
-  1, 2, 2.5, 4 (a Z80A), 6, 8, 10 and 20 MHz, with the speed measured while it runs. A speed can be set
-  when built, e.g. `cmake -DCPM_Z80_KHZ=4000 ..`.
+- **The Z80's speed.** **+** and **-** choose from unlimited (as fast as the Pico goes, about 23 MHz,
+  the default), 1, 2, 2.5, 4 (a Z80A), 6, 8, 10 and 20 MHz, with the speed measured while it runs. A
+  speed can be set when built, e.g. `cmake -DCPM_Z80_KHZ=4000 ..`.
 - **The terminal** programs are set up for, changed with **T**: see [Terminal codes](#terminal-codes).
 - **The registers:** PC, SP, AF, BC, DE, HL, IX, IY, the alternate set, I, R, the flags, the
   interrupt mode and the top of the stack.
