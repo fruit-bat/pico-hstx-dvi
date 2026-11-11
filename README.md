@@ -66,6 +66,9 @@ shown both on the screen and over the USB serial port, so any terminal program w
 picocom -q /dev/ttyACM0      # or screen /dev/ttyACM0, minicom -D /dev/ttyACM0...
 ```
 
+The screen is 80x30, in the Terminus 8x16 font. For 80x60 in the 8x8 font, build with
+`cmake -DCPM_VT_FONT=8x8 ..` (any font in [Fonts and sizes](#fonts-and-sizes) will do).
+
 Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
 it says so and restarts on a key press.
 
@@ -179,7 +182,8 @@ cmake -DHSTX_DVI_FONT_TERMINUS_12X24=OFF -DHSTX_DVI_FONT_TERMINUS_16X32=OFF \
       -DHSTX_DVI_FONT_VGA_8X16=OFF ..               # 80-column line drawing only: 6.5 KB flash, 3.5 KB RAM
 ```
 
-The options apply to every app using the terminal (the VT test, CP/M and Lisp). The automatic choice
+The options apply to every app using the terminal (the VT test, CP/M and Lisp). CP/M and Lisp use
+`terminus_8x16` (80x30), set by `CPM_VT_FONT` and `LISP_VT_FONT`; if it isn't built they use the 8x8 font. The automatic choice
 only picks from the fonts built (using `vga_8x16` for 8x16 if `terminus_8x16` is left out), and
 `hstx_dvi_font_find()` doesn't find the others. Choosing one that isn't built for `VT_FONT` stops CMake
 with an error. Outside CMake, define `HSTX_DVI_FONT_TERMINUS_16X32=0` and the like (see
