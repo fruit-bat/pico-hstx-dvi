@@ -3,11 +3,14 @@ include(${PICO_FOLDER}/CPM-Emulator/cpm_emulator.cmake)
 
 add_executable(hstx_dvi_cpm
   ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cpm_settings.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/z80_disasm.cpp
 )
 
 # The emulator reports errors with C++ exceptions, which can pass through the Z80 core
 set_source_files_properties(
   ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cpm_settings.cpp
   ${PICO_FOLDER}/CPM-Emulator/external/Z80/sources/Z80.c
   PROPERTIES COMPILE_FLAGS "-fexceptions")
 
@@ -16,6 +19,9 @@ set_source_files_properties(
 # e.g. cmake -DCPM_VT_FONT=8x8 .. If the one chosen isn't built (see the top
 # CMakeLists.txt), the 8x8 font is used.
 set(CPM_VT_FONT "terminus_8x16" CACHE STRING "The CP/M terminal's font: 8x8, terminus_8x14, terminus_8x16, terminus_12x24, terminus_16x32 or vga_8x16")
+
+# The Z80's speed to start with, in kHz: 0 is as fast as it goes, 4000 a Z80A
+set(CPM_Z80_KHZ 0 CACHE STRING "The CP/M Z80's speed to start with, in kHz (0: as fast as it goes)")
 
 target_compile_definitions(hstx_dvi_cpm PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
@@ -28,6 +34,9 @@ target_compile_definitions(hstx_dvi_cpm PRIVATE
   SDCARD_PIN_SPI0_CS=5
   # The directory of the SD card holding CCP-DR.64K and the drives (else the top)
   CPM_DIR="cpm"
+  # The Z80's speed to start with, in kHz (0: as fast as it goes). The
+  # settings screen (Ctrl-\ or F12) changes it while running.
+  CPM_Z80_KHZ=${CPM_Z80_KHZ}
 )
 
 target_include_directories(hstx_dvi_cpm PRIVATE

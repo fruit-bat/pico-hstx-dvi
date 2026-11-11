@@ -184,6 +184,12 @@ static void __not_in_flash_func(take_font)(void) {
     _seq = seq;
 }
 
+void hstx_dvi_vt_enable_alt_screen(void) {
+    // Only linked in if called
+    static vt_cell_t alt[CAP_ROWS][CAP_COLS];
+    vt_emu_set_alt_grid(&vt_emu, (vt_cell_t*)alt);
+}
+
 bool hstx_dvi_vt_set_font(const hstx_dvi_font_t* font, uint32_t sx, uint32_t sy) {
     if (!use_font(font, sx, sy)) return false;
     vt_emu_resize(&vt_emu, _fit_cols, _fit_rows);

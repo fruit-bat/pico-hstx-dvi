@@ -32,45 +32,10 @@ General MIDI synth such as a SAM2695, which is then no button's. This can be lef
 
 ## CP/M (hstx_dvi_cpm)
 
-`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen with
-[CPM-Emulator](https://github.com/fruit-bat/CPM-Emulator) (a Z80 with an emulated BDOS). It needs
-CPM-Emulator (with its submodules) and [pimoroni-pico](https://github.com/pimoroni/pimoroni-pico)
-(for its SD card & FatFs drivers) cloned beside this repository.
-
-The drives are directories on an SD card, wired to SPI0 on the GPIOs the Pico DVI Sock leaves free:
-
-| SD card | GPIO |
-|---|---|
-| SCK  | 2 |
-| MOSI | 3 |
-| MISO | 4 |
-| CS   | 5 |
-
-The card is FAT formatted, with the CCP and a directory for each drive in a `cpm` directory, as the
-`run` directory of CPM-Emulator:
-
-```
-cpm/
-  CCP-DR.64K
-  A/   PIP.COM, STAT.COM, MBASIC.COM...
-  B/
-```
-
-Without a `cpm` directory they're looked for at the top of the card. The name is `CPM_DIR` in
-[`apps/hstx_dvi_cpm/CMakeLists.txt`](apps/hstx_dvi_cpm/CMakeLists.txt).
-
-Only files with 8.3 names are seen. For now keys come from the USB serial port, and the output is
-shown both on the screen and over the USB serial port, so any terminal program works:
-
-```sh
-picocom -q /dev/ttyACM0      # or screen /dev/ttyACM0, minicom -D /dev/ttyACM0...
-```
-
-The screen is 80x30, in the Terminus 8x16 font. For 80x60 in the 8x8 font, build with
-`cmake -DCPM_VT_FONT=8x8 ..` (any font in [Fonts and sizes](#fonts-and-sizes) will do).
-
-Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
-it says so and restarts on a key press.
+`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen, with its drives on an SD card, and a settings screen
+(**Ctrl-\\**) for the Z80's speed, its registers and memory, and stepping it. See
+[`apps/hstx_dvi_cpm/README.md`](apps/hstx_dvi_cpm/README.md) for what it needs, the SD card's wiring and
+layout, and the keys.
 
 ## Using the virtual terminal (hstx_dvi_vt_test)
 
@@ -188,6 +153,10 @@ only picks from the fonts built (using `vga_8x16` for 8x16 if `terminus_8x16` is
 `hstx_dvi_font_find()` doesn't find the others. Choosing one that isn't built for `VT_FONT` stops CMake
 with an error. Outside CMake, define `HSTX_DVI_FONT_TERMINUS_16X32=0` and the like (see
 `src/hstx_dvi_font.h`).
+
+An app can give the terminal an alternate screen with `hstx_dvi_vt_enable_alt_screen()`, as full screen
+programs (`vim`, `less`...) switch to with `ESC [ ? 1049 h`, leaving the normal screen as it was. It costs
+another screen of cells in RAM (19 KB at 640x480), so is only there if asked for; CP/M uses it.
 
 From code, `hstx_dvi_vt_set_font()` and `hstx_dvi_vt_set_font_auto()` (in `src/hstx_dvi_vt.h`) change the
 font at any time, resizing the terminal to suit.

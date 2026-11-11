@@ -42,6 +42,13 @@ bool hstx_dvi_vt_set_font(const hstx_dvi_font_t* font, uint32_t sx, uint32_t sy)
 // the size is cut down to what fits.
 void hstx_dvi_vt_set_font_auto(bool on);
 
+// Give the terminal an alternate screen, as full screen programs switch to
+// with ESC [ ? 1049 h and back from with ESC [ ? 1049 l, leaving what was on
+// the normal screen as it was. It takes RAM for another screen of cells, 4
+// bytes each (19 KB at 640x480), so is left out unless asked for. Call it
+// after hstx_dvi_vt_init_all().
+void hstx_dvi_vt_enable_alt_screen(void);
+
 // The characters that fit with the font in use
 uint32_t hstx_dvi_vt_cols(void);
 uint32_t hstx_dvi_vt_rows(void);

@@ -4,7 +4,8 @@
 // The drives are directories on an SD card. Keys come from the USB serial port
 // or, built with GAME_USBKBD, from a USB keyboard on the Pico's USB port, with
 // the serial port then on the UART, GPIOs 0 and 1. Output goes to the screen
-// and to the serial port.
+// and to the serial port. Ctrl-\ (or F12 on a USB keyboard) opens the settings
+// screen (cpm_settings.h).
 
 // This example requires an external digital video connector connected to
 // GPIOs 12 through 19 (the HSTX-capable GPIOs) with appropriate
@@ -18,6 +19,7 @@
 #include "pico/stdio/driver.h"
 #include "ff.h"
 #include "computer.h"
+#include "cpm_settings.h"
 #include <cstdio>
 #include <exception>
 
@@ -44,6 +46,9 @@ int main(void)
     // isn't built
     hstx_dvi_vt_set_font(hstx_dvi_font_find(VT_FONT), 1, 1);
 
+    // For the settings screen, so CP/M's screen comes back as it was
+    hstx_dvi_vt_enable_alt_screen();
+
     _emu = hstx_dvi_vt_emu_get();
 
     // The screen only mirrors stdout, so leave answering queries to the serial terminal
@@ -63,15 +68,28 @@ int main(void)
     sleep_ms(2000); // Allow time for initialization
 
     printf("HSTX DVI CP/M\n");
+    printf("Ctrl-\\ (or F12) opens the settings screen\n");
 
     // 64K of memory, BDOS at FC00h and BIOS at FE00h, booting the CCP at F400h
     static Computer<64, 0xFC00, 0xFE00> computer("CCP-DR.64K", 0xF400);
+
+    // The settings screen, and the Z80's speed to start with
+    cpm_settings_init(CPM_Z80_KHZ, 0xFC00, 0xFE00);
+    computer.setMonitor(cpm_settings_monitor, nullptr);
+    conctrl_settings = cpm_settings_open;
 
     while (true) {
         try {
             // The drives are the directories A to P beside CCP-DR.64K, in the
             // directory CPM_DIR of the SD card if it has one, else at the top
-            FRESULT r = f_mount(&fatfs, "", 1);
+            // A card can take a while to be ready after power on, so try for
+            // a couple of seconds before giving up
+            FRESULT r = FR_NOT_READY;
+            for (int i = 0; i < 10; ++i) {
+                r = f_mount(&fatfs, "", 1);
+                if (r == FR_OK) break;
+                sleep_ms(200);
+            }
             if (r == FR_OK && f_chdir("/" CPM_DIR) != FR_OK) r = f_chdir("/");
             if (r != FR_OK) {
                 hostfs::check(r);
@@ -80,6 +98,11 @@ int main(void)
             else {
                 computer.start(); // Only returns through an exception
             }
+        }
+        catch (const CpmRestart&) {
+            // From the settings screen
+            printf("\nRestarting CP/M\n");
+            continue;
         }
         catch (const std::exception& e) {
             printf("\n%s\n", e.what());
