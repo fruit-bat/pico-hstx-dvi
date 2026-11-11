@@ -33,6 +33,15 @@ set(CPM_AUX_BAUD 115200 CACHE STRING "The baud rate of CP/M's reader and punch")
 set(CPM_AUX_TX_PIN 8 CACHE STRING "UART1's TX GPIO for CP/M's punch (4, 8, 20 or 24)")
 set(CPM_AUX_RX_PIN 9 CACHE STRING "UART1's RX GPIO for CP/M's reader (5, 9, 21 or 25)")
 
+# The terminal CP/M programs are set up for, whose codes are turned into the
+# screen's (ANSI) ones: mixed (Kaypro and CP/M-86 together), kaypro, vt52 or
+# ansi (passed on as they are). The settings screen (T) changes it.
+set(CPM_TERMINAL "mixed" CACHE STRING "The terminal CP/M programs are set up for: mixed, kaypro, vt52 or ansi")
+string(TOUPPER "${CPM_TERMINAL}" _cpm_terminal)
+if (NOT _cpm_terminal MATCHES "^(MIXED|KAYPRO|VT52|ANSI)$")
+  message(FATAL_ERROR "CPM_TERMINAL ${CPM_TERMINAL}: mixed, kaypro, vt52 or ansi")
+endif()
+
 target_compile_definitions(hstx_dvi_cpm PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
   VT_FONT="${CPM_VT_FONT}"
@@ -47,6 +56,7 @@ target_compile_definitions(hstx_dvi_cpm PRIVATE
   # The Z80's speed to start with, in kHz (0: as fast as it goes). The
   # settings screen (Ctrl-\ or F12) changes it while running.
   CPM_Z80_KHZ=${CPM_Z80_KHZ}
+  CPM_TERMINAL=CONSOLE_${_cpm_terminal}
   $<$<BOOL:${CPM_AUX}>:CPM_AUX=1>
   CPM_AUX_BAUD=${CPM_AUX_BAUD}
   CPM_AUX_TX_PIN=${CPM_AUX_TX_PIN}

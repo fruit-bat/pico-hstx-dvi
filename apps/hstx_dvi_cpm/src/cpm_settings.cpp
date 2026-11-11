@@ -5,6 +5,7 @@
 #include "cpm_settings.h"
 #include "z80_disasm.h"
 #include "host_console.h"
+#include "console.h"
 #include "hstx_dvi_vt.h"
 #include "pico/stdlib.h"
 #include <cctype>
@@ -133,10 +134,10 @@ static uint32_t clamp(int32_t v, int32_t lo, int32_t hi) {
     return (uint32_t)(v < lo ? lo : v > hi ? hi : v);
 }
 static uint32_t code_rows() {
-    return clamp((int32_t)_emu->term.h - 22, 4, 12);
+    return clamp((int32_t)_emu->term.h - 23, 4, 12);
 }
 static uint32_t mem_rows() {
-    return clamp((int32_t)_emu->term.h - (int32_t)code_rows() - 16, 4, 16);
+    return clamp((int32_t)_emu->term.h - (int32_t)code_rows() - 17, 4, 16);
 }
 
 // A line of code: the address, the bytes and the instruction, with a note of
@@ -182,17 +183,21 @@ static void draw(const char* prompt = nullptr) {
     else put("in a BDOS/BIOS call");
     putf("\x1b[4;62H%llu cycles", (unsigned long long)_cycles);
 
-    row(6);
+    row(5);
+    putf(" Terminal    \x1b[1m%s\x1b[0m", console_term_name(console_term));
+    put("\x1b[5;48Hthe codes programs use  T change");
+
+    row(7);
     putf(" PC \x1b[1m%04X\x1b[0m  SP %04X  AF %04X  BC %04X  DE %04X  HL %04X  IX %04X  IY %04X",
         pc, sp, Z80_AF(c), Z80_BC(c), Z80_DE(c), Z80_HL(c), Z80_IX(c), Z80_IY(c));
-    row(7);
+    row(8);
     putf("                   AF'%04X  BC'%04X  DE'%04X  HL'%04X  I %02X    R %02X",
         Z80_AF_(c), Z80_BC_(c), Z80_DE_(c), Z80_HL_(c), c.i, (c.r & 0x7f) | (c.r7 & 0x80));
-    row(8);
+    row(9);
     const uint8_t f = Z80_F(c);
     putf(" Flags  S%u Z%u H%u P%u N%u C%u      IM %u  IFF %u",
         f >> 7 & 1, f >> 6 & 1, f >> 4 & 1, f >> 2 & 1, f >> 1 & 1, f & 1, c.im, c.iff1);
-    put("\x1b[8;48HStack ");
+    put("\x1b[9;48HStack ");
     for (uint32_t i = 0; i < 4; ++i) {
         const uint16_t a = sp + i * 2;
         putf(" %04X", m[a] | m[(uint16_t)(a + 1)] << 8);
@@ -201,20 +206,20 @@ static void draw(const char* prompt = nullptr) {
     // The code: the last steps, dim, then from PC on
     const uint32_t code = code_rows();
     const uint32_t hist = _history_n < code / 3 ? _history_n : code / 3;
-    uint32_t r = 10;
+    uint32_t r = 11;
     for (uint32_t i = hist; i-- > 0;) {
         row(r++);
         code_line(_history[i], "   ", "\x1b[2m");
     }
     uint16_t a = pc;
-    for (bool first = true; r < 10 + code; first = false) {
+    for (bool first = true; r < 11 + code; first = false) {
         row(r++);
         code_line(a, first ? "-> " : "   ", first ? "\x1b[1m" : "");
         char ins[32];
         a += z80_disasm(m, a, ins, sizeof(ins));
     }
 
-    const uint32_t mtop = 10 + code + 1;
+    const uint32_t mtop = 11 + code + 1;
     row(mtop);
     put("\x1b[1m Memory  +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F  0123456789ABCDEF");
     const uint32_t rows = mem_rows();
@@ -430,6 +435,10 @@ void cpm_settings_open() {
                 break;
             case 'p': case 'P':
                 _follow_pc = true;
+                break;
+            case 't': case 'T':
+                console_term = (ConsoleTerm)((console_term + 1) % CONSOLE_TERMS);
+                console_reset();
                 break;
             case 'k': case 'K':
                 _addr = Z80_SP(*_cpu) & 0xfff0;

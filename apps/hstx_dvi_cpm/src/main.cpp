@@ -78,6 +78,9 @@ int main(void)
     // 64K of memory, BDOS at FC00h and BIOS at FE00h, booting the CCP at F400h
     static Computer<64, 0xFC00, 0xFE00> computer("CCP-DR.64K", 0xF400);
 
+    // The terminal CP/M programs are set up for, to start with
+    console_term = CPM_TERMINAL;
+
     // The settings screen, and the Z80's speed to start with
     cpm_settings_init(CPM_Z80_KHZ, 0xFC00, 0xFE00);
     computer.setMonitor(cpm_settings_monitor, nullptr);

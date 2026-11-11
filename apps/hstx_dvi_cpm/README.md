@@ -50,6 +50,7 @@ it was. It is only on the DVI screen, not the serial port. It shows:
 - **The Z80's speed.** **+** and **-** choose from unlimited (as fast as the Pico goes, the default),
   1, 2, 2.5, 4 (a Z80A), 6, 8, 10 and 20 MHz, with the speed measured while it runs. A speed can be set
   when built, e.g. `cmake -DCPM_Z80_KHZ=4000 ..`.
+- **The terminal** programs are set up for, changed with **T**: see [Terminal codes](#terminal-codes).
 - **The registers:** PC, SP, AF, BC, DE, HL, IX, IY, the alternate set, I, R, the flags, the
   interrupt mode and the top of the stack.
 - **The code**, disassembled: the last few instructions stepped (dim), the one at PC (marked `->`) and
@@ -103,11 +104,23 @@ CP/M 2.2" version, which uses the reader and punch, should.
 
 ## Terminal codes
 
-CP/M programs were written for many terminals. Output goes through CPM-Emulator's `console.h`, which
-turns the codes of the Kaypro (ADM-3A) and of CP/M-86 (VT52-like) into the ANSI ones the screen and
-a PC's terminal understand, and passes anything else on, so programs set up for a VT100 or ANSI
-terminal work as they are. When installing a program, choose an ANSI or VT100 terminal, or a Kaypro.
-Not a VT52: its ESC B and ESC C (cursor down and right) are a Kaypro's set and clear attribute.
+CP/M programs were written for many terminals, and each is set up (installed) for one. Output goes
+through CPM-Emulator's `console.h`, which turns the codes of the terminal chosen into the ANSI ones the
+screen and a PC's terminal understand. **T** on the settings screen changes it, and `-DCPM_TERMINAL=`
+sets it when built:
+
+| Terminal | `CPM_TERMINAL` | |
+|---|---|---|
+| Kaypro + CP/M-86 (mixed) | `mixed` (default) | A Kaypro's codes and CP/M-86's (VT52-like) together; anything else, such as ANSI codes, passed on |
+| Kaypro / ADM-3A | `kaypro` | A Kaypro's only: ESC = r c, attributes, insert and delete line, and the ADM-3A's control codes |
+| VT52 | `vt52` | A DEC VT52's: ESC A to D, H, I, J, K and ESC Y r c |
+| ANSI / VT100 | `ansi` | Passed on as they are |
+
+The two clash in the mixed one: there ESC B n and ESC C n set and clear a Kaypro attribute (on a VT52
+they move the cursor down and right), and ESC E clears the screen and ESC Y r c moves the cursor, as
+CP/M-86 has them (on a Kaypro they insert a line and clear to the end of the screen). So for a program
+set up for a VT52, choose `vt52`, and for a Kaypro, `kaypro`. Codes with nothing like them in ANSI
+(e.g. a Kaypro's pixel graphics) are dropped, rather than passed on to do something else.
 
 Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
 it says so and restarts on a key press.
