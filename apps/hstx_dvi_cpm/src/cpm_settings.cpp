@@ -122,6 +122,12 @@ static void put_speed(uint32_t khz) {
 // rows of it
 static uint16_t _addr = 0x0100;
 static bool _follow_pc = true;
+// Editing memory: the byte at the cursor, its first hex digit if typed (else
+// -1), and whether typing text rather than hex
+static bool _editing = false;
+static uint16_t _cur;
+static int _nib = -1;
+static bool _text = false;
 // The rows of code shown, and of memory, leaving room for the rest
 static uint32_t clamp(int32_t v, int32_t lo, int32_t hi) {
     return (uint32_t)(v < lo ? lo : v > hi ? hi : v);
@@ -218,26 +224,44 @@ static void draw(const char* prompt = nullptr) {
         putf("   %04X ", a);
         for (uint32_t i = 0; i < 16; ++i) {
             const uint16_t b = a + i;
-            // The byte at PC in reverse, at SP underlined
-            putf(b == pc ? " \x1b[7m%02X\x1b[0m" : b == sp ? " \x1b[4m%02X\x1b[0m" : " %02X", m[b]);
+            if (_editing && b == _cur) {
+                // The cursor, bright, with the first digit if typed
+                if (_nib >= 0) putf(" \x1b[1;7m%X_\x1b[0m", _nib);
+                else putf(_text ? " \x1b[1;4m%02X\x1b[0m" : " \x1b[1;7m%02X\x1b[0m", m[b]);
+            }
+            // The byte at PC in reverse (bold when editing), at SP underlined
+            else if (b == pc) putf(_editing ? " \x1b[1m%02X\x1b[0m" : " \x1b[7m%02X\x1b[0m", m[b]);
+            else if (b == sp) putf(" \x1b[4m%02X\x1b[0m", m[b]);
+            else putf(" %02X", m[b]);
         }
         put("  ");
-        char t[17];
         for (uint32_t i = 0; i < 16; ++i) {
-            const uint8_t ch = m[(uint16_t)(a + i)] & 0x7f;
-            t[i] = ch >= 32 && ch < 127 ? ch : '.';
+            const uint16_t b = a + i;
+            const uint8_t ch = m[b] & 0x7f;
+            const char t = ch >= 32 && ch < 127 ? ch : '.';
+            if (_editing && b == _cur) putf(_text ? "\x1b[1;7m%c\x1b[0m" : "\x1b[1;4m%c\x1b[0m", t);
+            else putf("%c", t);
         }
-        t[16] = 0;
-        put(t);
     }
 
     const uint32_t h = mtop + 1 + rows + 1;
+    if (_editing) {
+        row(h);
+        putf(" \x1b[1mEditing %04X\x1b[0m: type %s to change it  \x1b[1mTab\x1b[0m %s",
+            _cur, _text ? "text" : "hex", _text ? "hex instead" : "text instead");
+        row(h + 1);
+        put(" \x1b[1mArrows\x1b[0m move  \x1b[1mPgUp PgDn\x1b[0m a page  \x1b[1mEnter\x1b[0m or \x1b[1mEsc\x1b[0m done");
+        row(h + 3);
+        if (prompt) putf(" %s", prompt);
+        put("\x1b[J");
+        return;
+    }
     row(h);
     put(" \x1b[1mS\x1b[0m/\x1b[1mSpace\x1b[0m step  \x1b[1mC\x1b[0m/\x1b[1mEsc\x1b[0m back to CP/M  "
         "\x1b[1mR\x1b[0m restart CP/M  \x1b[1m+ -\x1b[0m speed");
     row(h + 1);
-    put(" \x1b[1mM\x1b[0m address  \x1b[1mP\x1b[0m follow PC  \x1b[1mK\x1b[0m stack  "
-        "\x1b[1mUp Down , .\x1b[0m a line  \x1b[1mPgUp PgDn < >\x1b[0m a page");
+    put(" \x1b[1mM\x1b[0m address  \x1b[1mE\x1b[0m edit  \x1b[1mP\x1b[0m follow PC  \x1b[1mK\x1b[0m stack  "
+        "\x1b[1mUp Down , .\x1b[0m line  \x1b[1mPgUp PgDn < >\x1b[0m page");
     row(h + 3);
     if (prompt) putf(" %s", prompt);
     put("\x1b[J");
@@ -250,6 +274,8 @@ enum {
     KEY_DOWN,
     KEY_PAGE_UP,
     KEY_PAGE_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
 };
 
 static int key_wait(uint32_t us) {
@@ -272,6 +298,8 @@ static int key() {
     switch (n) {
         case 'A': return KEY_UP;
         case 'B': return KEY_DOWN;
+        case 'C': return KEY_RIGHT;
+        case 'D': return KEY_LEFT;
         case '~': return p == 5 ? KEY_PAGE_UP : p == 6 ? KEY_PAGE_DOWN : -1;
         default: return -1;
     }
@@ -294,6 +322,58 @@ static bool ask_addr(uint16_t& a) {
     if (!n) return false;
     a = (uint16_t)strtoul(s, nullptr, 16);
     return true;
+}
+
+// Edits memory from the first byte shown: hex, or text after Tab, the arrows
+// moving, until Enter or Esc
+static void edit_memory() {
+    _editing = true;
+    _follow_pc = false;
+    _cur = _addr;
+    _nib = -1;
+    while (true) {
+        draw();
+        const uint32_t rows = mem_rows();
+        const int c = key();
+        int move = 0;
+        if (c == '\r' || c == '\n' || c == 0x1b) break;
+        switch (c) {
+            case '\t': _text = !_text; _nib = -1; break;
+            case KEY_LEFT: case 'S' & 0x1f: case 8: case 0x7f: move = -1; break;
+            case KEY_RIGHT: case 'D' & 0x1f: move = 1; break;
+            case KEY_UP: case 'E' & 0x1f: move = -16; break;
+            case KEY_DOWN: case 'X' & 0x1f: move = 16; break;
+            case KEY_PAGE_UP: case 'R' & 0x1f: move = -16 * (int)rows; break;
+            case KEY_PAGE_DOWN: case 'C' & 0x1f: move = 16 * (int)rows; break;
+            default:
+                if (_text) {
+                    if (c >= 32 && c < 127) {
+                        _mem[_cur] = (uint8_t)c;
+                        move = 1;
+                    }
+                }
+                else if (c >= 0 && c < 0x100 && isxdigit(c)) {
+                    const int v = isdigit(c) ? c - '0' : toupper(c) - 'A' + 10;
+                    if (_nib < 0) _nib = v;
+                    else {
+                        _mem[_cur] = (uint8_t)(_nib << 4 | v);
+                        move = 1;
+                    }
+                }
+                break;
+        }
+        if (move) {
+            _cur += move;
+            _nib = -1;
+            // Keep the cursor in view
+            const uint16_t line = _cur & 0xfff0;
+            if ((uint16_t)(line - _addr) >= rows * 16) {
+                _addr = move < 0 ? line : (uint16_t)(line - (rows - 1) * 16);
+            }
+        }
+    }
+    _editing = false;
+    _nib = -1;
 }
 
 void cpm_settings_open() {
@@ -344,6 +424,9 @@ void cpm_settings_open() {
                     _addr &= 0xfff0;
                     _follow_pc = false;
                 }
+                break;
+            case 'e': case 'E':
+                edit_memory();
                 break;
             case 'p': case 'P':
                 _follow_pc = true;

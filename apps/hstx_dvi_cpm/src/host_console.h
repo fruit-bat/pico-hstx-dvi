@@ -108,3 +108,13 @@ inline int conctrl_getch_wait() {
 inline int conctrl_getch() {
     return conctrl_status() ? conctrl_getch_wait() : 0;
 }
+
+#ifdef CPM_AUX
+// The reader (RDR:) and punch (PUN:) on UART1 (cpm_aux.cpp): what PIP's
+// RDR: and PUN: and BDOS functions 3 and 4 use. Waiting for the reader, the
+// settings key still works, and Ctrl-C gives up, as end of file (^Z).
+#define CONCTRL_AUX 1
+void conctrl_aux_init();
+int conctrl_aux_in();
+void conctrl_aux_out(int c);
+#endif

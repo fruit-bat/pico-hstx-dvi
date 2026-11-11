@@ -4,7 +4,8 @@
 // The drives are directories on an SD card. Keys come from the USB serial port
 // or, built with GAME_USBKBD, from a USB keyboard on the Pico's USB port, with
 // the serial port then on the UART, GPIOs 0 and 1. Output goes to the screen
-// and to the serial port. Ctrl-\ (or F12 on a USB keyboard) opens the settings
+// and to the serial port. The reader and punch (RDR: and PUN:) are on UART1,
+// TX on GPIO 8 and RX on GPIO 9. Ctrl-\ (or F12 on a USB keyboard) opens the settings
 // screen (cpm_settings.h).
 
 // This example requires an external digital video connector connected to
@@ -63,6 +64,10 @@ int main(void)
     stdio_set_driver_enabled(&vt_driver, true);
 #ifdef GAME_USBKBD
     usbkbd_init();
+#endif
+#ifdef CPM_AUX
+    // The reader and punch on UART1
+    conctrl_aux_init();
 #endif
 
     sleep_ms(2000); // Allow time for initialization

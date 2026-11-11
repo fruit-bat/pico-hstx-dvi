@@ -57,6 +57,10 @@ it was. It is only on the DVI screen, not the serial port. It shows:
 - **Memory**, in hex and ASCII, with the byte at PC in reverse and at SP underlined. It follows PC, or
   **M** shows an address (typed in hex), **K** the stack, **Up**/**Down** (or **,** **.**) move a line and
   **PgUp**/**PgDn** (or **<** **>**) a page. **P** follows PC again.
+- **Editing memory:** **E** puts a cursor on the first byte shown. Type two hex digits to change a byte
+  (the first is shown as it is typed), or press **Tab** to type text instead, and back. The arrows (or
+  WordStar's Ctrl-E, X, S, D) and **PgUp**/**PgDn** move the cursor, the view following it, and **Enter**
+  or **Esc** finishes. The code shown changes with it.
 
 **S** or **Space** steps the Z80 an instruction (a BDOS or BIOS call being one step) and shows it all
 again, so it can be pressed again and again. Only **C**, **Esc** and **Ctrl-\\** go back to CP/M, and
@@ -70,6 +74,40 @@ straight away.
 
 At power on the SD card can take a moment to be ready, so CP/M tries it for a couple of seconds before
 saying it can't read it.
+
+## The serial port: RDR: and PUN:
+
+CP/M 2.2's serial devices are the reader (`RDR:`) and punch (`PUN:`), which go to UART1, at 3.3V:
+
+| UART1 | GPIO |
+|---|---|
+| TX (`PUN:`) | 8 |
+| RX (`RDR:`) | 9 |
+
+at 115200 baud, 8 bits, no parity, 1 stop bit. With a USB serial adapter to a PC:
+
+```
+A>PIP PUN:=STAT.DOC           (sends a file, with 40 NULs before and after, as for paper tape)
+A>PIP B:NOTES.TXT=RDR:        (receives one: send a text file, then Ctrl-Z)
+```
+
+What arrives is kept (up to 4K) until read, so nothing is lost while CP/M writes to the SD card.
+While a program waits for the reader, **Ctrl-C** gives up, as if the file had ended, and **Ctrl-\\**
+still opens the settings screen. Programs using BDOS functions 3 and 4, or the BIOS's READER and PUNCH,
+use it too. The pins and baud rate are `CPM_AUX_TX_PIN`, `CPM_AUX_RX_PIN` and `CPM_AUX_BAUD` in
+[`CMakeLists.txt`](CMakeLists.txt), and `-DCPM_AUX=OFF` leaves the reader and punch out.
+
+Programs that drive a serial chip themselves (modem programs such as MEX, IMP or a machine's own
+Kermit) won't work, as I/O ports aren't emulated: they stop CP/M with an error. Kermit-80's "generic
+CP/M 2.2" version, which uses the reader and punch, should.
+
+## Terminal codes
+
+CP/M programs were written for many terminals. Output goes through CPM-Emulator's `console.h`, which
+turns the codes of the Kaypro (ADM-3A) and of CP/M-86 (VT52-like) into the ANSI ones the screen and
+a PC's terminal understand, and passes anything else on, so programs set up for a VT100 or ANSI
+terminal work as they are. When installing a program, choose an ANSI or VT100 terminal, or a Kaypro.
+Not a VT52: its ESC B and ESC C (cursor down and right) are a Kaypro's set and clear attribute.
 
 Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
 it says so and restarts on a key press.

@@ -5,12 +5,14 @@ add_executable(hstx_dvi_cpm
   ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cpm_settings.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/z80_disasm.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cpm_aux.cpp
 )
 
 # The emulator reports errors with C++ exceptions, which can pass through the Z80 core
 set_source_files_properties(
   ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cpm_settings.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cpm_aux.cpp
   ${PICO_FOLDER}/CPM-Emulator/external/Z80/sources/Z80.c
   PROPERTIES COMPILE_FLAGS "-fexceptions")
 
@@ -22,6 +24,14 @@ set(CPM_VT_FONT "terminus_8x16" CACHE STRING "The CP/M terminal's font: 8x8, ter
 
 # The Z80's speed to start with, in kHz: 0 is as fast as it goes, 4000 a Z80A
 set(CPM_Z80_KHZ 0 CACHE STRING "The CP/M Z80's speed to start with, in kHz (0: as fast as it goes)")
+
+# CP/M's reader and punch (RDR: and PUN:, e.g. PIP PUN:=FILE.TXT) on UART1, at
+# 3.3V: TX on GPIO 8, RX on GPIO 9. OFF leaves them as before: the punch
+# discards, the reader gives end of file.
+option(CPM_AUX "CP/M's reader and punch on UART1" ON)
+set(CPM_AUX_BAUD 115200 CACHE STRING "The baud rate of CP/M's reader and punch")
+set(CPM_AUX_TX_PIN 8 CACHE STRING "UART1's TX GPIO for CP/M's punch (4, 8, 20 or 24)")
+set(CPM_AUX_RX_PIN 9 CACHE STRING "UART1's RX GPIO for CP/M's reader (5, 9, 21 or 25)")
 
 target_compile_definitions(hstx_dvi_cpm PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
@@ -37,6 +47,10 @@ target_compile_definitions(hstx_dvi_cpm PRIVATE
   # The Z80's speed to start with, in kHz (0: as fast as it goes). The
   # settings screen (Ctrl-\ or F12) changes it while running.
   CPM_Z80_KHZ=${CPM_Z80_KHZ}
+  $<$<BOOL:${CPM_AUX}>:CPM_AUX=1>
+  CPM_AUX_BAUD=${CPM_AUX_BAUD}
+  CPM_AUX_TX_PIN=${CPM_AUX_TX_PIN}
+  CPM_AUX_RX_PIN=${CPM_AUX_RX_PIN}
 )
 
 target_include_directories(hstx_dvi_cpm PRIVATE
@@ -55,6 +69,7 @@ target_link_libraries(hstx_dvi_cpm
   pico_hstx_dvi
   pico_hstx_dvi_vt
   pico_vtlib
+  hardware_uart
   cpm_emulator
   sdcard
   fatfs

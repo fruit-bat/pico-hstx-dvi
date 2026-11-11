@@ -32,10 +32,11 @@ General MIDI synth such as a SAM2695, which is then no button's. This can be lef
 
 ## CP/M (hstx_dvi_cpm)
 
-`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen, with its drives on an SD card, and a settings screen
-(**Ctrl-\\**) for the Z80's speed, its registers and memory, and stepping it. See
-[`apps/hstx_dvi_cpm/README.md`](apps/hstx_dvi_cpm/README.md) for what it needs, the SD card's wiring and
-layout, and the keys.
+`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen, with its drives on an SD card, its reader and punch
+(`RDR:`, `PUN:`) on UART1, and a settings screen (**Ctrl-\\**) for the Z80's speed, its registers,
+code and memory (which can be edited), and stepping it. See
+[`apps/hstx_dvi_cpm/README.md`](apps/hstx_dvi_cpm/README.md) for what it needs, the wiring, the SD
+card's layout and the keys.
 
 ## Using the virtual terminal (hstx_dvi_vt_test)
 
