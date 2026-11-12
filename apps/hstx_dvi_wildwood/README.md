@@ -14,7 +14,7 @@ Hazel the witch wanders a wood full of animals, and gets on by helping them rath
 
 ## Controls
 
-Buttons connect the GPIO to ground (internal pull ups are used).
+Built with `-DGAME_BUTTONS=ON`, buttons connect the GPIO to ground (internal pull ups are used).
 
 | GPIO | Button  |
 |------|---------|
@@ -31,8 +31,9 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `WW_INP_GPIO_START` in CMakeLists.txt.
+GPIO 8 is the MIDI synth's unless built with `-DGAME_MIDI=OFF`, so up is then only on a pad.
 
-Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad to walk, A to cast and B to tiptoe.
+NES or SNES gamepads work as well (see the top README): D-pad to walk, A to cast and B to tiptoe.
 
 ## The game
 
@@ -53,6 +54,15 @@ Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as
 
 The title with the folk of the wood and what they need, a demo game played by the Pico,
 and the high score table with Hazel and her friends walking along the bottom.
+
+## Music and sounds
+
+With a General MIDI synth such as a SAM2695 on GPIO 8 (see the top README), there is storybook
+folk music in 6/8: a flute, harp and pizzicato tune on the title and high scores, a harp flourish
+as each night starts, a quiet recorder tune while exploring, a few bars when the wolf is calmed,
+a music box lullaby at the end of a game and a jig on the fiddle while putting in initials.
+Spells, the animals, the moon charm, the flowers and the wolf all have sounds, in the demo game too.
+They are in `src/ww_sound_data.c`, and `../common/tools/render_sounds.sh` renders each to a MIDI file to listen to.
 
 ## How it is drawn
 

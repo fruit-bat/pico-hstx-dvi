@@ -1,4 +1,5 @@
 #include "def_attract.h"
+#include "def_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "def_input.h"
 #include "def_world.h"
@@ -10,6 +11,7 @@
 #include "game_hiscore.h"
 #include "game_initials.h"
 #include "game_util.h"
+#include "game_options.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -49,15 +51,34 @@ static void attract_init(void) {
 	game_input_pressed();
 }
 
+static void settings_back(uint32_t frame) {
+	def_world_draw_stars(frame, frame);
+}
+
+// Start shows the settings, and the screen goes on after
+static void settings(void) {
+	static const GameOptions_t o = {
+		DEF_INP_BIT_U, DEF_INP_BIT_D, DEF_INP_BIT_L, DEF_INP_BIT_R, DEF_INP_BIT_F, DEF_INP_BIT_B, DEF_INP_BIT_START,
+		def_wait_for_frame, settings_back
+	};
+	game_options_run(&o);
+}
+
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	def_wait_for_frame();
 	game_fx_update();
-	return is_def_input_play(game_input_pressed());
+	const uint16_t pressed = game_input_pressed();
+	if (pressed & DEF_INP_BIT_START) {
+		settings();
+		return false;
+	}
+	return is_def_input_play(pressed);
 }
 
 bool def_attract_title(void) {
 	attract_init();
+	game_music_play(DEF_TUNE_TITLE);
 	char t[GAME_TEXT_MAX];
 
 	// Each letter of the title separately, so they can be different colours
@@ -65,9 +86,10 @@ bool def_attract_title(void) {
 		const char s[2] = { DEF_ATTRACT_TITLE[i], 0 };
 		game_text_set(&_text[i], s, 4);
 	}
-	game_text_set(&_text[8], "DEFEND THE HUMANOIDS", 1);
-	game_text_set(&_text[9], "PRESS FIRE TO START", 2);
+	game_text_set(&_text[8], "DEFEND THE HUMANOIDS", GAME_TEXT_BIG);
+	game_text_set(&_text[9], "PRESS FIRE TO START", GAME_TEXT_BIG);
 	game_text_set(&_text[10], "RP2350 HSTX DVI SPRITES", 1);
+	game_text_set(&_text[12], "START FOR SETTINGS", GAME_TEXT_BIG);
 
 	// Where the middle of each enemy in the roll call goes
 	int32_t rx[DEF_ATTRACT_ROLL_COUNT];
@@ -75,9 +97,9 @@ bool def_attract_title(void) {
 	for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 		rx[i] = 120 + (i % 3) * 200;
 		ry[i] = 200 + (i / 3) * 90;
-		game_text_set(&_names[i], def_enemy_name(_roll[i]), 1);
+		game_text_set(&_names[i], def_enemy_name(_roll[i]), GAME_TEXT_BIG);
 		snprintf(t, sizeof(t), "%lu", (unsigned long)def_enemy_score(_roll[i]));
-		game_text_set(&_scores[i], t, 1);
+		game_text_set(&_scores[i], t, GAME_TEXT_BIG);
 	}
 
 	const int32_t tx = (GAME_SCREEN_W - DEF_ATTRACT_TITLE_LEN * 32) >> 1;
@@ -102,9 +124,10 @@ bool def_attract_title(void) {
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame < DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP + DEF_ATTRACT_MATERIALISE) continue;
 			game_spr_text(&_names[i], rx[i] - (game_text_width(&_names[i]) >> 1), ry[i] + 22, game_pallet(GAME_WHITE));
-			game_spr_text(&_scores[i], rx[i] - (game_text_width(&_scores[i]) >> 1), ry[i] + 36, game_pallet(GAME_YELLOW));
+			game_spr_text(&_scores[i], rx[i] - (game_text_width(&_scores[i]) >> 1), ry[i] + 42, game_pallet(GAME_YELLOW));
 		}
 		if ((frame >> 5) & 1) game_spr_text_centre(&_text[9], 410, game_pallet(GAME_YELLOW));
+		game_spr_text_centre(&_text[12], 436, game_pallet(GAME_CYAN));
 		game_spr_text_centre(&_text[10], GAME_SCREEN_H - 20, game_pallet(GAME_GREY));
 		for (uint32_t i = 0; i < DEF_ATTRACT_ROLL_COUNT; ++i) {
 			if (frame < DEF_ATTRACT_ROLL_START + i * DEF_ATTRACT_ROLL_GAP + DEF_ATTRACT_MATERIALISE) continue;
@@ -126,13 +149,15 @@ static uint32_t rank_colour(const uint32_t rank) {
 
 bool def_attract_hiscores(int32_t highlight) {
 	attract_init();
+	// After a new high score its tune goes on
+	if (highlight < 0) game_music_play(DEF_TUNE_TITLE);
 	char rows[GAME_HISCORE_COUNT][GAME_TEXT_MAX];
 	game_text_set(&_text[0], "HALL OF FAME", 3);
 	for (uint32_t i = 0; i < GAME_HISCORE_COUNT; ++i) {
 		const GameHiScore_t *e = game_hiscore_get(i);
 		snprintf(rows[i], GAME_TEXT_MAX, "%-4s  %07lu  %s", game_hiscore_rank_name(i), (unsigned long)e->score, e->name);
 	}
-	game_text_set(&_text[11], "PRESS FIRE TO START", 2);
+	game_text_set(&_text[11], "PRESS FIRE TO START", GAME_TEXT_BIG);
 
 	const uint32_t frames = highlight >= 0 ? DEF_ATTRACT_HIGHLIGHT_FRAMES : DEF_ATTRACT_HISCORE_FRAMES;
 	for (uint32_t frame = 0; frame < frames; ++frame) {
@@ -144,7 +169,7 @@ bool def_attract_hiscores(int32_t highlight) {
 		// Typed out a line at a time
 		int32_t n = (int32_t)frame - 30;
 		for (uint32_t i = 0; i < GAME_HISCORE_COUNT; ++i) {
-			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, 1);
+			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, GAME_TEXT_BIG);
 			n -= strlen(rows[i]);
 			const uint32_t c = (int32_t)i == highlight && ((frame >> 3) & 1) ? GAME_RED : rank_colour(i);
 			game_spr_text_centre(&_text[1 + i], 140 + i * 24, game_pallet(c));
@@ -162,18 +187,19 @@ bool def_attract_game_over(void) {
 	if (rank < 0) return false;
 
 	attract_init();
+	game_music_play(DEF_TUNE_HISCORE);
 	char t[GAME_TEXT_MAX];
 	game_text_set(&_text[0], "NEW HIGH SCORE", 3);
 	snprintf(t, sizeof(t), "SCORE %07lu   %s PLACE", (unsigned long)score, game_hiscore_rank_name(rank));
-	game_text_set(&_text[1], t, 1);
-	game_text_set(&_text[2], "ENTER YOUR INITIALS", 2);
-	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", 1);
-	game_text_set(&_text[7], "FIRE TO ENTER  SMART BOMB WHEN DONE", 1);
+	game_text_set(&_text[1], t, GAME_TEXT_BIG);
+	game_text_set(&_text[2], "ENTER YOUR INITIALS", GAME_TEXT_BIG);
+	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", GAME_TEXT_BIG);
+	game_text_set(&_text[7], "FIRE TO ENTER  SMART BOMB WHEN DONE", GAME_TEXT_BIG);
 
 	GameInitials_t g;
 	game_initials_reset(&g);
 	for (uint32_t frame = 0; frame < DEF_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		def_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();
@@ -193,7 +219,7 @@ bool def_attract_game_over(void) {
 			game_spr_text(&_text[3 + j], (GAME_SCREEN_W >> 1) - 64 + j * 48, 220, game_pallet(c));
 		}
 		game_spr_text_centre(&_text[6], 300, game_pallet(GAME_CYAN));
-		game_spr_text_centre(&_text[7], 316, game_pallet(GAME_CYAN));
+		game_spr_text_centre(&_text[7], 322, game_pallet(GAME_CYAN));
 		def_world_draw_stars(frame, frame);
 		game_spr_end();
 	}

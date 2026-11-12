@@ -1,4 +1,5 @@
 #include "mm_game.h"
+#include "mm_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "mm_input.h"
 #include "mm_map.h"
@@ -33,7 +34,7 @@ static uint32_t _frame = 0;
 static int32_t _start_cx = 4, _start_cy = MM_MAP_GROUND - 1;
 
 static void set_message(const uint32_t line, const char* s, const uint32_t scale) {
-	game_text_set(&_message[line], s, scale);
+	game_text_set(&_message[line], s, scale == 2 ? GAME_TEXT_BIG : scale);
 }
 
 static void clear_messages(void) {
@@ -75,6 +76,7 @@ static void night_start(void) {
 	set_message(1, "FIND THE LOST KITTENS", 2);
 	set_message(2, "CHEER THE SPOOKS WITH SPELLS", 2);
 	_message_timer = MM_GAME_MESSAGE_FRAMES;
+	game_music_play(MM_TUNE_NIGHT);
 }
 
 static void draw_moon(void) {
@@ -144,27 +146,32 @@ static bool night_end(const bool demo) {
 	set_message(1, t, 2);
 	_message_timer = 0;
 	mm_witch_set_cheer(true);
+	game_music_play(MM_TUNE_NIGHT_END);
 
 	for (uint32_t frame = 0; frame < MM_GAME_TALLY_FRAMES; ++frame, ++_frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 		if (demo && is_mm_input_play(game_input_pressed())) return true;
 		if (frame == 120) {
 			mm_hud_add_score(night_bonus);
+			game_sound_play(MM_SFX_BONUS);
 			snprintf(t, sizeof(t), "NIGHT BONUS %lu", (unsigned long)night_bonus);
 			set_message(2, t, 2);
 		}
 		if (frame == 240) {
 			mm_hud_add_score(hearts * MM_HEART_POINTS);
+			game_sound_play(MM_SFX_BONUS);
 			snprintf(t, sizeof(t), "HEARTS %lu X %u", (unsigned long)hearts, MM_HEART_POINTS);
 			set_message(2, t, 2);
 		}
 		if (frame == 360) {
 			mm_hud_add_score(cheered * MM_CHEERED_POINTS);
+			game_sound_play(MM_SFX_BONUS);
 			snprintf(t, sizeof(t), "SPOOKS CHEERED %lu X %u", (unsigned long)cheered, MM_CHEERED_POINTS);
 			set_message(2, t, 2);
 		}
 		if (frame == 480) {
 			mm_hud_add_score(sweets * MM_SWEET_POINTS);
+			game_sound_play(MM_SFX_BONUS);
 			snprintf(t, sizeof(t), "SWEETS %lu X %u", (unsigned long)sweets, MM_SWEET_POINTS);
 			set_message(2, t, 2);
 		}
@@ -196,7 +203,7 @@ static bool game_run(const bool demo) {
 
 	uint32_t over = 0;
 	for (uint32_t frame = 0; ; ++frame, ++_frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 
 		uint8_t input;
 		if (demo) {
@@ -221,6 +228,7 @@ static bool game_run(const bool demo) {
 				clear_messages();
 				set_message(0, "GAME OVER", 3);
 				set_message(1, "SWEET DREAMS", 2);
+				game_music_play(MM_TUNE_GAME_OVER);
 				over = 1;
 			}
 			else {
@@ -233,7 +241,11 @@ static bool game_run(const bool demo) {
 			if (night_end(demo)) return true;
 		}
 
-		if (_message_timer && --_message_timer == 0) clear_messages();
+		if (_message_timer && --_message_timer == 0) {
+			clear_messages();
+			// The night's tune is over, so on to the quiet one
+			game_music_play(MM_TUNE_PLAY);
+		}
 		if (demo && !_message_timer) {
 			clear_messages();
 			if ((frame >> 5) & 1) set_message(2, "DEMO - PRESS JUMP", 2);

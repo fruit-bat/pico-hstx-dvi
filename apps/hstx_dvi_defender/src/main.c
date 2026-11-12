@@ -9,6 +9,7 @@
 // https://github.com/Wren6991/Pico-DVI-Sock
 
 #include "hstx_dvi_core.h"
+#include "def_sound.h"
 #include "app_led.h"
 #include "hstx_dvi_sprite.h"
 #include "pico/stdio.h"
@@ -46,8 +47,8 @@ int main(void)
 	stdio_init_all();
 	app_led_on();
 
-	static const uint16_t pad_map[DEF_INP_GPIO_COUNT] = DEF_INP_PAD_MAP;
-	game_input_init(DEF_INP_GPIO_START, DEF_INP_GPIO_COUNT, pad_map);
+	static const uint16_t pad_map[DEF_INP_PAD_COUNT] = DEF_INP_PAD_MAP;
+	game_input_init_pad(DEF_INP_GPIO_START, DEF_INP_GPIO_COUNT, pad_map, DEF_INP_PAD_COUNT);
 	game_pallet_init();
 	game_hiscore_init(def_hiscore_defaults());
 	game_fx_set_view(def_world_fx_view());
@@ -56,6 +57,8 @@ int main(void)
 
 	// Initialize the HSTX DVI sprite system
 	hstx_dvi_sprite_init_all();
+	// After the display has set the clocks, which the MIDI UART's baud rate comes from
+	def_sound_init();
 
 	sleep_ms(2000); // Allow time for initialization
 

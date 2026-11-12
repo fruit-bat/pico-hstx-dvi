@@ -5,6 +5,7 @@
 
 #include "el_save.h"
 #include "el_draw.h"
+#include "el_sound.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -144,6 +145,15 @@ static bool file_write(const char* name, const void* buf, size_t n) {
 	return r == FR_OK && c == FR_OK && put == n;
 }
 
+// Gone already is as good as deleted
+static bool file_delete(const char* name) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
+	const FRESULT r = f_unlink(path);
+	printf("SD card: delete %s %d\n", path, (int)r);
+	return r == FR_OK || r == FR_NO_FILE;
+}
+
 #elif defined(EL_HOST_SAVE)
 
 // On the PC, for trying it: the files in pico_dvi_harmless where it is run
@@ -181,6 +191,15 @@ static bool file_write(const char* name, const void* buf, size_t n) {
 	return fclose(f) == 0 && put == n;
 }
 
+static bool file_delete(const char* name) {
+	char path[48];
+	snprintf(path, sizeof(path), SAVE_DIR "/%s", name);
+	FILE* f = fopen(path, "rb");
+	if (!f) return true;
+	fclose(f);
+	return remove(path) == 0;
+}
+
 #endif
 
 #if defined(EL_SDCARD) || defined(EL_HOST_SAVE)
@@ -194,6 +213,12 @@ bool save_read(uint32_t slot, Save_t* s) {
 	slot_name(name, sizeof(name), slot);
 	size_t n = 0;
 	return file_read(name, &_read, sizeof(_read), &n) && save_good(s, n);
+}
+
+bool save_delete(uint32_t slot) {
+	char name[20];
+	slot_name(name, sizeof(name), slot);
+	return file_delete(name);
 }
 
 bool save_write(uint32_t slot, Save_t* s) {
@@ -216,6 +241,7 @@ typedef struct {
 	uint32_t hud_filled;
 	uint32_t wide;
 	uint32_t lens;    // added later, so older settings are without it
+	uint32_t music;   // added later still
 } Settings_t;
 
 void load_settings(void) {
@@ -223,6 +249,7 @@ void load_settings(void) {
 	Settings_t t;
 	size_t n = 0;
 	t.lens = LENS_NORMAL;
+	t.music = 1;
 	if (!file_read(SETTINGS_FILE, &t, sizeof(t), &n) || n < offsetof(Settings_t, lens) || n > sizeof(t)) return;
 	if (t.magic != SETTINGS_MAGIC || t.size != n || t.style >= STYLE_COUNT) return;
 	draw_style = (Style_e)t.style;
@@ -230,12 +257,14 @@ void load_settings(void) {
 	draw_hud_filled = t.hud_filled != 0;
 	draw_aspect = t.wide ? ASPECT_16_9 : ASPECT_4_3;
 	draw_set_lens((Lens_e)t.lens);
+	sound_set_music(t.music != 0);
 }
 
 void save_settings(void) {
 	if (!_card) return;
 	const Settings_t t = {
-		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9, (uint32_t)draw_lens
+		SETTINGS_MAGIC, sizeof(t), (uint32_t)draw_style, draw_dither, draw_hud_filled, draw_aspect == ASPECT_16_9, (uint32_t)draw_lens,
+		sound_music()
 	};
 	file_write(SETTINGS_FILE, &t, sizeof(t));
 }
@@ -259,6 +288,11 @@ bool save_read(uint32_t slot, Save_t* s) {
 bool save_write(uint32_t slot, Save_t* s) {
 	(void)slot;
 	(void)s;
+	return false;
+}
+
+bool save_delete(uint32_t slot) {
+	(void)slot;
 	return false;
 }
 

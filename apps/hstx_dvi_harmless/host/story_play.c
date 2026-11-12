@@ -71,7 +71,7 @@ void story_host_say(Speaker_e who, const char* name, const char* text) {
 // ----------------------------------------------------------------------------
 
 static const char* const _event_names[STORY_EVENTS] = {
-	"DOCK", "ARRIVE", "JUMP", "WITCH", "SCOOP", "DISABLED", "DESTROYED", "ESCAPED", "NEAR", "HULL HIT", "SUN", "NOW"
+	"DOCK", "ARRIVE", "JUMP", "WITCH", "SCOOP", "DISABLED", "DESTROYED", "ESCAPED", "NEAR", "HULL HIT", "SUN", "NOW", "LAUNCH", "DEPART", "APPROACH", "HERE"
 };
 
 // The story ship with an id: the one spawned, or else the one story i spawns as it
@@ -215,6 +215,10 @@ static uint32_t waits(uint32_t i) {
 		switch (x->ev) {
 			case STORY_DOCK:
 			case STORY_ARRIVE:
+			case STORY_LAUNCH:
+			case STORY_DEPART:
+			case STORY_APPROACH:
+			case STORY_HERE:
 				if (x->place == PLACE_ANY) printf(" anywhere");
 				else printf(" at %s (%%%u)", _gal[p->place[x->place]].name, x->place);
 				break;
@@ -386,17 +390,20 @@ static void play(uint32_t i) {
 		}
 		const StoryExit_t* x = &story_data[i].steps[p->step].exits[k];
 		uint32_t arg = x->arg;
-		if (x->ev == STORY_DOCK || x->ev == STORY_ARRIVE) {
+		StoryEvent_e ev = (StoryEvent_e)x->ev;
+		if (story_at_place(ev)) {
 			arg = x->place == PLACE_ANY ? _here : p->place[x->place];
 			_here = arg;
 		}
-		printf("  * %s\n", _event_names[x->ev]);
+		// Flying here, as if by launching
+		if (ev == STORY_HERE) ev = STORY_DEPART;
+		printf("  * %s\n", _event_names[ev]);
 		if (x->ev == STORY_JUMP) {
 			// As many jumps as it waits for, from where it is
 			for (uint32_t j = p->jumps; j < (x->arg ? x->arg : 1u); ++j) story_event(STORY_JUMP, 0);
 		}
 		else {
-			story_event((StoryEvent_e)x->ev, arg);
+			story_event(ev, arg);
 		}
 		pages();
 	}

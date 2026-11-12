@@ -48,6 +48,9 @@ void game_spr_bitmap(int32_t y, uint32_t rows, const uint32_t* bits, hstx_dvi_pi
 // x and the width must be multiples of 4, and it must be wholly on the screen
 void game_spr_pixels(int32_t x, int32_t y, uint32_t w, uint32_t h, const GamePixels_t* pixels);
 
+// As a scale: twice the size of the font, smoothed, as game_text_set_smooth
+#define GAME_TEXT_BIG 0x102
+
 void game_text_set(GameText_t* t, const char* s, uint32_t scale);
 // Only shows the first n characters, for typing text out
 void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale);

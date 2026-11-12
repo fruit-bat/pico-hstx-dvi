@@ -98,7 +98,7 @@ void story_host_say(Speaker_e who, const char* name, const char* text) {
 }
 
 static const char* const _event_names[STORY_EVENTS] = {
-	"DOCK", "ARRIVE", "JUMP", "WITCH", "SCOOP", "DISABLED", "DESTROYED", "ESCAPED", "NEAR", "HULL_HIT", "SUN", "NOW"
+	"DOCK", "ARRIVE", "JUMP", "WITCH", "SCOOP", "DISABLED", "DESTROYED", "ESCAPED", "NEAR", "HULL_HIT", "SUN", "NOW", "LAUNCH", "DEPART", "APPROACH", "HERE"
 };
 
 // ----------------------------------------------------------------------------
@@ -225,10 +225,13 @@ static void walk(uint32_t story) {
 		if (again) continue;
 		unsnap(&before);
 		uint32_t a = arg[k];
-		if ((ev[k] == STORY_DOCK || ev[k] == STORY_ARRIVE) && a == 0xffffffffu) a = p->place[0];
-		if (ev[k] == STORY_DOCK || ev[k] == STORY_ARRIVE) _here = a;
+		const bool placed = story_at_place(ev[k]);
+		if (placed && a == 0xffffffffu) a = p->place[0];
+		if (placed) _here = a;
+		// Flying here is by launching, which is the less obvious way
+		if (ev[k] == STORY_HERE) ev[k] = STORY_DEPART;
 		indent();
-		if (ev[k] == STORY_DOCK || ev[k] == STORY_ARRIVE) printf("* %s %s\n", _event_names[ev[k]], _gal[a].name);
+		if (placed) printf("* %s %s\n", _event_names[ev[k]], _gal[a].name);
 		else printf("* %s %u\n", _event_names[ev[k]], a);
 		++_depth;
 		const StorySave_t was = _save;

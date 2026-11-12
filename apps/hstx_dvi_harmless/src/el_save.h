@@ -43,6 +43,8 @@ void save_settings(void);
 // Returns false if the slot is empty, or cannot be read
 bool save_read(uint32_t slot, Save_t* s);
 bool save_write(uint32_t slot, Save_t* s);
+// Deletes the slot's file, so the slot is empty
+bool save_delete(uint32_t slot);
 
 #ifdef __cplusplus
 }

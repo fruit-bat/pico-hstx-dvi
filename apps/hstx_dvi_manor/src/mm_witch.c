@@ -1,4 +1,5 @@
 #include "mm_witch.h"
+#include "mm_sound.h"
 #include "mm_input.h"
 #include "mm_map.h"
 #include "mm_thing.h"
@@ -133,6 +134,7 @@ bool mm_witch_standing_on(int32_t x0, int32_t x1, int32_t y) {
 void mm_witch_hurt(int32_t from_x) {
 	if (_hurt || _dizzy || _cheer) return;
 	if (_hearts) --_hearts;
+	game_sound_play(_hearts ? MM_SFX_HURT : MM_SFX_DIZZY);
 	_hurt = MM_HURT_FRAMES;
 	_stun = MM_STUN_FRAMES;
 	const int32_t away = mm_witch_x() < from_x ? -1 : 1;
@@ -187,6 +189,7 @@ void mm_witch_set_cheer(bool cheer) {
 static void cast(bool up) {
 	_cast = MM_CAST_FRAMES;
 	_bolt = true;
+	game_sound_play(MM_SFX_CAST);
 	_blife = MM_BOLT_FRAMES;
 	if (up) {
 		_bx = _b.x;
@@ -220,15 +223,18 @@ static void update_bolt(void) {
 			switch (mm_map_cast(cx, cy)) {
 			case MM_CAST_LEVER:
 				mm_hud_say(tx, ty - 4, "CLUNK!", GAME_GREEN);
+				game_sound_play(MM_SFX_LEVER);
 				mm_hud_score_at(tx, ty, 500);
 				bolt_end(GAME_GREEN);
 				return;
 			case MM_CAST_CANDLE:
+				game_sound_play(MM_SFX_CANDLE);
 				mm_hud_score_at(tx, ty, 100);
 				bolt_end(GAME_YELLOW);
 				return;
 			case MM_CAST_LAST_CANDLE:
 				mm_hud_say(tx, ty - 4, "ALL LIT!", GAME_YELLOW);
+				game_sound_play(MM_SFX_ALL_LIT);
 				mm_hud_score_at(tx, ty, 500);
 				bolt_end(GAME_YELLOW);
 				return;
@@ -265,10 +271,12 @@ static void try_door(int32_t dir) {
 		_keys &= ~(1u << g);
 		mm_map_unlock(g);
 		mm_hud_say(mm_witch_x(), mm_witch_y() - 72, "UNLOCKED!", GAME_YELLOW);
+		game_sound_play(MM_SFX_UNLOCK);
 		mm_hud_score_at(mm_witch_x(), mm_witch_y() - 64, 500);
 	}
 	else if (!_locked_said) {
 		mm_hud_say(mm_witch_x(), mm_witch_y() - 72, "LOCKED! FIND THE KEY", GAME_WHITE);
+		game_sound_play(MM_SFX_LOCKED);
 		_locked_said = 120;
 	}
 }
@@ -282,6 +290,7 @@ static void light_lanterns(void) {
 			_check_cx = cx;
 			_check_cy = cy;
 			mm_hud_say(cx * MM_TILE + MM_TILE / 2, cy * MM_TILE - 8, "LANTERN LIT", GAME_YELLOW);
+			game_sound_play(MM_SFX_LANTERN);
 			mm_hud_score_at(cx * MM_TILE + MM_TILE / 2, cy * MM_TILE, 100);
 		}
 	}
@@ -335,12 +344,16 @@ void mm_witch_update(uint8_t input, uint32_t frame) {
 	if (_drop) --_drop;
 	if (_buffer && _coyote) {
 		if ((input & MM_INP_BIT_D) && can_drop()) _drop = MM_DROP_FRAMES;
-		else _b.vy = -MM_JUMP_SPEED;
+		else {
+			_b.vy = -MM_JUMP_SPEED;
+			game_sound_play(MM_SFX_JUMP);
+		}
 		_buffer = 0;
 		_coyote = 0;
 	}
 	if (!(input & MM_INP_BIT_J) && _b.vy < -MM_JUMP_CUT) _b.vy = -MM_JUMP_CUT;
 	_floating = _float && control && (input & MM_INP_BIT_J) && _b.vy > 0;
+	game_sound_hold(MM_SFX_FLOAT, _floating);
 	fall(_floating ? MM_FLOAT_FALL : MM_FALL_MAX);
 
 	// Pushing a crate along, slowly

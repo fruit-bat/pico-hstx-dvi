@@ -1,4 +1,5 @@
 #include "mm_thing.h"
+#include "mm_sound.h"
 #include "mm_map.h"
 #include "mm_art.h"
 #include "mm_camera.h"
@@ -202,6 +203,7 @@ static void cheer(MmThing_t* t) {
 	int32_t x0, y0, x1, y1;
 	box(t, &x0, &y0, &x1, &y1);
 	mm_hud_say(px(t->b.x), y0 - 4, says[t->type], GAME_PINK);
+	game_sound_play(MM_SFX_CHEER);
 	game_fx_explode(t->b.x, GAME_PX((y0 + y1) / 2), GAME_PINK, 12, GAME_PX(2));
 	mm_hud_score_at(px(t->b.x), y0, t->befriended ? 20 : 200);
 	if (!t->befriended) ++_cheered;
@@ -221,6 +223,7 @@ bool mm_thing_cast(int32_t x0, int32_t y0, int32_t x1, int32_t y1) {
 			// Pulled a tile towards Hazel
 			t->dir = mm_witch_x() < px(t->b.x) ? -1 : 1;
 			t->timer = MM_CRATE_PULL_FRAMES;
+			game_sound_play(MM_SFX_PULL);
 			game_fx_explode(t->b.x, t->b.y - GAME_PX(16), GAME_CYAN, 8, GAME_PX(2));
 			return true;
 		}
@@ -235,15 +238,18 @@ static void collect(MmThing_t* t) {
 		++_kittens;
 		_kitten_mask |= 1u << t->variant;
 		mm_hud_say(x, y - 8, "MEW!", GAME_PINK);
+		game_sound_play(MM_SFX_KITTEN);
 		mm_hud_score_at(x, y, 1000);
 		game_fx_explode(t->b.x, GAME_PX(y + 16), GAME_PINK, 20, GAME_PX(3));
 		break;
 	case MM_T_SWEET:
 		++_sweets;
+		game_sound_play(MM_SFX_SWEET);
 		mm_hud_score_at(x, y, 50);
 		game_fx_explode(t->b.x, GAME_PX(y + 8), GAME_COLOUR_RANDOM, 6, GAME_PX(2));
 		break;
 	case MM_T_HEART:
+		game_sound_play(MM_SFX_HEART);
 		if (mm_witch_heal()) mm_hud_say(x, y - 8, "HEART", GAME_PINK);
 		else mm_hud_score_at(x, y, 200);
 		game_fx_explode(t->b.x, GAME_PX(y + 8), GAME_PINK, 8, GAME_PX(2));
@@ -251,12 +257,14 @@ static void collect(MmThing_t* t) {
 	case MM_T_KEY:
 		mm_witch_add_key(t->group);
 		mm_hud_say(x, y - 8, "A KEY!", GAME_YELLOW);
+		game_sound_play(MM_SFX_KEY);
 		mm_hud_score_at(x, y, 500);
 		game_fx_explode(t->b.x, GAME_PX(y + 8), GAME_YELLOW, 12, GAME_PX(2));
 		break;
 	case MM_T_FEATHER:
 		mm_witch_learn_float();
 		mm_hud_say(x, y - 16, "FLOAT SPELL!", GAME_CYAN);
+		game_sound_play(MM_SFX_FEATHER);
 		mm_hud_say(x, y - 4, "HOLD JUMP TO FLOAT", GAME_WHITE);
 		mm_hud_score_at(x, y, 1000);
 		game_fx_explode(t->b.x, GAME_PX(y + 16), GAME_CYAN, 20, GAME_PX(3));

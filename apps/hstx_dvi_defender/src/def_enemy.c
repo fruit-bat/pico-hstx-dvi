@@ -1,4 +1,5 @@
 #include "def_enemy.h"
+#include "def_sound.h"
 #include "def_world.h"
 #include "game_render.h"
 #include "game_pallet.h"
@@ -503,6 +504,7 @@ static void fire_at_player(const DefEnemy_t* e) {
 	b->y = y;
 	b->vx = dx * speed / m;
 	b->vy = dy * speed / m;
+	game_sound_play(DEF_SFX_ENEMY_FIRE);
 }
 
 static void drop_mine(const DefEnemy_t* e) {
@@ -565,6 +567,7 @@ bool def_enemy_spawn(uint32_t type, int32_t x, int32_t y) {
 		}
 		if (e->state == DEF_ES_SPAWN) {
 			game_fx_implode(def_wrap(e->x + DEF_PX(_info[type].w >> 1)), e->y + DEF_PX(_info[type].h >> 1), _info[type].colour, 24, DEF_ENEMY_SPAWN_FRAMES);
+			game_sound_play(DEF_SFX_SPAWN);
 		}
 		return true;
 	}
@@ -577,6 +580,7 @@ static void enemy_kill(DefEnemy_t* e, const bool award, const bool split) {
 	const int32_t cy = e->y + DEF_PX(info->h >> 1);
 	game_fx_explode(cx, cy, info->colour, 28, DEF_PX(3));
 	game_fx_explode(cx, cy, info->detail, 12, DEF_PX(2));
+	game_sound_play(DEF_SFX_EXPLODE);
 	if (award) def_hud_add_score(info->score);
 	if (e->human >= 0 && e->state == DEF_ES_ASCEND) def_human_release(e->human);
 	const uint32_t type = e->type;
@@ -618,6 +622,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 			if ((e->y >> DEF_FP) + enemy_h(e) >= (def_human_y(e->human) >> DEF_FP)) {
 				def_human_grab(e->human);
 				e->state = DEF_ES_ASCEND;
+				game_sound_play(DEF_SFX_GRAB);
 			}
 			break;
 		}
@@ -631,6 +636,7 @@ static void update_lander(DefEnemy_t* e, const uint32_t frame) {
 				e->type = DEF_ENEMY_MUTANT;
 				e->state = DEF_ES_SEEK;
 				game_fx_explode(def_wrap(e->x + DEF_PX(DEF_LANDER_W >> 1)), e->y + DEF_PX(DEF_LANDER_H >> 1), GAME_PURPLE, 16, DEF_PX(2));
+				game_sound_play(DEF_SFX_MUTANT);
 			}
 			break;
 		}

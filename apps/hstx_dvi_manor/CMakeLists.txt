@@ -13,6 +13,8 @@ add_executable(hstx_dvi_manor
   ${CMAKE_CURRENT_LIST_DIR}/src/mm_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/mm_hiscore.c
   ${CMAKE_CURRENT_LIST_DIR}/src/mm_attract.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/mm_sound.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/mm_sound_data.c
 )
 
 target_compile_definitions(hstx_dvi_manor PRIVATE

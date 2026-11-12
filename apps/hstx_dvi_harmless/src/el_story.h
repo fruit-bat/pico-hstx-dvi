@@ -34,7 +34,7 @@ extern "C" {
 // What has happened, with the system, item or story ship it happened to
 typedef enum {
 	STORY_DOCK = 0,  // docked, at system arg
-	STORY_ARRIVE,    // came into system arg, by jumping or launching
+	STORY_ARRIVE,    // came into system arg by jumping, a moment after
 	STORY_JUMP,      // jumped, anywhere, for counting
 	STORY_WITCH,     // fell into witchspace
 	STORY_SCOOP,     // scooped the canister holding item arg
@@ -45,6 +45,10 @@ typedef enum {
 	STORY_HULL_HIT,  // a hit got through the shields
 	STORY_SUN,       // the cabin got hot by the sun
 	STORY_NOW,       // straight after a choice, for showing what came of it
+	STORY_LAUNCH,    // launching from system arg, still docked
+	STORY_DEPART,    // out of the station at system arg, a moment after
+	STORY_APPROACH,  // came near the station at system arg
+	STORY_HERE,      // for exits only: ARRIVE or DEPART, flying in system arg
 	STORY_EVENTS
 } StoryEvent_e;
 
@@ -155,6 +159,10 @@ bool story_start(uint32_t i, uint32_t here);
 // The story going, from 0, or -1
 int32_t story_active(void);
 const StoryProgress_t* story_progress(uint32_t i);
+// For trying a story on the PC: moves story i on to a step
+void story_debug_step(uint32_t i, uint32_t step);
+// Whether an event happens at a system, given as its arg
+bool story_at_place(StoryEvent_e ev);
 // What a story's exits wait for at its step: their events, for the harness
 // to make them happen, and its systems, items and ships
 uint32_t story_waits(uint32_t i, StoryEvent_e* ev, uint32_t* arg, uint32_t max);

@@ -11,13 +11,16 @@ add_executable(hstx_dvi_defender
   ${CMAKE_CURRENT_LIST_DIR}/src/def_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_hiscore.c
   ${CMAKE_CURRENT_LIST_DIR}/src/def_attract.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/def_sound.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/def_sound_data.c
 )
 
 target_compile_definitions(hstx_dvi_defender PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
   MODE_BYTES_PER_PIXEL=1
-  # Buttons on GPIOs 6 to 11, leaving 2 to 5 for the SD card as in hstx_dvi_cpm
-  DEF_INP_GPIO_START=6
+  # Buttons, if built with GAME_BUTTONS, on GPIOs 2 to 7, clear of the MIDI
+  # synth on 8
+  DEF_INP_GPIO_START=2
 )
 
 target_link_libraries(hstx_dvi_defender

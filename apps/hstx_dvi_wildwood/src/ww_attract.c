@@ -1,4 +1,5 @@
 #include "ww_attract.h"
+#include "ww_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "ww_input.h"
 #include "ww_witch.h"
@@ -82,7 +83,7 @@ static void attract_init(void) {
 
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	ww_wait_for_frame();
 	game_fx_update();
 	return is_ww_input_play(game_input_pressed());
 }
@@ -115,17 +116,18 @@ bool ww_attract_title(void) {
 		const char s[2] = { WW_ATTRACT_TITLE[i], 0 };
 		game_text_set(&_text[i], s, 4);
 	}
-	game_text_set(&_text[8], "HAZEL THE WITCH AND THE MOON CHARM", 1);
-	game_text_set(&_text[9], "PRESS FIRE TO PLAY", 2);
+	game_text_set(&_text[8], "HAZEL THE WITCH AND THE MOON CHARM", GAME_TEXT_BIG);
+	game_text_set(&_text[9], "PRESS FIRE TO PLAY", GAME_TEXT_BIG);
 	game_text_set(&_text[10], "MAGIC FLOWERS", 1);
 	for (uint32_t i = 0; i < WW_ATTRACT_ROLL_COUNT; ++i) {
-		game_text_set(&_roll_text[i][0], _roll[i].line1, 1);
+		game_text_set(&_roll_text[i][0], _roll[i].line1, GAME_TEXT_BIG);
 		game_text_set(&_roll_text[i][1], _roll[i].line2, 1);
 	}
 	for (uint32_t i = 0; i < WW_EFFECTS; ++i) game_text_set(&_effect_texts[i], _effect_names[i], 1);
 
 	const int32_t tx = (GAME_SCREEN_W - WW_ATTRACT_TITLE_LEN * 32) >> 1;
 	const int32_t ax = 120;
+	game_music_play(WW_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < WW_ATTRACT_TITLE_FRAMES; ++frame) {
 		if (attract_frame()) return true;
 
@@ -154,7 +156,7 @@ bool ww_attract_title(void) {
 			const bool moving = r->mood != WW_MOOD_ASLEEP && r->mood != WW_MOOD_HURT;
 			ww_animal_draw_at(r->type, r->mood, ax - (ww_animal_width(r->type) >> 1), y + 36 - h, moving ? (frame >> 3) : 0, false);
 			ww_animal_draw_mood(r->mood, ax, y + 36 - h, frame + i * 16);
-			game_spr_text(&_roll_text[i][0], ax + 50, y + 12, game_pallet(i == 4 ? GAME_BLUE : GAME_YELLOW));
+			game_spr_text(&_roll_text[i][0], ax + 50, y + 6, game_pallet(i == 4 ? GAME_BLUE : GAME_YELLOW));
 			game_spr_text(&_roll_text[i][1], ax + 50, y + 24, game_pallet(GAME_WHITE));
 		}
 
@@ -189,9 +191,11 @@ bool ww_attract_hiscores(int32_t highlight) {
 		const GameHiScore_t *e = game_hiscore_get(i);
 		snprintf(rows[i], GAME_TEXT_MAX, "%-4s  %07lu  %s", game_hiscore_rank_name(i), (unsigned long)e->score, e->name);
 	}
-	game_text_set(&_text[11], "PRESS FIRE TO PLAY", 2);
+	game_text_set(&_text[11], "PRESS FIRE TO PLAY", GAME_TEXT_BIG);
 
 	const uint32_t frames = highlight >= 0 ? WW_ATTRACT_HIGHLIGHT_FRAMES : WW_ATTRACT_HISCORE_FRAMES;
+	// After putting in initials, their tune goes on
+	if (highlight < 0) game_music_play(WW_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < frames; ++frame) {
 		if (attract_frame()) return true;
 
@@ -201,7 +205,7 @@ bool ww_attract_hiscores(int32_t highlight) {
 		// Typed out a line at a time
 		int32_t n = (int32_t)frame - 30;
 		for (uint32_t i = 0; i < GAME_HISCORE_COUNT; ++i) {
-			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, 1);
+			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, GAME_TEXT_BIG);
 			n -= strlen(rows[i]);
 			const uint32_t c = (int32_t)i == highlight && ((frame >> 3) & 1) ? GAME_RED : rank_colour(i);
 			game_spr_text_centre(&_text[1 + i], 116 + i * 24, game_pallet(c));
@@ -223,15 +227,16 @@ bool ww_attract_game_over(void) {
 	char t[GAME_TEXT_MAX];
 	game_text_set(&_text[0], "NEW HIGH SCORE", 3);
 	snprintf(t, sizeof(t), "SCORE %07lu   %s PLACE", (unsigned long)score, game_hiscore_rank_name(rank));
-	game_text_set(&_text[1], t, 1);
-	game_text_set(&_text[2], "ENTER YOUR INITIALS", 2);
-	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", 1);
-	game_text_set(&_text[7], "CAST TO ENTER  TIPTOE WHEN DONE", 1);
+	game_text_set(&_text[1], t, GAME_TEXT_BIG);
+	game_text_set(&_text[2], "ENTER YOUR INITIALS", GAME_TEXT_BIG);
+	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", GAME_TEXT_BIG);
+	game_text_set(&_text[7], "CAST TO ENTER  TIPTOE WHEN DONE", GAME_TEXT_BIG);
 
 	GameInitials_t g;
 	game_initials_reset(&g);
+	game_music_play(WW_TUNE_HISCORE);
 	for (uint32_t frame = 0; frame < WW_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		ww_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();
@@ -250,7 +255,7 @@ bool ww_attract_game_over(void) {
 			game_spr_text(&_text[3 + j], (GAME_SCREEN_W >> 1) - 64 + j * 48, 220, game_pallet(c));
 		}
 		game_spr_text_centre(&_text[6], 300, game_pallet(GAME_CYAN));
-		game_spr_text_centre(&_text[7], 316, game_pallet(GAME_CYAN));
+		game_spr_text_centre(&_text[7], 322, game_pallet(GAME_CYAN));
 		draw_parade(frame, 440);
 		draw_stars(frame);
 		game_spr_end();

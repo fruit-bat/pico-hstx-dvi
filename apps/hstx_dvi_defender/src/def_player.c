@@ -1,4 +1,5 @@
 #include "def_player.h"
+#include "def_sound.h"
 #include "def_world.h"
 #include "game_render.h"
 #include "game_pallet.h"
@@ -159,6 +160,7 @@ static void fire_laser(void) {
 		l->head = 0;
 		l->tail = 0;
 		l->age = 0;
+		game_sound_play(DEF_SFX_LASER);
 		return;
 	}
 }
@@ -182,6 +184,7 @@ static void hyperspace(void) {
 	_vx = 0;
 	def_player_clear_lasers();
 	game_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), GAME_WHITE, 16, 20);
+	game_sound_play(DEF_SFX_HYPERSPACE);
 }
 
 void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8_t pressed) {
@@ -218,6 +221,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 				_y += DEF_SHIP_VY;
 			}
 			_y = game_clamp(_y, DEF_PLAY_TOP, GAME_SCREEN_H - DEF_SHIP_H - 2);
+			game_sound_hold(DEF_SFX_THRUST, _thrust);
 
 			if (_fire_timer) --_fire_timer;
 			if (!_burst && ((pressed & DEF_INP_BIT_F) || ((input & DEF_INP_BIT_F) && !_fire_timer))) {
@@ -233,6 +237,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 			if ((pressed & DEF_INP_BIT_B) && def_hud_use_smart_bomb()) {
 				def_enemy_smart_bomb();
 				game_fx_flash(DEF_SMART_FLASH);
+				game_sound_play(DEF_SFX_SMART_BOMB);
 			}
 			break;
 		}
@@ -244,6 +249,7 @@ void __not_in_flash_func(def_player_update)(uint32_t frame, uint8_t input, uint8
 					_y = DEF_SHIP_START_Y;
 					def_enemy_clear_bullets();
 					game_fx_implode(def_wrap(_x + DEF_PX(DEF_SHIP_W >> 1)), DEF_PX(_y + (DEF_SHIP_H >> 1)), GAME_WHITE, 24, 30);
+					game_sound_play(DEF_SFX_RESPAWN);
 				}
 				else {
 					_state = DEF_PLAYER_OVER;
@@ -293,6 +299,7 @@ void def_player_kill(void) {
 	const int32_t cy = DEF_PX(_y + (DEF_SHIP_H >> 1));
 	game_fx_explode(cx, cy, GAME_COLOUR_RANDOM, 64, DEF_PX(4));
 	game_fx_explode(cx, cy, GAME_WHITE, 32, DEF_PX(2));
+	game_sound_play(DEF_SFX_DEAD);
 	def_player_clear_lasers();
 	_burst = 0;
 }

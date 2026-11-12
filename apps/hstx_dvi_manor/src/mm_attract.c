@@ -1,4 +1,5 @@
 #include "mm_attract.h"
+#include "mm_sound.h"
 #include "hstx_dvi_sprite.h"
 #include "mm_input.h"
 #include "mm_game.h"
@@ -97,7 +98,7 @@ static void attract_init(void) {
 
 // Waits for the next frame. Returns true if the player wants to play.
 static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
+	mm_wait_for_frame();
 	game_fx_update();
 	return is_mm_input_play(game_input_pressed());
 }
@@ -151,16 +152,17 @@ bool mm_attract_title(void) {
 		const char s[2] = { MM_ATTRACT_TITLE[i], 0 };
 		game_text_set(&_text[i], s, 4);
 	}
-	game_text_set(&_text[13], "HAZEL AND THE LOST KITTENS", 2);
-	game_text_set(&_text[14], "PRESS JUMP TO PLAY", 2);
-	game_text_set(&_text[15], "LEFT AND RIGHT TO MOVE   JUMP   CAST", 1);
-	game_text_set(&_text[16], "UP+CAST CASTS UP  DOWN+JUMP DROPS DOWN", 1);
+	game_text_set(&_text[13], "HAZEL AND THE LOST KITTENS", GAME_TEXT_BIG);
+	game_text_set(&_text[14], "PRESS JUMP TO PLAY", GAME_TEXT_BIG);
+	game_text_set(&_text[15], "LEFT AND RIGHT TO MOVE   JUMP   CAST", GAME_TEXT_BIG);
+	game_text_set(&_text[16], "UP+CAST CASTS UP  DOWN+JUMP DROPS DOWN", GAME_TEXT_BIG);
 
 	mm_game_tour_start();
+	game_music_play(MM_TUNE_TITLE);
 	uint32_t stop = 0;
 	const int32_t tx = (GAME_SCREEN_W - MM_ATTRACT_TITLE_LEN * 32) >> 1;
 	for (uint32_t frame = 0; frame < MM_ATTRACT_TITLE_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 		if (is_mm_input_play(game_input_pressed())) return true;
 		// Drifts round the house, a few seconds at each place
 		if (frame % 100 == 99) stop = (stop + 1) % MM_ATTRACT_TOUR_STOPS;
@@ -181,8 +183,8 @@ bool mm_attract_title(void) {
 		const uint32_t cheer = (frame >> 5) & 1 ? MM_HAZEL_CHEER : MM_HAZEL_FRONT;
 		mm_gfx_draw(&mm_art_hazel[cheer], mm_pal_hazel, GAME_SCREEN_W - 104, 270, 4, 0);
 		if ((frame >> 5) & 1) game_spr_text_centre(&_text[14], 412, game_pallet(GAME_YELLOW));
-		game_spr_text_centre(&_text[15], 444, game_pallet(GAME_CYAN));
-		game_spr_text_centre(&_text[16], 458, game_pallet(GAME_CYAN));
+		game_spr_text_centre(&_text[15], 434, game_pallet(GAME_CYAN));
+		game_spr_text_centre(&_text[16], 454, game_pallet(GAME_CYAN));
 		game_spr_end();
 	}
 	return false;
@@ -190,10 +192,10 @@ bool mm_attract_title(void) {
 
 bool mm_attract_roll(void) {
 	attract_init();
-	game_text_set(&_text[0], "WHO LIVES IN THE MANOR", 2);
-	game_text_set(&_text[1], "PRESS JUMP TO PLAY", 2);
+	game_text_set(&_text[0], "WHO LIVES IN THE MANOR", GAME_TEXT_BIG);
+	game_text_set(&_text[1], "PRESS JUMP TO PLAY", GAME_TEXT_BIG);
 	for (uint32_t i = 0; i < MM_ATTRACT_ROLL_COUNT; ++i) {
-		game_text_set(&_roll_text[i][0], _roll[i].line1, 1);
+		game_text_set(&_roll_text[i][0], _roll[i].line1, GAME_TEXT_BIG);
 		game_text_set(&_roll_text[i][1], _roll[i].line2, 1);
 	}
 	const int32_t ax = 90;
@@ -212,7 +214,7 @@ bool mm_attract_roll(void) {
 			if (frame < MM_ATTRACT_ROLL_START + i * MM_ATTRACT_ROLL_GAP + MM_ATTRACT_MATERIALISE) continue;
 			const int32_t y = MM_ATTRACT_ROLL_Y + i * MM_ATTRACT_ROLL_H;
 			draw_roll_picture(_roll[i].what, ax, y + 52, frame + i * 40);
-			game_spr_text(&_roll_text[i][0], ax + 60, y + 24, game_pallet(i == MM_ROLL_KITTEN ? GAME_PINK : GAME_YELLOW));
+			game_spr_text(&_roll_text[i][0], ax + 60, y + 18, game_pallet(i == MM_ROLL_KITTEN ? GAME_PINK : GAME_YELLOW));
 			game_spr_text(&_roll_text[i][1], ax + 60, y + 38, game_pallet(GAME_WHITE));
 		}
 		if ((frame >> 5) & 1) game_spr_text_centre(&_text[1], 450, game_pallet(GAME_YELLOW));
@@ -237,9 +239,11 @@ bool mm_attract_hiscores(int32_t highlight) {
 		const GameHiScore_t *e = game_hiscore_get(i);
 		snprintf(rows[i], GAME_TEXT_MAX, "%-4s  %07lu  %s", game_hiscore_rank_name(i), (unsigned long)e->score, e->name);
 	}
-	game_text_set(&_text[11], "PRESS JUMP TO PLAY", 2);
+	game_text_set(&_text[11], "PRESS JUMP TO PLAY", GAME_TEXT_BIG);
 
 	const uint32_t frames = highlight >= 0 ? MM_ATTRACT_HIGHLIGHT_FRAMES : MM_ATTRACT_HISCORE_FRAMES;
+	// After putting in initials, their tune goes on
+	if (highlight < 0) game_music_play(MM_TUNE_TITLE);
 	for (uint32_t frame = 0; frame < frames; ++frame) {
 		if (attract_frame()) return true;
 
@@ -250,7 +254,7 @@ bool mm_attract_hiscores(int32_t highlight) {
 		// Typed out a line at a time
 		int32_t n = (int32_t)frame - 30;
 		for (uint32_t i = 0; i < GAME_HISCORE_COUNT; ++i) {
-			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, 1);
+			game_text_set_n(&_text[1 + i], rows[i], n < 0 ? 0 : n, GAME_TEXT_BIG);
 			n -= strlen(rows[i]);
 			const uint32_t c = (int32_t)i == highlight && ((frame >> 3) & 1) ? GAME_RED : rank_colour(i);
 			game_spr_text_centre(&_text[1 + i], 104 + i * 22, game_pallet(c));
@@ -271,15 +275,16 @@ bool mm_attract_game_over(void) {
 	char t[GAME_TEXT_MAX];
 	game_text_set(&_text[0], "NEW HIGH SCORE", 3);
 	snprintf(t, sizeof(t), "SCORE %07lu   %s PLACE", (unsigned long)score, game_hiscore_rank_name(rank));
-	game_text_set(&_text[1], t, 1);
-	game_text_set(&_text[2], "ENTER YOUR INITIALS", 2);
-	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", 1);
-	game_text_set(&_text[7], "CAST TO ENTER  JUMP WHEN DONE", 1);
+	game_text_set(&_text[1], t, GAME_TEXT_BIG);
+	game_text_set(&_text[2], "ENTER YOUR INITIALS", GAME_TEXT_BIG);
+	game_text_set(&_text[6], "LEFT/RIGHT OR UP/DOWN TO CHOOSE", GAME_TEXT_BIG);
+	game_text_set(&_text[7], "CAST TO ENTER  JUMP WHEN DONE", GAME_TEXT_BIG);
 
 	GameInitials_t g;
 	game_initials_reset(&g);
+	game_music_play(MM_TUNE_HISCORE);
 	for (uint32_t frame = 0; frame < MM_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		mm_wait_for_frame();
 
 		const uint8_t pressed = game_input_pressed();
 		const uint8_t input = game_input_get();
@@ -299,7 +304,7 @@ bool mm_attract_game_over(void) {
 			game_spr_text(&_text[3 + j], (GAME_SCREEN_W >> 1) - 64 + j * 48, 220, game_pallet(c));
 		}
 		game_spr_text_centre(&_text[6], 300, game_pallet(GAME_CYAN));
-		game_spr_text_centre(&_text[7], 316, game_pallet(GAME_CYAN));
+		game_spr_text_centre(&_text[7], 322, game_pallet(GAME_CYAN));
 		draw_parade(frame, 450);
 		game_spr_end();
 	}

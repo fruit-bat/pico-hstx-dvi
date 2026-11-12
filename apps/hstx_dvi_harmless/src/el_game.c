@@ -34,6 +34,7 @@
 #include "el_screen.h"
 #include "el_save.h"
 #include "el_ships.h"
+#include "el_sound.h"
 #include "el_space.h"
 #include "el_story.h"
 #include "el_trade.h"
@@ -63,6 +64,8 @@
 #define CABIN_COOL 0.1f
 #define CABIN_CHANGE 0.004f
 #define CABIN_TOO_HOT 0.85f
+// The alarm sounds with less energy than this
+#define LOW_ENERGY 0.25f
 #define HEAT_DAMAGE 0.004f
 // Hot enough for the fuel scoops, which take a tenth of a light year this often
 #define SCOOP_HEAT 0.35f
@@ -323,11 +326,22 @@ static uint32_t _page_pick, _page_frames;
 // shields this fight; there were pirates about, and the shields were low,
 // last time we looked; and the docking computer docked us
 static bool _story_witch, _patched, _pirates_near, _shields_low, _docked_by_computer;
+// The stories hear we have come in or out this long after, to see where we are
+// first; we wait to launch while a story's page about it is up; and we are
+// near the station, where a story may hear we have come
+#define STORY_AFTER (150)
+static uint32_t _story_after;
+static StoryEvent_e _story_after_ev;
+static bool _launch_waiting, _in_zone;
 // Our ship and how we have done
 static float _fore, _aft, _energy;
 static float _laser_temp;
 static float _cabin_temp;
 static uint32_t _scoop_frames;
+// Taking fuel from the sun this frame
+static bool _scooping;
+// The docking computer's music playing
+static bool _waltz;
 static bool _overheated;
 static uint32_t _laser_wait, _laser_beam;
 // The ship the targeting computer follows, or -1, and how far off the
@@ -465,6 +479,7 @@ static void start(void) {
 }
 
 static void message(const char* m);
+static void refuse(const char* m);
 
 // Back to full speed at once; a jump counting down from the overdrive is
 // called off
@@ -480,6 +495,11 @@ static void overdrive_off(void) {
 }
 
 static void set_state(State_e state) {
+	if (state != _state) {
+		if (state == STATE_LAUNCHING || state == STATE_DOCKING) sound_play(SFX_TUNNEL);
+		else if (state == STATE_HYPERSPACE) sound_play(SFX_HYPERSPACE);
+		else if (state == STATE_DEAD) sound_play(SFX_DEAD);
+	}
 	_state = state;
 	_state_frames = 0;
 	overdrive_off();
@@ -487,6 +507,7 @@ static void set_state(State_e state) {
 	_bomb_presses = _bomb_frames = 0;
 	// Docking or dying stops a countdown to hyperspace
 	if (state == STATE_DOCKING || state == STATE_DEAD) _hyper_frames = 0;
+	if (state != STATE_FLYING) _story_after = 0;
 	// The tunnels are seen ahead
 	if (state == STATE_LAUNCHING || state == STATE_DOCKING || state == STATE_HYPERSPACE) _view = VIEW_FRONT;
 }
@@ -494,6 +515,12 @@ static void set_state(State_e state) {
 static void message(const char* m) {
 	_message = m;
 	_message_frames = MESSAGE_FRAMES;
+}
+
+// A message for what can't be done, with a buzz
+static void refuse(const char* m) {
+	message(m);
+	sound_play(SFX_DENIED);
 }
 
 // Whether we are too close to something to go into hyperspace, or the
@@ -515,11 +542,11 @@ static bool mass_locked(float planet) {
 static void start_hyperspace(bool galactic) {
 	if (_hyper_frames) return;
 	if (galactic && !cmdr.galactic) {
-		message("NO GALACTIC HYPERDRIVE");
+		refuse("NO GALACTIC HYPERDRIVE");
 		return;
 	}
 	if (mass_locked(LOCK_PLANET)) {
-		message("MASS LOCKED");
+		refuse("MASS LOCKED");
 		return;
 	}
 	_hyper_galactic = galactic;
@@ -530,11 +557,11 @@ static void start_hyperspace(bool galactic) {
 	}
 	const uint32_t to = chart_selected();
 	if (to == chart_home() && !_witch) {
-		message("WE ARE HERE");
+		refuse("WE ARE HERE");
 		return;
 	}
 	if (chart_distance(to) > cmdr.fuel) {
-		message("OUT OF RANGE");
+		refuse("OUT OF RANGE");
 		return;
 	}
 	_hyper_to = to;
@@ -580,6 +607,22 @@ static void galactic_jump(void) {
 	cmdr.galactic = false;
 }
 
+// The stories hear ev in a moment
+static void story_after(StoryEvent_e ev) {
+	_story_after = STORY_AFTER;
+	_story_after_ev = ev;
+}
+
+// The stories hear, in flight, what we were waiting to tell them, once any
+// page is gone, and when we come near the station
+static void story_flying(void) {
+	if (_page_shown) return;
+	if (_story_after && --_story_after == 0) story_event(_story_after_ev, chart_home());
+	const bool in_zone = !_witch && vec_length(vec_sub(_station.pos, _me.pos)) < SAFE_ZONE * _planet_radius;
+	if (in_zone && !_in_zone) story_event(STORY_APPROACH, chart_home());
+	_in_zone = in_zone;
+}
+
 static void arrive(void) {
 	if (_hyper_galactic) {
 		galactic_jump();
@@ -609,7 +652,7 @@ static void arrive(void) {
 	companion_event(CE_HYPERSPACE, false);
 	if (cmdr.fuel < 15) companion_event(CE_LOW_FUEL, false);
 	story_event(STORY_JUMP, 0);
-	story_event(STORY_ARRIVE, chart_home());
+	story_after(STORY_ARRIVE);
 }
 
 // Saves us, if there is somewhere to, as when docked
@@ -627,7 +670,9 @@ static void save(void) {
 
 // Out through the slot, facing the way it does, which is towards the planet,
 // saving first what we bought
-static void launch(void) {
+static void launch_now(void) {
+	_launch_waiting = false;
+	_in_zone = true;
 	save();
 	frame_set(&_me, vec_add(_station.pos, vec_scale(_station.f, _station_model->radius * LAUNCH_DISTANCE)), _station.f, _station.u);
 	_speed = MAX_SPEED * 0.25f;
@@ -636,6 +681,12 @@ static void launch(void) {
 	_view = VIEW_FRONT;
 	dust_init();
 	set_state(STATE_LAUNCHING);
+}
+
+// Launches, once a story has had its say about it
+static void launch(void) {
+	story_event(STORY_LAUNCH, chart_home());
+	_launch_waiting = true;
 }
 
 // For trying docking on the PC: puts us on a run at the slot, from far
@@ -830,8 +881,8 @@ static void overdrive(void) {
 	if (!_overdrive && (_over_hold >= OVERDRIVE_WAIT || _over_ask)) {
 		_over_hold = 0;
 		_over_ask = false;
-		if (mass_locked(OVERDRIVE_LOCK_PLANET)) message("MASS LOCKED");
-		else if (!cmdr.fuel) message("NO FUEL");
+		if (mass_locked(OVERDRIVE_LOCK_PLANET)) refuse("MASS LOCKED");
+		else if (!cmdr.fuel) refuse("NO FUEL");
 		else {
 			_overdrive = true;
 			_over_fuel = 0;
@@ -841,14 +892,14 @@ static void overdrive(void) {
 	if (!_overdrive) return;
 	if (mass_locked(OVERDRIVE_LOCK_PLANET)) {
 		overdrive_off();
-		message("MASS LOCKED");
+		refuse("MASS LOCKED");
 		return;
 	}
 	if (++_over_fuel >= OVERDRIVE_FUEL_FRAMES) {
 		_over_fuel = 0;
 		if (!cmdr.fuel) {
 			overdrive_off();
-			message("NO FUEL");
+			refuse("NO FUEL");
 			return;
 		}
 		--cmdr.fuel;
@@ -860,15 +911,15 @@ static void overdrive(void) {
 // The docking computer, on or off, if we have one
 static void docking_computer(bool on) {
 	if (on && !cmdr.docking) {
-		message("NO DOCKING COMPUTER");
+		refuse("NO DOCKING COMPUTER");
 		return;
 	}
 	if (on && _witch) {
-		message("NO STATION");
+		refuse("NO STATION");
 		return;
 	}
 	if (on && _station_angry) {
-		message("DOCKING REFUSED");
+		refuse("DOCKING REFUSED");
 		return;
 	}
 	if (on == _docking || _state != STATE_FLYING) return;
@@ -978,7 +1029,7 @@ static void fly(uint8_t held) {
 	if (faster && _overdrive && _over >= 1.0f && !_hyper_tried && !_hyper_frames) {
 		if (++_hyper_hold >= HYPERDRIVE_WAIT) {
 			_hyper_tried = true;
-			if (chart_selected() == chart_home() && !_witch) message("NO HYPERSPACE COORDINATES");
+			if (chart_selected() == chart_home() && !_witch) refuse("NO HYPERSPACE COORDINATES");
 			else start_hyperspace(false);
 		}
 	}
@@ -1002,9 +1053,12 @@ static void fly(uint8_t held) {
 static void fire_missile(void) {
 	look();
 	const int32_t target = ships_nearest_ahead(looking_out() ? &_eye : &_me);
-	if (!cmdr.missiles) message("NO MISSILES");
-	else if (target < 0) message("NO TARGET");
-	else if (ships_fire_missile(&_me, (uint32_t)target)) --cmdr.missiles;
+	if (!cmdr.missiles) refuse("NO MISSILES");
+	else if (target < 0) refuse("NO TARGET");
+	else if (ships_fire_missile(&_me, (uint32_t)target)) {
+		--cmdr.missiles;
+		sound_play(SFX_MISSILE);
+	}
 }
 
 // The ECM, which blows up the missiles flying
@@ -1012,9 +1066,10 @@ static void ecm(void) {
 	if (cmdr.ecm) {
 		ships_ecm();
 		message("E.C.M.");
+		sound_play(SFX_ECM);
 	}
 	else {
-		message("NO E.C.M.");
+		refuse("NO E.C.M.");
 	}
 }
 
@@ -1106,6 +1161,7 @@ static void fire(uint8_t held, uint8_t pressed, ShipsEvents_t* ev) {
 	_laser_wait = l->every;
 	_laser_beam = LASER_SEEN;
 	_laser_temp += l->heat;
+	sound_play(SFX_LASER);
 	if (_laser_temp >= 1.0f) {
 		_laser_temp = 1.0f;
 		_overheated = true;
@@ -1132,7 +1188,7 @@ static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	const bool now = KEY_PRESSED(HID_KEY_TAB);
 	if (!(pressed & EL_INP_BOMB) && !now) return;
 	if (!cmdr.bomb) {
-		message("NO ENERGY BOMB");
+		refuse("NO ENERGY BOMB");
 		return;
 	}
 	if (!_bomb_frames) _bomb_frames = BOMB_WINDOW;
@@ -1145,6 +1201,7 @@ static void bomb(uint16_t pressed, ShipsEvents_t* ev) {
 	ships_bomb(_me.pos, BOMB_RANGE, ev);
 	_bomb_flash = BOMB_FLASH;
 	message("ENERGY BOMB USED");
+	sound_play(SFX_BOMB);
 	companion_event(CE_BOMB, false);
 }
 
@@ -1180,6 +1237,8 @@ static void move_pod(void) {
 // Hits on our shields, then on our energy once a shield is down, and what we destroyed
 static void take(const ShipsEvents_t* ev) {
 	const bool busy = ships_hostile_near(&_me, SCANNER_RANGE);
+	if (ev->fore > 0.0f || ev->aft > 0.0f) sound_play(SFX_HIT);
+	if (ev->scooped || ev->items_n) sound_play(SFX_SCOOPED);
 	// A tougher ship's shields take more
 	_fore -= ev->fore / trade_hull()->toughness;
 	_aft -= ev->aft / trade_hull()->toughness;
@@ -1280,7 +1339,8 @@ static void heat(void) {
 			story_event(STORY_SUN, 0);
 		}
 	}
-	if (cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX) {
+	_scooping = cmdr.scoops && h > SCOOP_HEAT && _speed > 0.0f && cmdr.fuel < GALAXY_FUEL_MAX;
+	if (_scooping) {
 		if (++_scoop_frames >= SCOOP_FRAMES) {
 			_scoop_frames = 0;
 			++cmdr.fuel;
@@ -1342,6 +1402,13 @@ void game_debug_target(void) {
 	trade_max_equipment();
 	const Vec3_t off = vec_add(vec_scale(_me.r, 220.0f), vec_scale(_me.u, 120.0f));
 	ships_debug_place(0, "SIDEWINDER", vec_add(_me.pos, vec_add(vec_scale(_me.f, 3000.0f), off)), vec_scale(_me.f, -1.0f), _me.u, &w);
+}
+
+// For trying a story's launch on the PC: a cabin, nobody aboard, and the
+// Thargoid going home, at the step where Quill knocks as we launch
+void game_debug_quill(void) {
+	cmdr.cabin = true;
+	if (story_start(3, chart_home())) story_debug_step(3, 3);
 }
 
 // For trying the stories on the PC: a cabin and Pip aboard, and story i
@@ -1700,7 +1767,7 @@ static bool next_state(void) {
 			if (_state_frames >= TUNNEL_FRAMES) {
 				set_state(STATE_FLYING);
 				companion_event(CE_LAUNCH, false);
-				story_event(STORY_ARRIVE, chart_home());
+				story_after(STORY_DEPART);
 			}
 			break;
 		case STATE_DOCKING:
@@ -1756,8 +1823,19 @@ static void load(const Save_t* s) {
 // With nothing pressed for this long, the commanders go back to the title
 #define COMMANDERS_WAIT (30 * 60)
 
-// The list of commanders: the slot, name, where and cash, and then the rating
+// The list of commanders: the slot, name, where and cash, and then the rating,
+// and after the widest, past a gap, CLEAR, or NO and YES when asking
 #define SLOTS_RATING 35
+#define SLOTS_GAP 5
+#define SLOTS_YES 7
+#define SLOTS_BUTTONS (SLOTS_YES + 3)
+
+// On the commanders: on one, on its CLEAR, or asking whether to clear it
+typedef enum {
+	ON_COMMANDER = 0,
+	ON_CLEAR,
+	ON_ASKING
+} SlotOn_e;
 
 // The letters a name is made of; a space ends it
 static const char _letters[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -1830,8 +1908,10 @@ static void enter_name(void) {
 
 // When there is somewhere to save, picks which commander to play: fire plays
 // the one in a slot, or a new one if it is empty, and select starts a new one.
-// Start shows the options, as in the game. Returns false if the game is ended
-// from the options, or nothing is pressed for a while.
+// Right goes to a commander's CLEAR, where fire asks whether to delete it, NO
+// first; up and down go on to the others' CLEARs. Start shows the options, as
+// in the game. Returns false if the game is ended from the options, or
+// nothing is pressed for a while.
 static bool choose_commander(void) {
 	_slot = -1;
 	if (!save_ready()) return true;
@@ -1840,6 +1920,8 @@ static bool choose_commander(void) {
 	for (uint32_t i = 0; i < SAVE_SLOTS; ++i) used[i] = save_read(i, &saves[i]);
 	uint32_t pick = 0;
 	uint32_t idle = 0;
+	SlotOn_e on = ON_COMMANDER;
+	bool yes = false;
 	for (;;) {
 		const uint16_t pressed = game_input_pressed();
 		idle = game_input_get() ? 0 : idle + 1;
@@ -1850,10 +1932,47 @@ static bool choose_commander(void) {
 		if (options_shown()) {
 			if (options_input(pressed)) return false;
 		}
+		else if (on == ON_ASKING) {
+			if (pressed & (EL_INP_LEFT | EL_INP_RIGHT)) yes = !yes;
+			if (pressed & EL_INP_A) {
+				if (yes && save_delete(pick)) used[pick] = false;
+				on = used[pick] ? ON_CLEAR : ON_COMMANDER;
+			}
+			// Anything else calls it off
+			else if (pressed & (EL_INP_UP | EL_INP_DOWN | EL_INP_B | EL_INP_SELECT | EL_INP_START)) {
+				on = ON_CLEAR;
+			}
+		}
+		else if (on == ON_CLEAR) {
+			if (pressed & EL_INP_LEFT) on = ON_COMMANDER;
+			if (pressed & EL_INP_A) {
+				on = ON_ASKING;
+				yes = false;
+			}
+			// On to the next or last commander there is, if any
+			const uint32_t step = (pressed & EL_INP_DOWN) ? 1 : (pressed & EL_INP_UP) ? SAVE_SLOTS - 1 : 0;
+			if (step) {
+				uint32_t next = (pick + step) % SAVE_SLOTS;
+				while (!used[next]) next = (next + step) % SAVE_SLOTS;
+				pick = next;
+			}
+			if (pressed & EL_INP_START) {
+				on = ON_COMMANDER;
+				options_open(true);
+			}
+		}
 		else {
 			if (pressed & EL_INP_START) options_open(true);
 			if (pressed & EL_INP_DOWN) pick = (pick + 1) % SAVE_SLOTS;
 			if (pressed & EL_INP_UP) pick = (pick + SAVE_SLOTS - 1) % SAVE_SLOTS;
+			if ((pressed & EL_INP_RIGHT) && used[pick]) on = ON_CLEAR;
+			// On a keyboard, Backspace asks straight away
+			for (char k = game_key_char(); k; k = game_key_char()) {
+				if (k == '\b' && used[pick]) {
+					on = ON_ASKING;
+					yes = false;
+				}
+			}
 			if (pressed & (EL_INP_A | EL_INP_SELECT)) {
 				_slot = (int32_t)pick;
 				if ((pressed & EL_INP_A) && used[pick]) load(&saves[pick]);
@@ -1872,18 +1991,34 @@ static bool choose_commander(void) {
 		}
 		char line[GAME_TEXT_MAX + 1];
 		const int32_t top = VIEW_TOP + 40;
-		// Centred on the widest
+		// Centred on the widest, with the buttons when there are commanders
 		uint32_t widest = 8;
+		bool any = false;
 		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
 			const uint32_t w = used[i] ? SLOTS_RATING + (uint32_t)strlen(rating(saves[i].kills)) : 8;
 			if (w > widest) widest = w;
+			any |= used[i];
 		}
-		const int32_t x = (GAME_SCREEN_W - 8 * (int32_t)widest) / 2;
+		const uint32_t across = widest + (any ? SLOTS_GAP + SLOTS_BUTTONS : 0);
+		const int32_t x = (GAME_SCREEN_W - 8 * (int32_t)across) / 2;
+		const int32_t buttons = x + 8 * (int32_t)(widest + SLOTS_GAP);
 		for (uint32_t i = 0; i < SAVE_SLOTS; ++i) {
-			const uint32_t c = i == pick ? GAME_YELLOW : GAME_WHITE;
+			const uint32_t c = i == pick && on == ON_COMMANDER ? GAME_YELLOW : GAME_WHITE;
 			const int32_t y = top + 24 * (int32_t)i;
-			if (i == pick) screen_select(x, y, 8 * (int32_t)widest);
+			if (i == pick && on == ON_COMMANDER) screen_select(x, y, 8 * (int32_t)widest);
+			if (i == pick && on == ON_ASKING) {
+				const Save_t* sv = &saves[i];
+				snprintf(line, sizeof(line), "%u  CLEAR %s?", (unsigned)(i + 1), sv->name);
+				screen_text(x, y, line, GAME_WHITE, false);
+				screen_select(yes ? buttons + 8 * SLOTS_YES : buttons, y, yes ? 24 : 16);
+				screen_text(buttons, y, "NO", yes ? GAME_WHITE : GAME_YELLOW, false);
+				screen_text(buttons + 8 * SLOTS_YES, y, "YES", yes ? GAME_RED : GAME_WHITE, false);
+				continue;
+			}
 			if (used[i]) {
+				const bool there = i == pick && on == ON_CLEAR;
+				if (there) screen_select(buttons, y, 8 * 5);
+				screen_text(buttons, y, "CLEAR", there ? GAME_RED : GAME_GREY, false);
 				const Save_t* sv = &saves[i];
 				// Where it was saved, if in this galaxy
 				const char* at = sv->galaxy == chart_galaxy() ? chart_system(sv->home)->name : "";
@@ -1897,8 +2032,18 @@ static bool choose_commander(void) {
 				screen_text(x, y, line, c, false);
 			}
 		}
-		screen_text_centre(VIEW_BOTTOM - 40, "FIRE PLAYS", GAME_CYAN, false);
-		screen_text_centre(VIEW_BOTTOM - 24, "SELECT FOR A NEW COMMANDER", GAME_CYAN, false);
+		if (on == ON_ASKING) {
+			screen_text_centre(VIEW_BOTTOM - 40, "THE COMMANDER WILL BE GONE FOR GOOD", GAME_CYAN, false);
+			screen_text_centre(VIEW_BOTTOM - 24, "LEFT AND RIGHT CHOOSE, FIRE TAKES IT", GAME_CYAN, false);
+		}
+		else if (on == ON_CLEAR) {
+			screen_text_centre(VIEW_BOTTOM - 40, "FIRE TO CLEAR THIS COMMANDER", GAME_CYAN, false);
+			screen_text_centre(VIEW_BOTTOM - 24, "LEFT GOES BACK", GAME_CYAN, false);
+		}
+		else {
+			screen_text_centre(VIEW_BOTTOM - 40, used[pick] ? "FIRE PLAYS, RIGHT TO CLEAR" : "FIRE PLAYS", GAME_CYAN, false);
+			screen_text_centre(VIEW_BOTTOM - 24, "SELECT FOR A NEW COMMANDER", GAME_CYAN, false);
+		}
 		screen_end("COMMANDERS", "COMMANDERS");
 		++_frame;
 	}
@@ -2026,6 +2171,7 @@ static void page_input(uint16_t pressed) {
 	if (_page.choices) {
 		if (pressed & (EL_INP_UP | EL_INP_DOWN)) _page_pick = (_page_pick + 1) % _page.choices;
 		if ((pressed & EL_INP_A) && _page.can[_page_pick]) {
+			sound_play(SFX_CHOOSE);
 			story_choose(_page_pick);
 			_page_frames = 0;
 			_page_fire = true;
@@ -2161,6 +2307,8 @@ static void draw_log(void) {
 void game_play(void) {
 	start();
 	if (!choose_commander()) return;
+	music_stop(FADE_SLOW);
+	_waltz = false;
 	for (;;) {
 		uint16_t pressed = game_input_pressed() | _debug_pressed;
 		_debug_pressed = 0;
@@ -2170,6 +2318,7 @@ void game_play(void) {
 		const bool was_page = _page_shown;
 		_page_shown = !options_shown() && story_page(&_page);
 		if (_page_shown && !was_page) {
+			sound_play(SFX_PAGE);
 			_page_frames = 0;
 			_page_pick = 0;
 		}
@@ -2229,10 +2378,15 @@ void game_play(void) {
 					else if (_view == VIEW_EQUIPMENT) m = trade_equipment_input(pressed, chart_system(chart_home()));
 				else if (_view == VIEW_SHIPYARD) m = trade_shipyard_input(pressed, chart_system(chart_home()));
 					else move_cursor(held);
-					if (m) message(m);
+					if (m) {
+						message(m);
+						sound_play(SFX_CHOOSE);
+					}
 					chart_set_fuel(cmdr.fuel);
 					// Only from the status, so not by mistake on the charts
 					if ((pressed & EL_INP_A) && _view == VIEW_FRONT) launch();
+					// A page about launching is up next time round, if there is one
+					else if (_launch_waiting && !_page_shown && !story_page(&_page)) launch_now();
 					break;
 				}
 				case STATE_FLYING:
@@ -2241,14 +2395,24 @@ void game_play(void) {
 					if ((pressed & EL_INP_A) && (held & EL_INP_B) && _view == VIEW_GALAXY) start_hyperspace(true);
 					if (_hyper_frames && --_hyper_frames == 0) {
 						// Still clear of everything at the end of the countdown
-						if (mass_locked(LOCK_PLANET)) message("MASS LOCKED");
+						if (mass_locked(LOCK_PLANET)) refuse("MASS LOCKED");
 						else set_state(STATE_HYPERSPACE);
 					}
+					else if (_hyper_frames && _hyper_frames % 60 == 0) {
+						sound_play(SFX_COUNT);
+					}
+					story_flying();
 					fire(held, pressed, &ev);
 					bomb(pressed, &ev);
 					station_attack(&ev);
 					fly(held);
 					heat();
+					// The alarms and the engines, while they are so
+					sound_hold(SFX_INCOMING, ships_missile_coming());
+					sound_hold(SFX_LOW_ENERGY, _energy < LOW_ENERGY);
+					sound_hold(SFX_HEAT, _cabin_temp > CABIN_TOO_HOT);
+					sound_hold(SFX_SCOOPING, _scooping);
+					sound_hold_level(SFX_OVERDRIVE, _overdrive, 0.5f + 0.5f * _over);
 					break;
 				case STATE_DEAD:
 					_speed = 0.0f;
@@ -2263,6 +2427,12 @@ void game_play(void) {
 			}
 			move_world(&ev);
 			if (_state == STATE_FLYING) take(&ev);
+			if (ships_explosions()) sound_play(SFX_EXPLOSION);
+			// The docking computer flies to music, which fades as we go in
+			const bool waltz = _docking && _state == STATE_FLYING;
+			if (waltz && !_waltz) music_play(TUNE_DOCKING);
+			else if (!waltz && _waltz) music_stop(FADE_SLOW);
+			_waltz = waltz;
 			if (next_state()) return;
 		}
 

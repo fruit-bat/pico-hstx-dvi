@@ -6,6 +6,7 @@
 #include "el_screen.h"
 #include "hstx_dvi_row_fifo.h"
 #include "el_save.h"
+#include "el_sound.h"
 #include "game_pallet.h"
 #include <stdio.h>
 
@@ -121,6 +122,7 @@ void screen_end(const char* title, const char* label) {
 	(void)label;
 #endif
 	++_frame;
+	sound_frame();
 	draw_frame_end();
 	hstx_dvi_sprite_wait_for_frame();
 }

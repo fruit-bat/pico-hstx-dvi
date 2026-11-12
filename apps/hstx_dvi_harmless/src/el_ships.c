@@ -363,7 +363,17 @@ void ships_debug_canister(Vec3_t pos) {
 	new_canister(pos, (Vec3_t){ 0.0f, 0.0f, 0.0f }, false);
 }
 
+// Explosions since the game last asked, for their sound
+static uint32_t _exploded;
+
+uint32_t ships_explosions(void) {
+	const uint32_t n = _exploded;
+	_exploded = 0;
+	return n;
+}
+
 static void explode(Vec3_t pos, float size) {
+	++_exploded;
 	Explosion_t* e = &_explosions[0];
 	for (uint32_t i = 0; i < EXPLOSIONS; ++i) {
 		if (!_explosions[i].on) {
@@ -861,6 +871,13 @@ void ships_ecm(void) {
 		explode(_missiles[i].fr.pos, model_missile.radius * 2.0f);
 		_missiles[i].on = false;
 	}
+}
+
+bool ships_missile_coming(void) {
+	for (uint32_t i = 0; i < MISSILES; ++i) {
+		if (_missiles[i].on && _missiles[i].target < 0) return true;
+	}
+	return false;
 }
 
 bool ships_hostile_near(const Frame_t* me, float range) {

@@ -49,11 +49,20 @@ void game_input_init(uint32_t first, uint32_t count, const uint16_t *pad_map) {
 
 void game_input_init_pad(uint32_t first, uint32_t count, const uint16_t *pad_map, uint32_t pad_count) {
 #ifdef GAME_BUTTONS
+#ifdef GAME_HOST
+	// On the PC the buttons are pretend, so a scenario can press a pad's too
+	if (pad_count > count) count = pad_count;
+#endif
 	_first = first;
 	_mask = (1u << count) - 1;
+#ifdef GAME_MIDI
+	// The MIDI synth's, so no button's
+	if (GAME_MIDI_TX_GPIO >= first && GAME_MIDI_TX_GPIO < first + count) _mask &= ~(1u << (GAME_MIDI_TX_GPIO - first));
+#endif
 	for(uint i = 0; i < count; ++i) {
 		// Set the GPIO pin to input, with a pull up resistor
 		const uint32_t gpio = first + i;
+		if (!(_mask & (1u << i))) continue;
 		gpio_init(gpio);
 		gpio_set_dir(gpio, GPIO_IN);
 		gpio_pull_up(gpio);

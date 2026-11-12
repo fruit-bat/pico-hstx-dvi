@@ -8,6 +8,7 @@
 #include "el_input.h"
 #include "el_save.h"
 #include "el_screen.h"
+#include "el_sound.h"
 #include "el_trade.h"
 #include "game_pallet.h"
 #include <stdio.h>
@@ -19,6 +20,8 @@ typedef enum {
 	OPTION_HUD,
 	OPTION_SCREEN,
 	OPTION_LENS,
+	OPTION_MUSIC,
+	OPTION_SOUND,
 	OPTION_DOCK,
 	// For trying things out, until the game is finished
 	OPTION_MAX_EQUIP,
@@ -43,6 +46,8 @@ typedef enum {
 static bool _shown = false;
 static bool _in_game = false;
 static uint32_t _option = 0;
+// The sound to try, in the sound test
+static uint32_t _sound = 0;
 // Whether the equipment was fitted since they were opened
 static bool _fitted = false;
 // Whether the docking computer was asked for
@@ -51,10 +56,16 @@ static bool _dock = false;
 static bool _witch = false;
 static GameText_t _text[2][OPTIONS + 1];
 
+// Hidden, and the sound test stopped
+static void hide(void) {
+	_shown = false;
+	sound_test_stop();
+}
+
 // How many there are: the docking computer, the equipment and ending the
 // game are only there in one
 static uint32_t count(void) {
-	return _in_game ? OPTIONS : OPTION_LENS + 1;
+	return _in_game ? OPTIONS : OPTION_SOUND + 1;
 }
 
 void options_open(bool in_game) {
@@ -66,7 +77,7 @@ void options_open(bool in_game) {
 }
 
 void options_close(void) {
-	_shown = false;
+	hide();
 }
 
 bool options_dock(void) {
@@ -87,11 +98,13 @@ bool options_shown(void) {
 
 bool options_input(uint16_t pressed) {
 	if (pressed & EL_INP_START) {
-		_shown = false;
+		hide();
 		save_settings();
 		return false;
 	}
 	const uint32_t n = count();
+	// Away from the sound test, it stops
+	if ((pressed & (EL_INP_UP | EL_INP_DOWN)) && _option == OPTION_SOUND) sound_test_stop();
 	if (pressed & EL_INP_DOWN) _option = (_option + 1) % n;
 	if (pressed & EL_INP_UP) _option = (_option + n - 1) % n;
 	const int32_t change = (pressed & EL_INP_RIGHT ? 1 : 0) - (pressed & EL_INP_LEFT ? 1 : 0);
@@ -114,11 +127,21 @@ bool options_input(uint16_t pressed) {
 		case OPTION_LENS:
 			if (change) draw_set_lens((Lens_e)((draw_lens + LENS_COUNT + change) % LENS_COUNT));
 			break;
+		case OPTION_MUSIC:
+			if (change) sound_set_music(!sound_music());
+			break;
+		case OPTION_SOUND:
+			if (change) {
+				sound_test_stop();
+				_sound = (_sound + SOUND_TESTS + (uint32_t)(int32_t)change) % SOUND_TESTS;
+			}
+			if (pressed & EL_INP_A) sound_test(_sound);
+			break;
 		case OPTION_DOCK:
 			// It goes back to the game, to see it
 			if (pressed & EL_INP_A) {
 				_dock = true;
-				_shown = false;
+				hide();
 				save_settings();
 			}
 			break;
@@ -137,7 +160,7 @@ bool options_input(uint16_t pressed) {
 		default:
 			// The game ends
 			if (pressed & EL_INP_A) {
-				_shown = false;
+				hide();
 				return true;
 			}
 			break;
@@ -176,6 +199,8 @@ void options_draw(void) {
 			case OPTION_HUD: line(s, sizeof(s), "DASHBOARD", draw_hud_filled ? "FILLED" : "LINES", true); break;
 			case OPTION_SCREEN: line(s, sizeof(s), "SCREEN", draw_aspect == ASPECT_16_9 ? "16:9" : "4:3", true); break;
 			case OPTION_LENS: line(s, sizeof(s), "LENS", lens_names[draw_lens], true); break;
+			case OPTION_MUSIC: line(s, sizeof(s), "MUSIC", sound_music() ? "ON" : "OFF", true); break;
+			case OPTION_SOUND: line(s, sizeof(s), "SOUND", sound_test_names[_sound], true); break;
 			case OPTION_DOCK: line(s, sizeof(s), "DOCKING", "(FIRE)", false); break;
 			case OPTION_WITCH: line(s, sizeof(s), "WITCHSPACE", _witch ? "NEXT JUMP" : "(FIRE)", false); break;
 			case OPTION_MAX_EQUIP: line(s, sizeof(s), "MAX EQUIP", _fitted ? "FITTED" : "(FIRE)", false); break;

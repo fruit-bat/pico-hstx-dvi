@@ -25,6 +25,15 @@ int main(void)
 
     hstx_dvi_vt_init_all();
 
+    // The font chosen when built
+    if (!hstx_dvi_vt_set_font(hstx_dvi_font_find(VT_FONT), VT_SCALE_X, VT_SCALE_Y)) {
+        printf("Can't use font %s x%d x%d\n", VT_FONT, VT_SCALE_X, VT_SCALE_Y);
+    }
+#ifdef VT_FONT_AUTO
+    // The host asking for a size picks the font
+    hstx_dvi_vt_set_font_auto(true);
+#endif
+
     sleep_ms(2000); // Allow time for initialization
 
     vt_emu_t* e = hstx_dvi_vt_emu_get();

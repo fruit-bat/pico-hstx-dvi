@@ -5,6 +5,7 @@
 // when start is.
 
 #include "el_attract.h"
+#include "el_sound.h"
 #include "el_chart.h"
 #include "el_draw.h"
 #include "el_hud.h"
@@ -223,6 +224,7 @@ static void show_options(uint32_t frame) {
 }
 
 void attract_run(void) {
+	music_play(TUNE_TITLE);
 	// A game may have ended in witchspace
 	dust_strange = false;
 	// Start with the first galaxy

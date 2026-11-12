@@ -1,4 +1,5 @@
 #include "def_hud.h"
+#include "def_sound.h"
 #include "game_render.h"
 #include "game_pallet.h"
 #include "def_player.h"
@@ -44,6 +45,7 @@ void __not_in_flash_func(def_hud_add_score)(uint32_t points) {
 		_next_bonus += DEF_HUD_BONUS;
 		if (_lives < DEF_HUD_MAX) ++_lives;
 		if (_smart < DEF_HUD_MAX) ++_smart;
+		game_sound_play(DEF_SFX_EXTRA_LIFE);
 	}
 }
 
@@ -78,7 +80,7 @@ bool def_hud_use_smart_bomb(void) {
 void def_hud_draw(uint32_t wave, bool in_game) {
 	char t[GAME_TEXT_MAX];
 	snprintf(t, sizeof(t), "%7lu", (unsigned long)(_score % 10000000));
-	game_text_set(&_score_text, t, 2);
+	game_text_set(&_score_text, t, GAME_TEXT_BIG);
 	game_spr_text(&_score_text, 16, 6, game_pallet(GAME_CYAN));
 
 	const uint32_t top = game_hiscore_top();

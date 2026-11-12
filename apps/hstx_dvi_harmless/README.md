@@ -202,8 +202,8 @@ A and B are a NES pad's. On a SNES pad, B (bottom) is A, fire, and Y (left) is B
 - The display is 640 by 480, 4:3, and a 16:9 screen stretches it across. So that circles stay round,
   everything is drawn a quarter narrower for 16:9, which it starts with; 4:3 is for older screens that show it as it is.
 
-A NES or SNES pad works when built with `GAME_NESPAD`, and buttons on GPIOs 4 to 11, each to ground,
-in the order left, right, up, down, A, B, select and start, unless built with `GAME_BUTTONS` off.
+A NES or SNES pad works, unless built with `GAME_NESPAD` off, and built with `GAME_BUTTONS` on, buttons on
+GPIOs 4 to 11, each to ground, in the order left, right, up, down, A, B, select and start.
 
 ## A keyboard
 

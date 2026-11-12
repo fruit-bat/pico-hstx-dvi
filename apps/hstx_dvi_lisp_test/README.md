@@ -6,6 +6,9 @@ Type at a USB serial terminal; output appears on the DVI display. `init.lisp` (l
 `defun`, `map`, `filter`, ...) is built in and loaded at start up. `(quit)` starts a fresh
 interpreter.
 
+The display is 80x30, in the Terminus 8x16 font. `cmake -DLISP_VT_FONT=8x8 ..` gives 80x60 in the
+8x8 font instead; any font of the top README's "Fonts and sizes" will do.
+
 Notes
 - The interpreter (about 80K) is allocated on the heap and the REPL runs on its own 64K stack
   in main RAM, because core 0's stack is a 4K scratch bank shared with the DVI interrupt code.

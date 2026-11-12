@@ -43,12 +43,12 @@ add_subdirectory(${PICO_FOLDER}/pico-hstx-dvi "${CMAKE_CURRENT_BINARY_DIR}/pico-
 include(${PICO_FOLDER}/pimoroni-pico/drivers/fatfs/fatfs.cmake)
 include(${PICO_FOLDER}/pimoroni-pico/drivers/sdcard/sdcard.cmake)
 
-# Buttons on GPIOs for the games, each to ground. Turned off, the GPIOs are
-# left free for other things, and only a pad is read, e.g. cmake -DGAME_BUTTONS=OFF ..
-option(GAME_BUTTONS "Read buttons on GPIOs in the games" ON)
+# Buttons on GPIOs for the games, each to ground, as well as the pads, e.g.
+# cmake -DGAME_BUTTONS=ON .. Off, the GPIOs are left free for other things.
+option(GAME_BUTTONS "Read buttons on GPIOs in the games" OFF)
 
-# NES or SNES gamepads for the games, as well as the buttons, e.g. cmake -DGAME_NESPAD=ON ..
-option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" OFF)
+# NES or SNES gamepads for the games, using pico-nespad, e.g. cmake -DGAME_NESPAD=OFF ..
+option(GAME_NESPAD "Read NES or SNES gamepads in the games, using pico-nespad" ON)
 if (GAME_NESPAD)
   add_subdirectory(${PICO_FOLDER}/pico-nespad "${CMAKE_CURRENT_BINARY_DIR}/pico-nespad")
 endif()
@@ -69,6 +69,10 @@ option(GAME_USBKBD "Read a USB keyboard in the games, using pico-hid-host" OFF)
 if (GAME_USBKBD)
   add_subdirectory(${PICO_FOLDER}/pico-hid-host "${CMAKE_CURRENT_BINARY_DIR}/pico-hid-host")
 endif()
+
+# Music and sounds for the games, as MIDI to a General MIDI synth such as a
+# SAM2695 or a VS1053b, on UART1's TX, GPIO 8, which is then no button's
+option(GAME_MIDI "Play the games' music and sounds on a MIDI synth on GPIO 8" ON)
 
 add_subdirectory(common/game "${CMAKE_CURRENT_BINARY_DIR}/game_common")
 

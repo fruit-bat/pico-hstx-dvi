@@ -14,7 +14,7 @@ Hazel the witch has followed five lost kittens into the old manor, and gets past
 
 ## Controls
 
-Buttons connect the GPIO to ground (internal pull ups are used).
+Built with `-DGAME_BUTTONS=ON`, buttons connect the GPIO to ground (internal pull ups are used).
 
 | GPIO | Button |
 |------|--------|
@@ -32,8 +32,9 @@ Buttons connect the GPIO to ground (internal pull ups are used).
 
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `MM_INP_GPIO_START` in CMakeLists.txt.
+GPIO 8 is the MIDI synth's unless built with `-DGAME_MIDI=OFF`, so up is then only on a pad.
 
-Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as well: D-pad to move, A to jump and B to cast.
+NES or SNES gamepads work as well (see the top README): D-pad to move, A to jump and B to cast.
 
 ## The game
 
@@ -59,6 +60,16 @@ Built with `-DGAME_NESPAD=ON` (see the top README), NES or SNES gamepads work as
 
 The title with a tour of the house, who lives there and what to do about them, a demo game played by the Pico,
 and the high score table with Hazel and the kittens walking along the bottom.
+
+## Music and sounds
+
+With a General MIDI synth such as a SAM2695 on GPIO 8 (see the top README), there are spooky
+waltzes: a harpsichord, tuba and pizzicato tune on the title and high scores, a celesta and timpani
+as each night starts, a quiet celesta and choir tune while exploring, a few bars in a major key when
+the kittens are safe, a sad trombone at the end of a game and a skeleton's dance on the xylophone
+while putting in initials. Jumping, floating, spells, the spooks, the kittens, everything picked up
+and the puzzles all have sounds, in the demo game too. They are in `src/mm_sound_data.c`, and
+`../common/tools/render_sounds.sh` renders each to a MIDI file to listen to.
 
 ## How it is drawn
 

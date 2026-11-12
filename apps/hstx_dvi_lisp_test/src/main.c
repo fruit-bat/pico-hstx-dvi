@@ -45,6 +45,9 @@ int main(void)
     app_led_on();
 
     hstx_dvi_vt_init_all();
+    // The font chosen when built (CMakeLists.txt), else the 8x8 font if it
+    // isn't built
+    hstx_dvi_vt_set_font(hstx_dvi_font_find(VT_FONT), 1, 1);
 
     _emu = hstx_dvi_vt_emu_get();
 

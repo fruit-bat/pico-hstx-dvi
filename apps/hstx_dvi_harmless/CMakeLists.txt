@@ -10,6 +10,8 @@ add_executable(hstx_dvi_harmless
   ${CMAKE_CURRENT_LIST_DIR}/src/el_save.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_screen.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_ships.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_sound.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/el_sound_data.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_space.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_story.c
   ${CMAKE_CURRENT_LIST_DIR}/src/el_story_data.c

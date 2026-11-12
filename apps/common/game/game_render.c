@@ -295,16 +295,21 @@ void game_text_set_n(GameText_t* t, const char* s, uint32_t n, uint32_t scale) {
 	t->grid.w = len;
 	t->grid.s = t->s;
 	t->grid.font = (uint8_t*)font_8x8;
-	t->scale = scale ? scale : 1;
 	t->smooth = false;
+	if (scale == GAME_TEXT_BIG) {
+		t->scale = 2;
+#if MODE_BYTES_PER_PIXEL == 1
+		if (!_smooth_font_made) make_smooth_font();
+		t->smooth = true;
+#endif
+	}
+	else {
+		t->scale = scale ? scale : 1;
+	}
 }
 
 void game_text_set_smooth(GameText_t* t, const char* s) {
-	game_text_set(t, s, 2);
-#if MODE_BYTES_PER_PIXEL == 1
-	if (!_smooth_font_made) make_smooth_font();
-	t->smooth = true;
-#endif
+	game_text_set(t, s, GAME_TEXT_BIG);
 }
 
 void game_text_set(GameText_t* t, const char* s, uint32_t scale) {

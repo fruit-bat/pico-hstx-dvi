@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 # Run a program with its screen on the Pico terminal and its keyboard here.
-#   ./pico_term.py [-p /dev/ttyACM0] [-- program args...]   (default: your shell)
+#   ./pico_term.py [-p /dev/ttyACM0] [-s COLSxROWS] [-- program args...]   (default: your shell)
 # Output goes to the Pico; this keyboard and the Pico's replies go to the program.
+# -s asks the Pico for a size, e.g. -s 80x24, which it may pick a font for.
 # Ctrl-] quits.
 import fcntl, os, pty, re, select, struct, sys, termios, time, tty
 
 args = sys.argv[1:]
-port = "/dev/ttyACM0"
-if args[:1] == ["-p"]:
-    port, args = args[1], args[2:]
+port, size = "/dev/ttyACM0", None
+while args[:1] in (["-p"], ["-s"]):
+    if args[0] == "-p":
+        port = args[1]
+    else:
+        size = re.fullmatch(r"(\d+)x(\d+)", args[1])
+        if not size:
+            raise SystemExit("-s wants COLSxROWS, e.g. 80x24")
+    args = args[2:]
 if args[:1] == ["--"]:
     args = args[1:]
 cmd = args or [os.environ.get("SHELL", "/bin/sh")]
@@ -16,6 +23,9 @@ cmd = args or [os.environ.get("SHELL", "/bin/sh")]
 ser = os.open(port, os.O_RDWR | os.O_NOCTTY)
 tty.setraw(ser)  # No echo (it would bounce replies back to the screen) and no CRLF translation
 
+# Ask for a size, if given: ESC [ 8 ; rows ; cols t
+if size:
+    os.write(ser, b"\x1b[8;%d;%dt" % (int(size[2]), int(size[1])))
 # Ask the Pico for its size: ESC [ 18 t -> ESC [ 8 ; rows ; cols t
 termios.tcflush(ser, termios.TCIFLUSH)
 os.write(ser, b"\x1b[18t")
