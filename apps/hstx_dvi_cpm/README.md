@@ -35,7 +35,7 @@ tio /dev/ttyACM0             # or picocom -q /dev/ttyACM0, screen /dev/ttyACM0..
 ```
 
 The screen is 80x30, in the Terminus 8x16 font. For 80x60 in the 8x8 font, build with
-`cmake -DCPM_VT_FONT=8x8 ..` (any font in [Fonts and sizes](../../README.md#fonts-and-sizes) will do).
+`cmake -DCPM_VT_FONT=8x8 ..` (any font in [Fonts and sizes](../hstx_dvi_vt_test/README.md#fonts-and-sizes) will do).
 
 ## Settings screen
 

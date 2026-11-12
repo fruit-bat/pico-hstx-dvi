@@ -30,93 +30,34 @@ The games play music and sounds as MIDI, at 31250 baud on GPIO 8 (UART1's TX), t
 General MIDI synth such as a SAM2695, which is then no button's. This can be left out with
 `-DGAME_MIDI=OFF`.
 
-## CP/M (hstx_dvi_cpm)
+## The apps
 
-`hstx_dvi_cpm` runs CP/M 2.2 on the DVI screen, with its drives on an SD card, its reader and punch
-(`RDR:`, `PUN:`) on UART1, and a settings screen (**Ctrl-\\**) for the Z80's speed, its registers,
-code and memory (which can be edited), and stepping it. See
-[`apps/hstx_dvi_cpm/README.md`](apps/hstx_dvi_cpm/README.md) for what it needs, the wiring, the SD
-card's layout and the keys.
+Each app has a README saying what it shows, what it needs and how to use it:
 
-## Using the virtual terminal (hstx_dvi_vt_test)
+| App | What it is |
+|-----|------------|
+| [`hstx_dvi_hello_world`](apps/hstx_dvi_hello_world/README.md) | A picture from a frame buffer: the simplest use of the library |
+| [`hstx_dvi_row_fifo_test`](apps/hstx_dvi_row_fifo_test/README.md) | The screen drawn a row at a time through the row FIFO, recovering when it runs dry |
+| [`hstx_dvi_text_test`](apps/hstx_dvi_text_test/README.md) | An 80x60 text grid with colours and attributes |
+| [`hstx_dvi_tmt_test`](apps/hstx_dvi_tmt_test/README.md) | A terminal using libtmt |
+| [`hstx_dvi_vt_test`](apps/hstx_dvi_vt_test/README.md) | A terminal on the screen for programs run on the PC (vim, htop...), with a choice of fonts |
+| [`hstx_dvi_lisp_test`](apps/hstx_dvi_lisp_test/README.md) | A Lisp REPL on the terminal |
+| [`hstx_dvi_cpm`](apps/hstx_dvi_cpm/README.md) | CP/M 2.2 with its drives on an SD card, a serial port, and a settings screen (**Ctrl-\\**) for the Z80's speed, registers, code and memory |
+| [`hstx_dvi_sprite_test`](apps/hstx_dvi_sprite_test/README.md) | Invaders, with lots of sprites |
+| [`hstx_dvi_android_test`](apps/hstx_dvi_android_test/README.md) | An android's walk cycle, in sprites taller than 16 pixels |
+| [`hstx_dvi_defender`](apps/hstx_dvi_defender/README.md) | Guardian, a side scrolling shoot 'em up |
+| [`hstx_dvi_wildwood`](apps/hstx_dvi_wildwood/README.md) | Wildwood, a flip screen maze adventure |
+| [`hstx_dvi_manor`](apps/hstx_dvi_manor/README.md) | Moonlit Manor, a scrolling platform game in a haunted house |
+| [`hstx_dvi_wireframe_test`](apps/hstx_dvi_wireframe_test/README.md) | Elite's ships in 3D, wireframe and filled, round a space station |
+| [`hstx_dvi_harmless`](apps/hstx_dvi_harmless/README.md) | Harmless, a space trading and combat game in the style of Elite |
 
-`hstx_dvi_vt_test` turns the Pico into a terminal on the DVI screen, 80x60 with the 8x8 font, or other
-sizes with bigger fonts (below). It shows what arrives on
-the USB serial port and sends its replies (e.g. cursor position and size reports) back the same way.
-It has no keyboard of its own, so programs run on the PC and are typed into from there.
+## Terminal fonts
 
-[`pico_term.py`](apps/hstx_dvi_vt_test/pico_term.py) does this: it runs a program on a pty sized to
-match the Pico (it asks with `ESC [ 18 t`), sends its output to the Pico, and passes both your keys and
-the Pico's replies to it. It needs Python 3 and nothing else.
+The terminal (`src/hstx_dvi_vt.h`), used by the VT test, Lisp and CP/M, can use larger fonts than the
+8x8 one. The [VT test's README](apps/hstx_dvi_vt_test/README.md#fonts-and-sizes) shows them and the
+terminal sizes they give.
 
-```sh
-apps/hstx_dvi_vt_test/pico_term.py -- vim     # vim on the Pico screen
-apps/hstx_dvi_vt_test/pico_term.py            # your shell, then try less, top, vttest...
-```
-
-* `Ctrl-]` quits.
-* `-p /dev/ttyACM1` picks another port (default `/dev/ttyACM0`). You need to be in the `dialout`
-  group, and nothing else (minicom, screen...) can have the port open.
-* `TERM` is `xterm-256color`; set `PICO_TERM` to try another, e.g. `PICO_TERM=vt100`.
-
-Without the script, plain commands also work, though the Pico's replies are then ignored:
-
-```sh
-stty -F /dev/ttyACM0 raw -echo           # no echo, no newline translation
-stty -F /dev/ttyACM0 rows 60 cols 80
-TERM=xterm-256color vim > /dev/ttyACM0   # keys from here, screen on the Pico
-```
-
-Make the port `raw -echo` first: with echo on, Linux sends the Pico's replies straight back to it and
-they show up as junk on the screen.
-
-A terminal program such as minicom or screen is fine for typing at the Pico, but it swallows the
-replies (it treats them as escape sequences for its own screen). To see them, read the port directly:
-
-```sh
-python3 -c "import serial,time; s=serial.Serial('/dev/ttyACM0'); s.write(b'\x1b[6n'); time.sleep(0.3); print(repr(s.read(s.in_waiting)))"
-# b'\x1b[5;1R'
-```
-
-(this one needs pyserial).
-
-### Fonts and sizes
-
-The terminal's font is chosen when it is built, and it can be drawn twice as wide, twice as tall or both:
-
-```sh
-cmake -DVT_FONT=terminus_8x16 ..                         # 80x30
-cmake -DVT_FONT=8x8 -DVT_SCALE_X=2 -DVT_SCALE_Y=2 ..     # 40x30
-```
-
-| Font             | Size at 640x480 | Twice as big |
-|------------------|-----------------|--------------|
-| `8x8` (default)  | 80x60           | 40x30 (and 80x30 only twice as tall) |
-| `terminus_8x14`  | 80x34           | 40x17        |
-| `terminus_8x16`  | 80x30           | 40x15        |
-| `vga_8x16`       | 80x30           | 40x15        |
-| `terminus_12x24` | 53x20           | 26x10        |
-| `terminus_16x32` | 40x15           | 20x7         |
-
-The terminal is as big as fits, and `pico_term.py` asks the Pico for its size, so it needs no changes.
-
-A size can also be asked for, and the Pico then picks the biggest font it fits with (Terminus, once or
-twice as big, else the 8x8 font), and shows the rest of the screen blank:
-
-```sh
-apps/hstx_dvi_vt_test/pico_term.py -s 80x24 -- vim   # Terminus 8x16
-apps/hstx_dvi_vt_test/pico_term.py -s 53x20          # Terminus 12x24
-apps/hstx_dvi_vt_test/pico_term.py -s 20x10          # Terminus 12x24, twice as big
-```
-
-This is what any program asking with `ESC [ 8 ; rows ; cols t` gets. It can be turned off with
-`-DVT_FONT_AUTO=OFF`, when the font stays as built and the size is cut down to what fits.
-
-All but the 8x8 font have line drawing (as UTF-8 or the DEC set), double and rounded box lines, blocks,
-arrows, curly quotes and dashes, and Latin-1's accented letters, so menus, `mc`, `htop` and the like
-draw proper boxes. The 8x8 font, ASCII only, shows them as near as it can (`+`, `-`, `|`, `#`...).
-
-#### Choosing fonts: quality against memory
+### Choosing fonts: quality against memory
 
 Each larger font can be left out of the build, to save flash and RAM. They are all in by default:
 
