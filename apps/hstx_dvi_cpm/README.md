@@ -5,6 +5,15 @@
 CPM-Emulator (with its submodules) and [pimoroni-pico](https://github.com/pimoroni/pimoroni-pico)
 (for its SD card & FatFs drivers) cloned beside this repository.
 
+<p>
+  <img src="images/zork.png" width="49%" alt="Zork I, at the white house">
+  <img src="images/ladder.png" width="49%" alt="Ladder, using the TeleVideo's screen codes">
+</p>
+<p>
+  <img src="images/mbasic.png" width="49%" alt="A program in MBASIC, listed and run">
+  <img src="images/settings.png" width="49%" alt="The settings screen, stepping through MBASIC: registers, code and memory">
+</p>
+
 The drives are directories on an SD card, wired to SPI0 on the GPIOs the Pico DVI Sock leaves free:
 
 | SD card | GPIO |
@@ -124,3 +133,21 @@ set up for a VT52, choose `vt52`, and for a Kaypro, `kaypro`. Codes with nothing
 
 Without an SD card, or if CP/M stops on an error (e.g. a Z80 `IN` or `OUT`, which aren't emulated),
 it says so and restarts on a key press.
+
+## Screenshots on the PC
+
+The pictures above are from [`host/`](host), which builds the app's settings screen and disassembler
+with CPM-Emulator, pico-vt and the library's terminal renderer to run on the PC, so the screen is
+drawn just as on the Pico. The drives are the current directory (as CPM-Emulator's `run` directory),
+the keys come from a script, and the script says when to save the screen:
+
+```sh
+apps/hstx_dvi_cpm/host/build.sh /tmp/cpm_host
+cp -r ../CPM-Emulator/run /tmp/cpm_run && cd /tmp/cpm_run
+printf 'C:{enter}ZORK1{enter}{wait 3000}open mailbox{enter}{shot zork}{quit}' > zork.txt
+/tmp/cpm_host/cpm_host zork.txt .      # saves zork.ppm
+```
+
+The script's keys and commands (`{enter}`, `{ctrl-\}`, `{wait ms}`, `{shot name}`...) are listed at the
+top of [`host/cpm_host.cpp`](host/cpm_host.cpp). The time is the Z80's cycles at the Pico's
+speed, so the settings screen shows much the same speed as on the Pico.
