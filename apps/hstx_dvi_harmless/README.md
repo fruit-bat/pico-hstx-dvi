@@ -12,7 +12,7 @@ fly about, look at the charts of the galaxy and the data on its systems, jump to
   <img src="images/hyperspace.png" width="49%" alt="The hyperspace countdown, in the overdrive">
 </p>
 <p>
-  <img src="images/story.png" width="49%" alt="A story's page: a basket of lost kittens">
+  <img src="images/story.png" width="49%" alt="A story's page: a scorched crate of lost kittens">
   <img src="images/log.png" width="49%" alt="The ship's log, with the story so far and who is aboard">
 </p>
 <p>

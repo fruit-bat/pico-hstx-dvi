@@ -202,15 +202,15 @@ uint32_t host_input(uint32_t f) {
 		// Every ship for sale, from the options, then the shipyard: buy an
 		// Adder, look at the Anaconda, and round to the status
 		if (f >= 60 && f < 63) return START;
-		if (f >= 66 && f < 108 && (f - 66) % 6 < 3) return D;
-		if (f >= 110 && f < 113) return A;
-		if (f >= 120 && f < 123) return START;
-		if (f >= 140 && f < 170 && (f - 140) % 10 < 3) return SELECT;
-		if (f >= 180 && f < 183) return D;
-		if (f >= 240 && f < 243) return A;
-		if (f >= 250 && f < 253) return A;
-		if (f >= 280 && f < 334 && (f - 280) % 6 < 3) return D;
-		if (f >= 420 && f < 480 && (f - 420) % 10 < 3) return SELECT;
+		if (f >= 66 && f < 120 && (f - 66) % 6 < 3) return D;
+		if (f >= 130 && f < 133) return A;
+		if (f >= 140 && f < 143) return START;
+		if (f >= 160 && f < 190 && (f - 160) % 10 < 3) return SELECT;
+		if (f >= 200 && f < 203) return D;
+		if (f >= 260 && f < 263) return A;
+		if (f >= 270 && f < 273) return A;
+		if (f >= 300 && f < 354 && (f - 300) % 6 < 3) return D;
+		if (f >= 440 && f < 500 && (f - 440) % 10 < 3) return SELECT;
 		return 0;
 	}
 	if (!strcmp(host_mode, "trade")) {
