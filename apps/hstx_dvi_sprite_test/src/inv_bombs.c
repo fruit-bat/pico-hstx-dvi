@@ -3,6 +3,7 @@
 #include "inv_collisions.h"
 #include "inv_base.h"
 #include "inv_level.h"
+#include "inv_sound.h"
 
 #define INV_BOMB_COUNT 10
 
@@ -120,6 +121,7 @@ void __not_in_flash_func(inv_bombs_update)() {
 			if (m & ~(INV_BOMB_COLLISION_MASK | INV_INVADER_COLLISION_MASK)) {
 				if (m & INV_BASE_COLLISION_MASKS) {
 					inv_base_bomb_hit(si, m); // Notify the base of the bomb hit
+					game_sound_play(INV_SFX_BASE);
 				}
 				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
 			}

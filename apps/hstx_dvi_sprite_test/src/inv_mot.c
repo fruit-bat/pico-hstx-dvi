@@ -9,6 +9,7 @@
 #include "game_util.h"
 #include "game_art.h"
 #include "game_fx.h"
+#include "inv_sound.h"
 
 #define INV_MOT_Y 24
 // The mystery ship only comes out while there are this many invaders left
@@ -123,6 +124,7 @@ void __not_in_flash_func(inv_mot_update)(uint32_t frame) {
 				game_fx_explode(cx, GAME_PX(INV_MOT_Y + 4), GAME_RED, 24, GAME_PX(3));
 				game_fx_explode(cx, GAME_PX(INV_MOT_Y + 4), GAME_YELLOW, 12, GAME_PX(1));
 				game_fx_popup(cx - GAME_PX(12), INV_MOT_Y, score);
+				game_sound_play(INV_SFX_MYSTERY_HIT);
 				_mot_state = MOT_STATE_SCORE;
 				_mot_timer = INV_MOT_SCORE_FRAMES;
 				break;
@@ -135,6 +137,7 @@ void __not_in_flash_func(inv_mot_update)(uint32_t frame) {
 			}
 			else {
 				game_art_sprites(si, INV_MOT_LAYERS, &_art_mot[(frame >> 3) % INV_MOT_FRAMES], _mot_x, INV_MOT_Y, NULL);
+				game_sound_hold(INV_SFX_MYSTERY, true);
 			}
 			break;
 		}

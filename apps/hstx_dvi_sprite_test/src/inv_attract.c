@@ -10,6 +10,8 @@
 #include "game_initials.h"
 #include "game_render.h"
 #include "inv_screen.h"
+#include "inv_sound.h"
+#include "game_options.h"
 #include <stdio.h>
 
 #define INV_ATTRACT_TITLE_FRAMES 600
@@ -38,12 +40,51 @@ static SpriteId attract_init(const uint32_t slots) {
 	return si;
 }
 
-// Returns true if the player wants to play
-static bool attract_frame(void) {
-	hstx_dvi_sprite_wait_for_frame();
-	inv_score_update();
-	return is_inv_input_play(game_input_pressed());
+#define INV_ATTRACT_SETTINGS_PARADE_Y 260
+
+typedef enum {
+	ATTRACT_GO_ON = 0,
+	ATTRACT_PLAY,  // the player wants to play
+	ATTRACT_LEAVE, // back from the settings, which have drawn over the screen
+} AttractFrame_e;
+
+// The invaders parading along behind the settings
+static void settings_back(uint32_t frame) {
+	const uint32_t loop = MODE_H_ACTIVE_PIXELS + 32 + INV_ATTRACT_PARADE_COUNT * INV_ATTRACT_PARADE_GAP;
+	for (uint32_t k = 0; k < INV_ATTRACT_PARADE_COUNT; ++k) {
+		const uint32_t type = _types[k == 0 ? 0 : 1 + (k - 1) % INV_INVADER_TYPE_COUNT];
+		const int32_t x = (int32_t)((frame + loop - k * INV_ATTRACT_PARADE_GAP) % loop) - 32;
+		inv_invaders_draw_icon(type, x, INV_ATTRACT_SETTINGS_PARADE_Y, frame + k * 8);
+	}
 }
+
+// The settings take over all the sprites, so the screen that opened them is
+// left after
+static void settings(void) {
+	static const GameOptions_t o = {
+		INV_INP_BIT_U, INV_INP_BIT_D, INV_INP_BIT_L, INV_INP_BIT_R, INV_INP_BIT_F, 0, INV_INP_BIT_S,
+		inv_wait_for_frame, settings_back
+	};
+	inv_screen_clear();
+	game_options_run(&o);
+}
+
+static AttractFrame_e attract_frame(void) {
+	inv_wait_for_frame();
+	inv_score_update();
+	const uint16_t pressed = game_input_pressed();
+	if (is_inv_input_start(pressed)) {
+		settings();
+		return ATTRACT_LEAVE;
+	}
+	return is_inv_input_play(pressed) ? ATTRACT_PLAY : ATTRACT_GO_ON;
+}
+
+// Leaves the screen, returning whether to play, unless it is to go on
+#define ATTRACT_FRAME() do { \
+		const AttractFrame_e a = attract_frame(); \
+		if (a != ATTRACT_GO_ON) return a == ATTRACT_PLAY; \
+	} while (0)
 
 // Types out the text slots first to last, one after the other, a character
 // every rate frames starting at frame start
@@ -56,9 +97,10 @@ static void type_out(const uint32_t first, const uint32_t last, const uint32_t f
 }
 
 bool inv_attract_title(void) {
-	SpriteId si = attract_init(3);
+	SpriteId si = attract_init(4);
 	si = inv_base_init(si);
 	si = inv_title_init(si);
+	game_music_play(INV_TUNE_TITLE);
 
 	char t[INV_SCREEN_TEXT_MAX];
 	const GameHiScore_t *best = game_hiscore_get(0);
@@ -66,18 +108,21 @@ bool inv_attract_title(void) {
 	inv_screen_text_centre(0, 230, t, game_pallet(GAME_WHITE), false);
 	inv_screen_text_centre(1, 300, "PRESS FIRE TO PLAY", game_pallet(GAME_YELLOW), true);
 	inv_screen_text_centre(2, MODE_V_ACTIVE_LINES - 24, "RP2350 HSTX DVI SPRITES", game_pallet(GAME_GREY), false);
+	inv_screen_text_centre(3, 336, "START FOR SETTINGS", game_pallet(GAME_CYAN), false);
 
 	for (uint32_t frame = 0; frame < INV_ATTRACT_TITLE_FRAMES; ++frame) {
-		if (attract_frame()) return true;
+		ATTRACT_FRAME();
 		inv_title_update(frame, INV_ATTRACT_TITLE_FRAMES);
 		type_out(0, 0, frame, 90, 2);
 		inv_screen_text_show(1, frame > 90 && ((frame >> 5) & 1));
+		inv_screen_text_show(3, frame > 90);
 	}
 	return false;
 }
 
 bool inv_attract_score_table(void) {
 	const SpriteId si = attract_init(9);
+	game_music_play(INV_TUNE_TITLE);
 
 	char t[INV_SCREEN_TEXT_MAX];
 	inv_screen_text_centre(0, 90, "*SCORE ADVANCE TABLE*", game_pallet(GAME_WHITE), true);
@@ -106,7 +151,7 @@ bool inv_attract_score_table(void) {
 	const uint32_t start = 20;
 	const uint32_t rate = 3;
 	for (uint32_t frame = 0; frame < INV_ATTRACT_TABLE_FRAMES; ++frame) {
-		if (attract_frame()) return true;
+		ATTRACT_FRAME();
 		type_out(0, 7, frame, start, rate);
 		game_spr_begin_at(si);
 		for (uint32_t i = 0; i < 4; ++i) {
@@ -130,6 +175,8 @@ static hstx_dvi_pixel_t* rank_pallet(const uint32_t rank) {
 
 bool inv_attract_hiscores(int32_t highlight) {
 	const SpriteId si = attract_init(12);
+	// The high score tune goes on while a new score is shown off
+	if (highlight < 0) game_music_play(INV_TUNE_TITLE);
 
 	char t[INV_SCREEN_TEXT_MAX];
 	inv_screen_text_centre(0, 48, "HIGH SCORES", game_pallet_rainbow(0), true);
@@ -143,7 +190,7 @@ bool inv_attract_hiscores(int32_t highlight) {
 	const uint32_t frames = highlight >= 0 ? INV_ATTRACT_HIGHLIGHT_FRAMES : INV_ATTRACT_HISCORE_FRAMES;
 	const uint32_t loop = MODE_H_ACTIVE_PIXELS + 32 + INV_ATTRACT_PARADE_COUNT * INV_ATTRACT_PARADE_GAP;
 	for (uint32_t frame = 0; frame < frames; ++frame) {
-		if (attract_frame()) return true;
+		ATTRACT_FRAME();
 		type_out(1, GAME_HISCORE_COUNT, frame, 30, 1);
 		inv_screen_text_pallet(0, game_pallet_rainbow(frame >> 3));
 		if (highlight >= 0) {
@@ -169,6 +216,7 @@ bool inv_attract_game_over(void) {
 	if (rank < 0) return false;
 
 	attract_init(8);
+	game_music_play(INV_TUNE_HISCORE);
 
 	char t[INV_SCREEN_TEXT_MAX];
 	inv_screen_text_centre(0, 70, "NEW HIGH SCORE", game_pallet_rainbow(0), true);
@@ -181,7 +229,7 @@ bool inv_attract_game_over(void) {
 	GameInitials_t g;
 	game_initials_reset(&g);
 	for (uint32_t frame = 0; frame < INV_ATTRACT_ENTRY_FRAMES; ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		inv_wait_for_frame();
 		inv_score_update();
 		inv_screen_text_pallet(0, game_pallet_rainbow(frame >> 3));
 

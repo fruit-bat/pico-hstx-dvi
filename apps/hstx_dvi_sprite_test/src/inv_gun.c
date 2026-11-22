@@ -7,6 +7,7 @@
 #include "game_art.h"
 #include "game_fx.h"
 #include "game_util.h"
+#include "inv_sound.h"
 
 #define INV_GUN_COOLDOWN 20
 #define INV_GUN_Y (MODE_V_ACTIVE_LINES - 64)
@@ -94,6 +95,7 @@ static void inv_gun_explode(const uint32_t frame) {
 	const int32_t cy = GAME_PX(INV_GUN_Y + 5);
 	game_fx_explode(cx, cy, GAME_COLOUR_RANDOM, 40, GAME_PX(3));
 	game_fx_explode(cx, cy, GAME_WHITE, 16, GAME_PX(1));
+	game_sound_play(INV_SFX_DEAD);
 	_gun_state.state = GUN_STATE_EXPLODE;
 	_gun_state.end = frame + 40;
 }

@@ -16,12 +16,15 @@ add_executable(hstx_dvi_sprite_test
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_demo.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/inv_attract.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_sound.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/inv_sound_data.c
 )
 
 target_compile_definitions(hstx_dvi_sprite_test PRIVATE
   PICO_CORE1_STACK_SIZE=0x400
   MODE_BYTES_PER_PIXEL=1
-  # Buttons on GPIOs 6 to 9, leaving 2 to 5 for the SD card as in hstx_dvi_cpm
+  # Buttons on GPIOs 6 to 11, leaving 2 to 5 for the SD card as in hstx_dvi_cpm.
+  # Up, on 8, is left to the MIDI synth when that is built in.
   INV_INP_GPIO_START=6
 )
 

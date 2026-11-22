@@ -2,6 +2,7 @@
 #include "game_pallet.h"
 #include "inv_collisions.h"
 #include "inv_base.h"
+#include "inv_sound.h"
 
 #define INV_BULLET_COUNT 5
 
@@ -56,6 +57,7 @@ void __not_in_flash_func(inv_bullets_update)() {
 			if (m & ~INV_BULLET_COLLISION_MASK) {
 				if (m & INV_BASE_COLLISION_MASKS) {
 					inv_base_bullet_hit(si, m); // Notify the base of the bomb hit
+					game_sound_play(INV_SFX_BASE);
 				}
 				hstx_dvi_sprite_disable_1(sprite); // Disable the bullet if it was previously enabled
 			}
@@ -79,6 +81,7 @@ void __not_in_flash_func(inv_bullets_fire)(int32_t x, int32_t y) {
 			sprite->y = y - 8;
 			sprite->f |= SF_ENABLE; // Enable the bullet
 			++_shots;
+			game_sound_play(INV_SFX_SHOOT);
 			break; // Exit after firing one bullet
 		}
 	}

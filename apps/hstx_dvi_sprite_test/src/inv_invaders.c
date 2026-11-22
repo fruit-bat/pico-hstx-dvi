@@ -10,6 +10,7 @@
 #include "game_fx.h"
 #include "game_pallet.h"
 #include "game_util.h"
+#include "inv_sound.h"
 
 #define INV_INVADER_COLS 8
 #define INV_INVADER_ROWS 5
@@ -37,6 +38,10 @@
 #define INV_DIVE_SIDEWAYS GAME_PX(2)
 // Speed a diver flies back to the formation at, at least
 #define INV_DIVE_RETURN GAME_PX(3)
+// A footstep each time the formation has marched this far, but no closer
+// together than this many frames, so the last ones don't buzz
+#define INV_MARCH_STEP_PX 12
+#define INV_MARCH_STEP_FRAMES 6
 
 typedef enum  {
 	INV_STATE_WALK = 0,
@@ -90,6 +95,10 @@ static bool _inv_landed = false;
 static uint32_t _fire_timer = 0;
 static uint32_t _dive_timer = 0;
 static bool _art_made = false;
+// How far the formation has marched since the last footstep, and how long ago
+static uint32_t _march_px = 0;
+static uint32_t _march_frames = 0;
+static uint32_t _march_note = 0;
 
 static __force_inline int32_t slot_x(const uint32_t i) {
 	return _form_x + (int32_t)(i % INV_INVADER_COLS) * INV_INVADER_GAP_X;
@@ -186,6 +195,9 @@ SpriteId inv_invaders_init(SpriteId start) {
 	_inv_landed = false;
 	_fire_timer = INV_INVADER_FIRE_DELAY;
 	_dive_timer = INV_INVADER_DIVE_DELAY;
+	_march_px = INV_MARCH_STEP_PX;
+	_march_frames = INV_MARCH_STEP_FRAMES;
+	_march_note = 0;
 
 	return start + INV_INVADER_COUNT * INV_ALIEN_LAYERS;
 }
@@ -223,9 +235,11 @@ static bool invader_shot(InvInvader_t* v, const uint32_t i, const int32_t x, con
 		v->hits = 1;
 		v->flash = INV_INVADER_FLASH;
 		game_fx_explode(GAME_PX(x + (INV_ALIEN_W >> 1)), GAME_PX(y + 6), GAME_WHITE, 6, GAME_PX(1));
+		game_sound_play(INV_SFX_ARMOUR);
 		return false;
 	}
 	invader_kill(v, i, x, y, true);
+	game_sound_play(INV_SFX_HIT);
 	return true;
 }
 
@@ -244,6 +258,7 @@ static void start_dive(void) {
 		// Up out of the formation first
 		v->vy = -INV_DIVE_RISE;
 		v->bombs = inv_level_dive_bombs();
+		game_sound_play(INV_SFX_DIVE);
 		return;
 	}
 }
@@ -321,6 +336,16 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 		_inv_sub &= 15;
 	}
 	_form_x += dx;
+	if (!frozen) {
+		_march_px += (uint32_t)game_abs(dx);
+		++_march_frames;
+		if (_march_px >= INV_MARCH_STEP_PX && _march_frames >= INV_MARCH_STEP_FRAMES) {
+			game_sound_play(INV_SFX_MARCH_1 + _march_note);
+			_march_note = (_march_note + 1) & 3;
+			_march_px = 0;
+			_march_frames = 0;
+		}
+	}
 
 	for (uint32_t i = 0; i < INV_INVADER_COLS; ++i) {
 		_inv_lowest[i] = -1;
@@ -397,8 +422,9 @@ void __not_in_flash_func(inv_invader_update)(uint32_t frame) {
 	_inv_exploding = exploding;
 	_inv_divers = divers;
 
-	if (right > left && bottom >= inv_gun_get_y()) {
+	if (right > left && bottom >= inv_gun_get_y() && !_inv_landed) {
 		_inv_landed = true;
+		game_sound_play(INV_SFX_LANDED);
 	}
 
 	// Draw them where they have got to. The marchers step as the formation moves.

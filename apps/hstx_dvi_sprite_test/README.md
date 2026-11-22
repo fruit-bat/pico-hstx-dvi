@@ -21,13 +21,18 @@ Built with `-DGAME_BUTTONS=ON`, buttons connect the GPIO to ground (internal pul
 |------|--------|
 | 6    | Left   |
 | 7    | Right  |
-| 8    | Fire   |
-| 9    | Start  |
+| 8    | Up     |
+| 9    | Down   |
+| 10   | Fire   |
+| 11   | Start  |
 
+Up and down are only used in the settings. With the MIDI synth built in (the default) GPIO 8 is its,
+so up comes only from a gamepad.
 GPIOs 2 to 5 are left free for the SD card, wired as in the hstx_dvi_cpm app.
 The first button GPIO can be changed with `INV_INP_GPIO_START` in CMakeLists.txt.
 
-NES or SNES gamepads work as well (see the top README): D-pad left and right, A or B to fire and Start to start.
+NES or SNES gamepads work as well (see the top README): D-pad left and right, A or B to fire.
+Start, between games, opens the settings: music on or off, and a sound test.
 
 ## The game
 
@@ -45,6 +50,18 @@ NES or SNES gamepads work as well (see the top README): D-pad left and right, A 
 - A bonus life is awarded every 3000 points.
 - The top 10 scores are kept, with initials, until the power is turned off.
 
+## Music and sounds
+
+With a General MIDI synth such as a SAM2695 on GPIO 8 (see the top README), in the style of an old flying saucer film:
+a wobbly whistle for a theremin over vibraphone, synth bass and a lounge beat.
+There is a tune between games, a jingle as each wave starts, one for game over and one
+while putting in initials. There is no music while playing, as the invaders' march is the music:
+a footstep down through D minor, faster as they speed up. Shots, hits, the commanders' armour,
+divers peeling off, bits knocked off the bases, the mystery ship's warble and its end,
+the gun blown up, the invaders landing and a bonus life all have their own sounds.
+The demo plays the sounds but no music. They are in `src/inv_sound_data.c`, and
+`../common/tools/render_sounds.sh` renders each to a MIDI file to listen to.
+
 ## Between games
 
 The attract mode cycles through:
@@ -54,7 +71,7 @@ The attract mode cycles through:
 3. A demo game played by the Pico
 4. The high score table, with a parade along the bottom
 
-Press fire or start at any time to play.
+Press fire at any time to play, or start for the settings.
 
 ## Running on the PC
 
@@ -67,8 +84,9 @@ host/build/invaders_host play 6000 300 frames
 ```
 
 The arguments are the mode, how many frames to run, how often to save one and where to put them.
-The modes are `attract` (no buttons pressed), `play` (a game driven by the demo player) and
-`idle` (a game where the gun just sits there). The score, lives, wave and invaders left are
+The modes are `attract` (no buttons pressed), `play` (a game driven by the demo player),
+`idle` (a game where the gun just sits there) and `settings` (opens the settings on the title,
+tries a sound and turns the music off). The score, lives, wave and invaders left are
 printed every 10 seconds of game time.
 
 Each saved frame is about 1MB, so keep the gap between them large on long runs.

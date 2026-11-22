@@ -6,6 +6,7 @@
 #include "inv_level.h"
 #include "game_hiscore.h"
 #include <string.h>
+#include "inv_sound.h"
 
 #define INV_SCORE_TEXT_WIDTH 72
 
@@ -60,6 +61,7 @@ void __not_in_flash_func(inv_score_add)(uint32_t score) {
 	_score += score;
 	if ((_score / INV_SCORE_BONUS_LIFE) != (before / INV_SCORE_BONUS_LIFE)) {
 		inv_gun_add_life();
+		game_sound_play(INV_SFX_EXTRA_LIFE);
 	}
 }
 

@@ -15,6 +15,7 @@
 #include "game_util.h"
 #include "game_render.h"
 #include "game_fx.h"
+#include "inv_sound.h"
 #include <stdio.h>
 
 #define INV_GAME_TEXT_SLOTS 2
@@ -76,7 +77,7 @@ static void hide_message(void) {
 // demo is taken over.
 static bool hold_frames(const uint32_t frames, const bool demo) {
 	for (uint32_t i = 0; i < frames; ++i) {
-		hstx_dvi_sprite_wait_for_frame();
+		inv_wait_for_frame();
 		inv_score_update();
 		draw_fx();
 		if (demo && is_inv_input_play(game_input_pressed())) return true;
@@ -91,6 +92,7 @@ static bool next_wave(const bool demo) {
 	inv_level_next();
 	snprintf(t, sizeof(t), "WAVE %lu", (unsigned long)inv_level_get());
 	show_message(t, game_pallet_rainbow(inv_level_get()), "GET READY");
+	game_music_play(INV_TUNE_WAVE);
 	if (hold_frames(INV_GAME_WAVE_FRAMES, demo)) return true;
 	hide_message();
 	inv_invaders_init(_invaders_si);
@@ -103,7 +105,7 @@ static bool next_wave(const bool demo) {
 // is taken over.
 static bool game_run(const bool demo) {
 	for(uint32_t frame = 0; inv_gun_get_lives(); ++frame) {
-		hstx_dvi_sprite_wait_for_frame();
+		inv_wait_for_frame();
 
 		uint8_t input;
 		if (demo) {
@@ -143,12 +145,15 @@ void inv_game_play(void) {
 	game_init();
 
 	show_message("PLAYER 1", game_pallet(GAME_WHITE), "GET READY");
+	// No music while playing, only the jingles: the march is the music
+	game_music_play(INV_TUNE_WAVE);
 	hold_frames(INV_GAME_READY_FRAMES, false);
 	hide_message();
 
 	game_run(false);
 
 	show_message("GAME OVER", game_pallet(GAME_RED), inv_invaders_landed() ? "THE INVADERS HAVE LANDED" : NULL);
+	game_music_play(INV_TUNE_GAME_OVER);
 	hold_frames(INV_GAME_OVER_FRAMES, false);
 }
 
@@ -161,6 +166,8 @@ bool inv_game_demo(void) {
 	inv_demo_init();
 	game_init();
 	game_input_pressed();
+	// The demo plays the sounds, but no music
+	game_music_stop(GAME_FADE_QUICK);
 
 	inv_screen_text_centre(INV_GAME_SLOT_SMALL, MODE_V_ACTIVE_LINES - 24, "DEMO - PRESS FIRE TO PLAY", game_pallet(GAME_YELLOW), false);
 	const bool taken_over = game_run(true);

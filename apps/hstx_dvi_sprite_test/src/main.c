@@ -23,6 +23,7 @@
 #include "game_pallet.h"
 #include "inv_game.h"
 #include "inv_attract.h"
+#include "inv_sound.h"
 
 // Cycles through the screens shown between games. Returns true when a player
 // wants to play, or false once it has been round them all.
@@ -58,6 +59,7 @@ int main(void)
 
 	// Initialize the HSTX DVI sprite system
     hstx_dvi_sprite_init_all();
+	inv_sound_init();
 
     sleep_ms(2000); // Allow time for initialization
 
