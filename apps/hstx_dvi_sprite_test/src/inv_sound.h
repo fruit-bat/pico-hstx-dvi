@@ -32,7 +32,9 @@ typedef enum {
 } InvSfx_e;
 
 typedef enum {
-	INV_TUNE_TITLE = 0, // between games
+	INV_TUNE_TITLE = 0, // between games, taking turns with the next two
+	INV_TUNE_MARCH,
+	INV_TUNE_SURF,
 	INV_TUNE_WAVE,      // a wave starting
 	INV_TUNE_GAME_OVER,
 	INV_TUNE_HISCORE,   // putting in initials

@@ -39,7 +39,7 @@ typedef enum {
 
 typedef enum {
 	TUNE_TITLE = 0,
-	TUNE_DOCKING, // a waltz, for the docking computer
+	TUNE_DOCKING, // for the docking computer
 	TUNES
 } Tune_e;
 

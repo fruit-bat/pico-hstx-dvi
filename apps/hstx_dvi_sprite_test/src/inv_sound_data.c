@@ -6,6 +6,7 @@
 
 #include "inv_sound.h"
 #include "game_seq_steps.h"
+#include "game_songs.h"
 
 // ----------------------------------------------------------------------------
 // Sounds: an old flying saucer film, square waves, a wobbly whistle and bangs
@@ -250,6 +251,8 @@ static const SeqTrack_t _hiscore[] = {
 
 const SeqTune_t inv_tune_data[INV_TUNES] = {
 	[INV_TUNE_TITLE] = { _title, 4, true },
+	[INV_TUNE_MARCH] = GAME_SONG_SAUCER_MARCH,
+	[INV_TUNE_SURF] = GAME_SONG_ATOMIC_SURF,
 	[INV_TUNE_WAVE] = { _wave, 4, false },
 	[INV_TUNE_GAME_OVER] = { _over, 3, false },
 	[INV_TUNE_HISCORE] = { _hiscore, 3, true },

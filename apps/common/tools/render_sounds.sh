@@ -21,7 +21,7 @@ C="$R/apps/common/game"
 gcc -O2 -std=gnu11 -Wall -Wno-unused-function -DGAME_HOST=1 -DMODE_BYTES_PER_PIXEL=1 \
 	-I"$R/apps/common/host/stub" -I"$R/apps/common/host" -I"$R/src" -I"$C" \
 	-o "$B/render_sounds" "$T/render_sounds.c" \
-	"$C/game_seq.c" "$C/game_sound.c" "$C/game_synth.c" "$C/game_synth_file.c" \
+	"$C/game_seq.c" "$C/game_sound.c" "$C/game_songs.c" "$C/game_synth.c" "$C/game_synth_file.c" \
 	"$GAME"/src/*sound*.c
 "$B/render_sounds" "$OUT" "$3" | while read -r f; do
 	echo "$f"

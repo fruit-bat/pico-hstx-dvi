@@ -29,6 +29,17 @@ static const uint32_t _types[4] = {
 	INV_INVADER_TYPE_MOT, INV_ALIEN_COMMANDER, INV_ALIEN_CRAB, INV_ALIEN_JELLY
 };
 
+// The tune for this time round the attract screens, the title tune and two
+// from the song library taking turns
+static const InvTune_e _attract_tunes[] = { INV_TUNE_TITLE, INV_TUNE_MARCH, INV_TUNE_SURF };
+#define INV_ATTRACT_TUNES (sizeof(_attract_tunes) / sizeof(_attract_tunes[0]))
+// The title moves it on, so the first time round is the title tune
+static uint32_t _attract_tune = INV_ATTRACT_TUNES - 1;
+
+static void attract_music(void) {
+	game_music_play(_attract_tunes[_attract_tune]);
+}
+
 // Sets up a new screen with the score line and some text slots
 static SpriteId attract_init(const uint32_t slots) {
 	inv_screen_clear();
@@ -100,7 +111,9 @@ bool inv_attract_title(void) {
 	SpriteId si = attract_init(4);
 	si = inv_base_init(si);
 	si = inv_title_init(si);
-	game_music_play(INV_TUNE_TITLE);
+	// The next tune each time round
+	_attract_tune = (_attract_tune + 1) % INV_ATTRACT_TUNES;
+	attract_music();
 
 	char t[INV_SCREEN_TEXT_MAX];
 	const GameHiScore_t *best = game_hiscore_get(0);
@@ -122,7 +135,7 @@ bool inv_attract_title(void) {
 
 bool inv_attract_score_table(void) {
 	const SpriteId si = attract_init(9);
-	game_music_play(INV_TUNE_TITLE);
+	attract_music();
 
 	char t[INV_SCREEN_TEXT_MAX];
 	inv_screen_text_centre(0, 90, "*SCORE ADVANCE TABLE*", game_pallet(GAME_WHITE), true);
@@ -176,7 +189,7 @@ static hstx_dvi_pixel_t* rank_pallet(const uint32_t rank) {
 bool inv_attract_hiscores(int32_t highlight) {
 	const SpriteId si = attract_init(12);
 	// The high score tune goes on while a new score is shown off
-	if (highlight < 0) game_music_play(INV_TUNE_TITLE);
+	if (highlight < 0) attract_music();
 
 	char t[INV_SCREEN_TEXT_MAX];
 	inv_screen_text_centre(0, 48, "HIGH SCORES", game_pallet_rainbow(0), true);

@@ -6,6 +6,7 @@
 
 #include "el_sound.h"
 #include "game_seq_steps.h"
+#include "game_songs.h"
 
 // ----------------------------------------------------------------------------
 // Sounds
@@ -105,108 +106,8 @@ const SeqSound_t sound_data[SFX_SOUNDS] = {
 // ----------------------------------------------------------------------------
 // Tunes
 
-// The docking computer's waltz: our own, in D major, three beats of B ticks
-// a bar, 32 bars. A flute, doubled an octave up on the crystal, over an
-// electric piano's two chords to a bar, a soft pad and the bass on the
-// first beat. The first half goes from D to A and back, the second wanders
-// through G and B minor before coming home.
-#define B 44
-
-#define W_G4 67
-#define W_A4 69
-#define W_B4 71
-#define W_C5 72
-#define W_CS5 73
-#define W_D5 74
-#define W_E5 76
-#define W_FS5 78
-#define W_G5 79
-#define W_A5 81
-#define W_B5 83
-#define W_C6 84
-#define W_D6 86
-
-// The tune, a note at a time, for N(note, beats)
-#define W_MELODY(N) \
-	N(W_A4, 1), N(W_D5, 1), N(W_FS5, 1),  N(W_A5, 2), N(W_FS5, 1), \
-	N(W_G5, 1), N(W_FS5, 1), N(W_E5, 1),  N(W_E5, 3), \
-	N(W_G4, 1), N(W_CS5, 1), N(W_E5, 1),  N(W_G5, 2), N(W_E5, 1), \
-	N(W_FS5, 1), N(W_E5, 1), N(W_D5, 1),  N(W_D5, 3), \
-	N(W_A4, 1), N(W_D5, 1), N(W_FS5, 1),  N(W_A5, 2), N(W_D6, 1), \
-	N(W_D6, 1), N(W_B5, 1), N(W_G5, 1),   N(W_B5, 3), \
-	N(W_A5, 1), N(W_FS5, 1), N(W_D5, 1),  N(W_E5, 2), N(W_D5, 1), \
-	N(W_E5, 1), N(W_CS5, 1), N(W_A4, 1),  N(W_D5, 3), \
-	N(W_D5, 2), N(W_B4, 1),               N(W_G5, 3), \
-	N(W_E5, 2), N(W_C5, 1),               N(W_A5, 2), N(W_FS5, 1), \
-	N(W_FS5, 1), N(W_A5, 1), N(W_C6, 1),  N(W_B5, 3), \
-	N(W_G5, 1), N(W_E5, 1), N(W_B4, 1),   N(W_CS5, 2), N(W_E5, 1), \
-	N(W_FS5, 2), N(W_A5, 1),              N(W_D6, 2), N(W_B5, 1), \
-	N(W_G5, 2), N(W_E5, 1),               N(W_A5, 1), N(W_G5, 1), N(W_E5, 1), \
-	N(W_FS5, 1), N(W_A5, 1), N(W_D6, 1),  N(W_D6, 2), N(W_B5, 1), \
-	N(W_A5, 1), N(W_G5, 1), N(W_CS5, 1),  N(W_D5, 3)
-
-#define W_LEAD(n, q) NOTE(n, (q) * B, 95)
-#define W_HIGH(n, q) NOTE((n) + 12, (q) * B, 50)
-
-// A bar of each chord, for C(a, b, c), and the bass's note for it
-#define W_BARS(C) \
-	C(62, 66, 69), C(62, 66, 69), C(61, 64, 67), C(61, 64, 67), \
-	C(61, 64, 67), C(61, 64, 67), C(62, 66, 69), C(62, 66, 69), \
-	C(62, 66, 69), C(62, 66, 69), C(62, 67, 71), C(62, 67, 71), \
-	C(62, 66, 69), C(62, 64, 68), C(61, 64, 67), C(62, 66, 69), \
-	C(62, 67, 71), C(62, 67, 71), C(60, 64, 67), C(60, 66, 69), \
-	C(60, 66, 69), C(62, 67, 71), C(64, 67, 71), C(61, 64, 67), \
-	C(62, 66, 69), C(62, 66, 71), C(64, 67, 71), C(61, 64, 67), \
-	C(62, 66, 69), C(62, 67, 71), C(61, 64, 67), C(62, 66, 69)
-// The root, or the fifth when a chord goes on
-#define W_ROOTS(R) \
-	R(38), R(45), R(45), R(40), R(45), R(40), R(38), R(45), \
-	R(38), R(45), R(43), R(38), R(38), R(40), R(45), R(38), \
-	R(43), R(38), R(48), R(38), R(45), R(43), R(40), R(45), \
-	R(38), R(47), R(40), R(45), R(38), R(43), R(45), R(38)
-
-// Oom, pah, pah
-#define W_PAH(a, b, c) REST(B), CHORD(a, b, c, B - 6, 60), REST(6), CHORD(a, b, c, B - 6, 55), REST(6)
-#define W_PAD(a, b, c) CHORD(a, b, c, 3 * B - 8, 45), REST(8)
-#define W_OOM(r) NOTE(r, B, 95), REST(2 * B)
-
-static const SeqStep_t _docking_lead[] = {
-	PROG(GM_FLUTE), CC(11, 105),
-	W_MELODY(W_LEAD),
-	END(0)
-};
-
-static const SeqStep_t _docking_high[] = {
-	PROG(GM_CRYSTAL), CC(11, 80),
-	W_MELODY(W_HIGH),
-	END(0)
-};
-
-static const SeqStep_t _docking_pah[] = {
-	PROG(GM_ELECTRIC_PIANO_2), CC(11, 90),
-	W_BARS(W_PAH),
-	END(0)
-};
-
-static const SeqStep_t _docking_pad[] = {
-	PROG(GM_WARM_PAD), CC(11, 75),
-	W_BARS(W_PAD),
-	END(0)
-};
-
-static const SeqStep_t _docking_bass[] = {
-	PROG(GM_ACOUSTIC_BASS), CC(11, 105),
-	W_ROOTS(W_OOM),
-	END(0)
-};
-
-static const SeqTrack_t _docking[] = {
-	{ 0, _docking_lead },
-	{ 1, _docking_high },
-	{ 2, _docking_pah },
-	{ 3, _docking_pad },
-	{ 4, _docking_bass },
-};
+// The docking computer's music is Night Orbit, from the song library
+// (game_songs.h).
 
 // The title: our own, slow, in D minor, four beats of Q ticks a bar, a pad,
 // a crystal arpeggio in eighths, and a bass
@@ -251,5 +152,5 @@ static const SeqTrack_t _title[] = {
 
 const SeqTune_t tune_data[TUNES] = {
 	[TUNE_TITLE] = { _title, 3, true },
-	[TUNE_DOCKING] = { _docking, 5, true },
+	[TUNE_DOCKING] = GAME_SONG_NIGHT_ORBIT,
 };
