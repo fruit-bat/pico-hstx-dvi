@@ -34,6 +34,9 @@ typedef enum {
 	RR_SFX_BOSS_HIT,
 	RR_SFX_BOSS_DIE,
 	RR_SFX_TALLY,       // fuel counted into the score after the warship
+	RR_SFX_BUZZ,        // mosquitoes or wasps coming
+	RR_SFX_PULSE,       // a jellyfish pushing itself up
+	RR_SFX_STING,       // a wasp's sting
 	// Held
 	RR_SFX_CHARGE,      // the beam charging, rising with it
 	RR_SFX_SOUNDS

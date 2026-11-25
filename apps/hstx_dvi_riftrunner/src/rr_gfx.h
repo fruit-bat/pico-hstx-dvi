@@ -21,6 +21,10 @@ typedef struct {
 	RrArt_t meteor, rock;
 	RrArt_t bullet[2];
 	RrArt_t hull, core[3], wall;
+	// The giants, from the second time round
+	RrArt_t jelly[2];                // drifting, squeezed
+	RrArt_t mosquito[2];             // wings up, down
+	RrArt_t wasp_r[2], wasp_l[2];    // facing right, left; wings up, down
 } RrGfx_t;
 
 extern RrGfx_t rr_gfx;

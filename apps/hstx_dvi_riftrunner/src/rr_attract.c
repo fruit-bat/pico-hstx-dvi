@@ -160,6 +160,59 @@ bool rr_attract_roll(void) {
 	return false;
 }
 
+bool rr_attract_giants(void) {
+	attract_init();
+	static const char* const what[3] = { "DRIFTS AND STINGS", "DARTS AT YOU", "COMES FROM BEHIND" };
+	static const uint8_t types[3] = { RR_EN_JELLY, RR_EN_MOSQUITO, RR_EN_WASP };
+	char t[GAME_TEXT_MAX];
+	game_text_set(&_text[0], "THE GIANTS", 4);
+	game_text_set(&_text[1], "FROM THE SECOND ROUND", GAME_TEXT_BIG);
+	game_text_set(&_text[2], "PRESS FIRE TO START", GAME_TEXT_BIG);
+	for (uint32_t i = 0; i < 3; ++i) {
+		snprintf(t, sizeof(t), "%-10s %lu", rr_enemy_name(types[i]), (unsigned long)rr_enemy_score(types[i]));
+		game_text_set(&_names[i], t, GAME_TEXT_BIG);
+		game_text_set(&_scores[i], what[i], GAME_TEXT_BIG);
+	}
+	for (uint32_t frame = 0; frame < RR_ROLL_FRAMES; ++frame) {
+		if (attract_frame()) return true;
+		game_spr_begin();
+		for (uint32_t i = 0; i < 3; ++i) {
+			const uint32_t at = RR_ROLL_START + i * RR_ROLL_GAP * 2;
+			if (frame < at) continue;
+			const int32_t slide = frame - at < 20 ? (20 - (int32_t)(frame - at)) * 24 : 0;
+			const int32_t y = 118 + i * 98;
+			// Each moving as it does in the game, more or less
+			const RrArt_t* a;
+			int32_t ax = 40 + slide, ay = y;
+			if (i == 0) {
+				const uint32_t c = frame % 100;
+				a = &rr_gfx.jelly[c < 18 ? 1 : 0];
+				ay = y - 8 + (c < 18 ? -(int32_t)c : (int32_t)(c - 18) * 18 / 82 - 18) + 18;
+			}
+			else if (i == 1) {
+				a = &rr_gfx.mosquito[(frame >> 1) & 1];
+				ax += (int32_t)(game_rand() % 5) - 2;
+				ay += 16 + (int32_t)(game_rand() % 5) - 2;
+			}
+			else {
+				a = &rr_gfx.wasp_r[(frame >> 1) & 1];
+				ay += 16 + game_sin(frame * 5) * 8 / 127;
+			}
+			rr_art_draw(a, ax, ay);
+			game_spr_text(&_names[i], 176 + slide, y + 22, game_pallet(GAME_WHITE));
+			game_spr_text(&_scores[i], 176 + slide, y + 44, game_pallet(GAME_YELLOW));
+		}
+		rr_world_draw_stars(frame * 3);
+		// Text last, as it draws straight into the row
+		rr_hud_draw(frame, false);
+		game_spr_text_centre(&_text[0], 52, game_pallet_rainbow(frame >> 3));
+		game_spr_text_centre(&_text[1], 92, game_pallet(GAME_CYAN));
+		if ((frame >> 5) & 1) game_spr_text_centre(&_text[2], 420, game_pallet(GAME_YELLOW));
+		game_spr_end();
+	}
+	return false;
+}
+
 bool rr_attract_howto(void) {
 	attract_init();
 	static const char* const lines[] = {

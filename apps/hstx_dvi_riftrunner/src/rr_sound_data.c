@@ -98,6 +98,22 @@ static const SeqStep_t _boss_die[] = {
 static const SeqStep_t _tally[] = {
 	PROG(GM_GLOCKENSPIEL), ON(0, 96, 80), OFF(6, 96), END(2)
 };
+// A buzz, wobbling up and down quickly, swelling then fading
+static const SeqStep_t _buzz[] = {
+	PROG(GM_SAW_LEAD), BEND(64), CC(11, 60), ON(0, 55, 90), ON(0, 56, 80),
+	SWEEP(0, 70, 3), SWEEP(3, 58, 3), CC_AFTER(0, 11, 90), SWEEP(3, 70, 3), SWEEP(3, 58, 3),
+	CC_AFTER(0, 11, 110), SWEEP(3, 70, 3), SWEEP(3, 58, 3), SWEEP(3, 70, 3), SWEEP(3, 58, 3),
+	CC_AFTER(0, 11, 80), SWEEP(3, 70, 3), SWEEP(3, 58, 3), CC_AFTER(0, 11, 50), SWEEP(3, 70, 3),
+	OFF(3, 55), OFF(0, 56), END(2)
+};
+// A soft bloop, up
+static const SeqStep_t _pulse[] = {
+	PROG(GM_SQUARE_LEAD), BEND(40), CC(11, 100), ON(0, 60, 70), SWEEP(0, 100, 14), OFF(14, 60), END(2)
+};
+// A sharp hiss, down
+static const SeqStep_t _sting[] = {
+	PROG(GM_SAW_LEAD), BEND(127), ON(0, 96, 70), SWEEP(0, 60, 8), OFF(8, 96), END(1)
+};
 // Held: a whine, bent up as the beam charges
 static const SeqStep_t _charge[] = {
 	PROG(GM_SAW_LEAD), BEND(0), CC(11, 90), ON(0, 72, 70), ON(0, 79, 50), MARK, LOOP(240)
@@ -125,6 +141,9 @@ const SeqSound_t rr_sound_data[RR_SFX_SOUNDS] = {
 	[RR_SFX_BOSS_HIT] = { _boss_hit, 4, SEQ_LEVEL_NONE },
 	[RR_SFX_BOSS_DIE] = { _boss_die, 10, SEQ_LEVEL_NONE },
 	[RR_SFX_TALLY] = { _tally, 5, SEQ_LEVEL_NONE },
+	[RR_SFX_BUZZ] = { _buzz, 4, SEQ_LEVEL_NONE },
+	[RR_SFX_PULSE] = { _pulse, 3, SEQ_LEVEL_NONE },
+	[RR_SFX_STING] = { _sting, 3, SEQ_LEVEL_NONE },
 	[RR_SFX_CHARGE] = { _charge, 6, SEQ_LEVEL_BEND },
 };
 

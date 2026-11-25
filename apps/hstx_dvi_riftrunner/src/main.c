@@ -45,6 +45,7 @@ static const GameHiScore_t _hiscores[GAME_HISCORE_COUNT] = {
 static bool attract_loop(void) {
 	return rr_attract_title()
 		|| rr_attract_roll()
+		|| rr_attract_giants()
 		|| rr_game_demo()
 		|| rr_attract_howto()
 		|| rr_attract_hiscores(-1);

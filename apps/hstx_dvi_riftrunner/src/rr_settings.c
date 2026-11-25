@@ -18,8 +18,13 @@ static const char* const _tune_names[] = { "RIFT RUNNER", "NIGHT ORBIT", "ATOMIC
 static const uint8_t _tunes[] = { RR_TUNE_STAGE, RR_TUNE_NIGHT_ORBIT, RR_TUNE_ATOMIC_SURF, RR_TUNE_CLOCKWORK };
 #define RR_FLYING_TUNES (sizeof(_tunes) / sizeof(_tunes[0]))
 
+static const char* const _rounds[] = { "1", "2", "3" };
+static const char* const _demo_sound[] = { "ON", "SILENT" };
+
 static uint8_t _flight_off = 0;
 static uint8_t _tune = 0;
+static uint8_t _start_round = 0;
+static uint8_t _demo_silent = 0;
 static RrFlying_e _flying = RR_FLYING_NONE;
 
 static void play(void) {
@@ -31,6 +36,8 @@ static void play(void) {
 static const GameOption_t _options[] = {
 	{ "FLIGHT MUSIC", _on_off, 2, &_flight_off, play },
 	{ "FLYING TUNE", _tune_names, RR_FLYING_TUNES, &_tune, play },
+	{ "START ROUND", _rounds, sizeof(_rounds) / sizeof(_rounds[0]), &_start_round, NULL },
+	{ "DEMO SOUND", _demo_sound, 2, &_demo_silent, NULL },
 };
 
 void rr_settings_run(void (*draw_back)(uint32_t frame)) {
@@ -53,4 +60,12 @@ void rr_music_warship(void) {
 
 void rr_music_landed(void) {
 	_flying = RR_FLYING_NONE;
+}
+
+uint32_t rr_settings_start_round(void) {
+	return _start_round;
+}
+
+bool rr_settings_demo_silent(void) {
+	return _demo_silent != 0;
 }

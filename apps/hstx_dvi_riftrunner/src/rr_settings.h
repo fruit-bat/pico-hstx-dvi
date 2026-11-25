@@ -1,7 +1,8 @@
 // Copyright (c) 2024 fruit-bat.
 
 // The settings: the shared ones (music on or off, the sound test) and Rift
-// Runner's own, music while flying and which tune. Opened with start between
+// Runner's own: music while flying and which tune, the round a game starts
+// at, and whether the demo is heard. Opened with start between
 // games, or in a game, where it pauses it.
 #pragma once
 
@@ -20,6 +21,11 @@ void rr_music_flying(void);
 void rr_music_warship(void);
 // Not flying any more, between games or after the warship
 void rr_music_landed(void);
+
+// The round a game starts at, from 0, for trying the later ones
+uint32_t rr_settings_start_round(void);
+// The demo game played without music or sounds
+bool rr_settings_demo_silent(void);
 
 #ifdef __cplusplus
 }

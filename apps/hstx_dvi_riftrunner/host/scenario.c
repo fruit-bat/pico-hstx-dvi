@@ -8,6 +8,7 @@
 // settings - opens the settings on the title, plays a sound and goes back
 // powers   - starts a game and takes power ups: twin twice, bomb twice, orb
 //            twice, speed, drone, firing all the while
+// giants   - as play, sending in jellyfish, then mosquitoes, then wasps
 // pause    - starts a game, opens the settings with start, turns flight music
 //            off and picks another tune
 #include <stdio.h>
@@ -29,6 +30,7 @@ bool rr_boss_active(void);
 bool rr_player_alive(void);
 void rr_player_add_capsule(void);
 int32_t rr_player_power_cursor(void);
+void rr_enemy_giants(uint32_t type, uint32_t count, int32_t y);
 
 #define F 16
 #define START 64
@@ -39,6 +41,14 @@ static bool flying(void) {
 
 // Buttons as the game sees them: L R U D F B start power from bit 0
 uint32_t host_input(uint32_t f) {
+	if (!strcmp(host_mode, "giants")) {
+		// Jellyfish, mosquitoes, wasps, as in rr_enemy.h
+		if (f == 200) rr_enemy_giants(9, 3, 200);
+		if (f == 600) rr_enemy_giants(10, 4, 220);
+		if (f == 1000) rr_enemy_giants(11, 2, 200);
+		if (f > 100 && f < 104) return F;
+		if (f > 120) return rr_demo_input(f);
+	}
 	if (flying()) {
 		if (f > 100 && f < 104) return F;
 		if (f > 120) return rr_demo_input(f);

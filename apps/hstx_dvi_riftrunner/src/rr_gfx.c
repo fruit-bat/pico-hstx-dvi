@@ -4,6 +4,7 @@
 
 #include "rr_gfx.h"
 #include "rr_world.h"
+#include <string.h>
 
 RrGfx_t rr_gfx;
 
@@ -410,6 +411,145 @@ static const char* const _wall[] = {
 };
 static const hstx_dvi_pixel_t _wall_px[] = { RR_RGB(224, 224, 255), RR_RGB(128, 160, 224), RR_RGB(64, 80, 160) };
 
+// ----------------------------------------------------------------------------
+// The giants, from the second time round, drawn four times the size
+
+// A jellyfish, drifting with its bell wide, and squeezed to push up
+static const char* const _jelly[2][21] = {
+	{
+		"......PPPPPPPP......",
+		"....PPLLLLLLLLPP....",
+		"...PLLWWLLLLLLLLP...",
+		"..PLLWWLLLLLLLWLLP..",
+		".PLLLLLLLLLLLLLLLLP.",
+		".PLLLLLDDLLDDLLLLLP.",
+		"PLLLLLDDDDDDDDLLLLLP",
+		"PPPPPPPPPPPPPPPPPPPP",
+		"P.P..P..P..P..P..P.P",
+		"..T..T..T..T..T..T..",
+		"..T...T..T..T..T..T.",
+		"...T..T...T..T..T...",
+		"...T...T..T...T..T..",
+		"..T....T...T..T...T.",
+		"..T...T....T...T..T.",
+		"...T..T...T....T..T.",
+		"...T...T..T...T..T..",
+		"....T..T...T..T..T..",
+		"....T...T..T...T....",
+		".....T..T...T..T....",
+		".....T...T..T...T...",
+	},
+	{
+		".......PPPPPP.......",
+		".....PPLLLLLLPP.....",
+		"....PLLWWLLLLLLP....",
+		"....PLWWLLLLLWLP....",
+		"...PLLLLLLLLLLLLP...",
+		"...PLLLDDLLDDLLLP...",
+		"...PLLDDDDDDDDLLP...",
+		"...PPPPPPPPPPPPPP...",
+		"...P.P..P..P..P.P...",
+		"....T..T..T..T..T...",
+		"....T..T..T..T..T...",
+		".....T.T..T..T.T....",
+		".....T..T.T.T..T....",
+		"......T.T.T.T.T.....",
+		"......T.T.T.T.T.....",
+		".......T.T.T.T......",
+		".......T.T.T.T......",
+		"........T.T.T.......",
+		"........T.T.T.......",
+		"........T...T.......",
+		"....................",
+	},
+};
+static const hstx_dvi_pixel_t _jelly_px[] = {
+	RR_RGB(200, 0, 160), RR_RGB(255, 128, 224), RR_RGB(255, 255, 255), RR_RGB(160, 0, 224), RR_RGB(128, 224, 255),
+};
+
+// A mosquito, facing left, its proboscis out in front
+static const char* const _mosquito[2][12] = {
+	{
+		"............WWW..WWW....",
+		"...........WWWWWWWWWWW..",
+		"............WWWWWWWWW...",
+		".............WW..WW.....",
+		".......HHH...BB.........",
+		"NNNNNHHRHHBBBBSSBBSSBB..",
+		".......HHHBBBBSSBBSSBBBB",
+		"........L..L..L.........",
+		".......L...L...L........",
+		"......L...L.....L.......",
+		".....L...L.......L......",
+		"....L...L.........L.....",
+	},
+	{
+		"........................",
+		"........................",
+		"...........WWWWWWWWWWWW.",
+		"............WWWWWWWWW...",
+		".......HHH...BB.........",
+		"NNNNNHHRHHBBBBSSBBSSBB..",
+		".......HHHBBBBSSBBSSBBBB",
+		"........L..L..L.........",
+		".......L....L...L.......",
+		"......L......L....L.....",
+		".....L.......L.....L....",
+		"....L.........L.....L...",
+	},
+};
+static const hstx_dvi_pixel_t _mosquito_px[] = {
+	RR_RGB(192, 224, 255), RR_RGB(224, 128, 64), RR_RGB(255, 0, 0), RR_RGB(160, 96, 64),
+	RR_RGB(255, 176, 96), RR_RGB(160, 64, 32), RR_RGB(200, 160, 128),
+};
+
+// A wasp, facing right, its sting behind
+static const char* const _wasp[2][12] = {
+	{
+		"........WWWW..WWWW......",
+		".......WWWWWWWWWWWW.....",
+		"........WWWWWWWWWW......",
+		".........WW...WW......A.",
+		"...KKYYKKYYKKTTTT...HHA.",
+		".KYYKKYYKKYYKTTTTTHHHHH.",
+		"SKYYKKYYKKYYKTTTTTHHRHHH",
+		".KYYKKYYKKYYKTTTTTHHHHH.",
+		"...KKYYKKYYKKTTTT..HHH..",
+		"..........L..L..L.......",
+		".........L..L..L........",
+		"........L..L..L.........",
+	},
+	{
+		"........................",
+		"........................",
+		".....WWWWWWWWWWWWW......",
+		".......WWWWWWWWWW.....A.",
+		"...KKYYKKYYKKTTTT...HHA.",
+		".KYYKKYYKKYYKTTTTTHHHHH.",
+		"SKYYKKYYKKYYKTTTTTHHRHHH",
+		".KYYKKYYKKYYKTTTTTHHHHH.",
+		"...KKYYKKYYKKTTTT..HHH..",
+		"...........L..L..L......",
+		"..........L..L..L.......",
+		".........L..L..L........",
+	},
+};
+static const hstx_dvi_pixel_t _wasp_px[] = {
+	RR_RGB(200, 230, 255), RR_RGB(48, 48, 48), RR_RGB(32, 32, 32), RR_RGB(255, 224, 0),
+	RR_RGB(200, 120, 0), RR_RGB(255, 176, 0), RR_RGB(255, 0, 0), RR_RGB(64, 64, 64), RR_RGB(48, 48, 48),
+};
+#define WASP_KEY "WAKYTHRSL"
+
+// A left to right mirror image of rows up to 32 wide, into buf
+static void mirror(const char* const* rows, uint32_t h, char buf[][33], const char** out) {
+	for (uint32_t r = 0; r < h; ++r) {
+		const uint32_t n = strlen(rows[r]) < 32 ? strlen(rows[r]) : 32;
+		for (uint32_t i = 0; i < n; ++i) buf[r][i] = rows[r][n - 1 - i];
+		buf[r][n] = 0;
+		out[r] = buf[r];
+	}
+}
+
 void rr_gfx_init(void) {
 	static bool made = false;
 	if (made) return;
@@ -445,4 +585,14 @@ void rr_gfx_init(void) {
 	rr_art_make(&g->rock, _rock, RR_ROWS(_rock), "KGLD", _meteor_px, 2, false);
 	rr_art_make(&g->hull, _hull, RR_ROWS(_hull), "KLHDRBO", _hull_px, 2, false);
 	rr_art_make(&g->wall, _wall, RR_ROWS(_wall), "LGD", _wall_px, 2, false);
+	for (uint32_t i = 0; i < 2; ++i) {
+		static char buf[12][33];
+		const char* rows[12];
+		// Giants: four times the size
+		rr_art_make(&g->jelly[i], _jelly[i], 21, "PLWDT", _jelly_px, 4, false);
+		rr_art_make(&g->mosquito[i], _mosquito[i], 12, "WHRNBSL", _mosquito_px, 4, false);
+		rr_art_make(&g->wasp_r[i], _wasp[i], 12, WASP_KEY, _wasp_px, 4, false);
+		mirror(_wasp[i], 12, buf, rows);
+		rr_art_make(&g->wasp_l[i], rows, 12, WASP_KEY, _wasp_px, 4, false);
+	}
 }

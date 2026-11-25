@@ -29,6 +29,8 @@
 #define RR_GAME_CLEAR_FRAMES 360
 // Fuel left after the warship is worth this much a frame of it
 #define RR_GAME_FUEL_BONUS 2
+// The sequencer's volume for music and sounds, as it starts
+#define RR_VOLUME 100
 
 typedef enum {
 	RR_PHASE_FLY = 0,
@@ -42,7 +44,7 @@ static uint32_t _loop = 0;
 static uint32_t _section = 0;
 static RrPhase_e _phase = RR_PHASE_FLY;
 static uint32_t _phase_frame = 0;
-static uint32_t _wave_timer = 0, _extra_timer = 0, _carrier_timer = 0;
+static uint32_t _wave_timer = 0, _extra_timer = 0, _carrier_timer = 0, _giant_timer = 0;
 static uint32_t _bonus = 0, _bonus_shown = 0;
 // After the warship, until the land comes back
 static bool _after_boss = false;
@@ -169,6 +171,22 @@ static void spawn(uint32_t section) {
 		default:
 			return;
 	}
+	// From the second time round, the giants, a kind or two to each section
+	if (_loop >= 1) {
+		if (_giant_timer) --_giant_timer;
+		if (!_giant_timer) {
+			static const uint8_t kinds[RR_SECTIONS][2] = {
+				[RR_SEC_RIDGES] = { RR_EN_WASP, RR_EN_WASP },
+				[RR_SEC_CAVERNS] = { RR_EN_JELLY, RR_EN_JELLY },
+				[RR_SEC_DEBRIS] = { RR_EN_JELLY, RR_EN_MOSQUITO },
+				[RR_SEC_CITY] = { RR_EN_MOSQUITO, RR_EN_WASP },
+				[RR_SEC_FORTRESS] = { RR_EN_MOSQUITO, RR_EN_MOSQUITO },
+			};
+			const uint32_t kind = kinds[section][game_rand() & 1];
+			rr_enemy_giants(kind, kind == RR_EN_MOSQUITO ? 4 : kind == RR_EN_JELLY ? 3 : 2, room_y(60) + 30);
+			_giant_timer = gap(460);
+		}
+	}
 	// Now and then, a carrier with a capsule
 	if (!_carrier_timer) {
 		rr_enemy_spawn(RR_EN_CARRIER, (rr_world_camera() >> RR_FP) + GAME_SCREEN_W + 8, room_y(18));
@@ -183,6 +201,7 @@ static void start_loop(void) {
 	_wave_timer = 120;
 	_extra_timer = 200;
 	_carrier_timer = 400;
+	_giant_timer = 300;
 }
 
 // The play area and the score, power bar and so on, without messages
@@ -209,15 +228,10 @@ static void draw_scene(uint32_t frame) {
 	game_spr_end();
 }
 
-// The game, still, behind the settings, with panels where their text goes
-static uint32_t _paused_frame = 0;
-
+// Stars behind the settings while paused: the game itself behind them, with
+// the settings' text over it, was more than the renderer could draw in time
 static void paused_back(uint32_t frame) {
-	static const int16_t panels[][2] = { { 44, 36 }, { 112, 4 * 36 + 8 }, { 388, 52 } };
-	for (uint32_t i = 0; i < sizeof(panels) / sizeof(panels[0]); ++i) {
-		rr_spr_rect(24, panels[i][0], GAME_SCREEN_W - 48, panels[i][1], RR_RGB(0, 0, 64));
-	}
-	draw_play(_paused_frame);
+	rr_world_draw_stars(frame * 2);
 }
 
 // The ship passing into a section, the warship coming, and beating it
@@ -301,9 +315,10 @@ static bool game_run(const bool demo) {
 	rr_enemy_init();
 	rr_boss_init();
 	rr_player_init();
-	_loop = 0;
+	// Started later on, from the settings, but not the demo
+	_loop = demo ? 0 : rr_settings_start_round();
 	_after_boss = false;
-	rr_hud_set_loop(0);
+	rr_hud_set_loop(_loop);
 	_section = RR_SEC_RIDGES;
 	start_loop();
 	show_section(_section);
@@ -326,7 +341,6 @@ static bool game_run(const bool demo) {
 			// Start pauses, with the settings over the game
 			if (pressed & RR_INP_BIT_START) {
 				game_sound_hold(RR_SFX_CHARGE, false);
-				_paused_frame = frame;
 				rr_settings_run(paused_back);
 				last = game_input_get();
 			}
@@ -374,8 +388,14 @@ void rr_game_play(void) {
 bool rr_game_demo(void) {
 	// The demo should not count against the last player's score
 	const uint32_t score = rr_hud_score();
+	// Silent, if so set, until a player takes it over or it ends
+	if (rr_settings_demo_silent()) game_seq_volume(0, 0);
 	const bool taken_over = game_run(true);
 	rr_music_landed();
+	// Back to the title's tune, the demo's stopped while still silent
+	game_music_stop(0);
+	game_seq_volume(RR_VOLUME, RR_VOLUME);
+	if (!taken_over) game_music_play(RR_TUNE_TITLE);
 	rr_hud_set_score(score);
 	game_sound_hold(RR_SFX_CHARGE, false);
 	return taken_over;

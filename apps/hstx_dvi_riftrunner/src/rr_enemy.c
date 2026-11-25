@@ -43,6 +43,9 @@ static const RrEnemyInfo_t _info[RR_EN_TYPES] = {
 	[RR_EN_FUEL] = { "FUEL", 150, 1, RR_BOOM_MEDIUM, 1 },
 	[RR_EN_TURRET] = { "TURRET", 200, 2, RR_BOOM_MEDIUM, 1 },
 	[RR_EN_TURRET_C] = { "TURRET", 200, 2, RR_BOOM_MEDIUM, 1 },
+	[RR_EN_JELLY] = { "JELLYFISH", 500, 8, RR_BOOM_HUGE, 0 },
+	[RR_EN_MOSQUITO] = { "MOSQUITO", 300, 3, RR_BOOM_BIG, 0 },
+	[RR_EN_WASP] = { "WASP", 400, 5, RR_BOOM_BIG, 0 },
 	[RR_EN_CAPSULE] = { "CAPSULE", 0, 0, RR_BOOM_SMALL, 0 },
 };
 
@@ -90,6 +93,11 @@ static const RrArt_t* art_of(const RrEnemy_t* e, uint32_t frame) {
 		case RR_EN_FUEL: return &rr_gfx.fuel;
 		case RR_EN_TURRET: return &rr_gfx.turret[e->phase % 3];
 		case RR_EN_TURRET_C: return &rr_gfx.turret_c[e->phase % 3];
+		// Squeezed while pushing up
+		case RR_EN_JELLY: return &rr_gfx.jelly[e->state == 1 ? 1 : 0];
+		case RR_EN_MOSQUITO: return &rr_gfx.mosquito[(frame >> 1) & 1];
+		// Facing the way it flies
+		case RR_EN_WASP: return e->state == 0 ? &rr_gfx.wasp_r[(frame >> 1) & 1] : &rr_gfx.wasp_l[(frame >> 1) & 1];
 		default: return &rr_gfx.capsule[(frame >> 3) & 1];
 	}
 }
@@ -165,6 +173,68 @@ void rr_enemy_spawn(uint32_t type, int32_t px, int32_t y) {
 		default:
 			break;
 	}
+}
+
+// The giants' ways of moving
+#define RR_JELLY_CYCLE 100   // frames between pushes
+#define RR_JELLY_PUSH 18     // frames squeezed, pushing up
+#define RR_JELLY_SINK 8      // how fast it starts sinking, a frame
+#define RR_MOSQUITO_HOVER 50
+#define RR_MOSQUITO_DASH 26
+#define RR_MOSQUITO_DASHES 3
+#define RR_WASP_AHEAD 230    // how far ahead of the ship it turns
+#define RR_WASP_TURN 36      // frames turned, before diving back
+
+void rr_enemy_giants(uint32_t type, uint32_t count, int32_t y) {
+	uint32_t w = 0;
+	while (w < RR_WAVES && _waves[w].count) ++w;
+	const int32_t cam = rr_world_camera() >> RR_FP;
+	uint32_t made = 0;
+	for (uint32_t i = 0; i < count; ++i) {
+		int32_t px, py;
+		switch (type) {
+			case RR_EN_JELLY:
+				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 170;
+				py = y + (int32_t)(game_rand() % 120) - 60;
+				break;
+			case RR_EN_WASP:
+				// From behind, one after the other
+				px = cam - 110 - (int32_t)i * 140;
+				py = y + ((i & 1) ? 60 : -60);
+				break;
+			default:
+				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 70;
+				py = y + (int32_t)i * 50 - (int32_t)count * 25;
+				break;
+		}
+		py = game_clamp(py, RR_PLAY_TOP + 8, RR_PLAY_BOTTOM - 100);
+		RrEnemy_t* e = add(type, px, py);
+		if (!e) break;
+		e->phase = game_rand();
+		e->wave = w < RR_WAVES ? w + 1 : 0;
+		switch (type) {
+			case RR_EN_JELLY:
+				// Drifting slowly, each pushing at its own time
+				e->vx = RR_SCROLL - RR_PX(5) / 4;
+				e->timer = (i * 37) % RR_JELLY_CYCLE;
+				break;
+			case RR_EN_MOSQUITO:
+				e->vx = RR_SCROLL - RR_PX(2);
+				e->timer = i * 12;
+				break;
+			default:
+				e->vx = RR_SCROLL + RR_PX(9) / 2;
+				break;
+		}
+		++made;
+	}
+	if (w < RR_WAVES && made) {
+		_waves[w].count = made;
+		_waves[w].killed = 0;
+		_waves[w].left = made;
+		_waves[w].broken = false;
+	}
+	game_sound_play(type == RR_EN_JELLY ? RR_SFX_PULSE : RR_SFX_BUZZ);
 }
 
 bool rr_enemy_place(int32_t px, int32_t y, bool ceiling, uint32_t section) {
@@ -432,6 +502,107 @@ static void update_enemy(RrEnemy_t* e) {
 		case RR_EN_CAPSULE:
 			e->y = e->base_y + game_sin(e->timer * 4) * RR_PX(4) / 127;
 			break;
+		case RR_EN_JELLY: {
+			// Squeezes and pushes up, then opens out and sinks slowly
+			const uint32_t t = e->timer % RR_JELLY_CYCLE;
+			if (t == 0) {
+				e->state = 1;
+				e->vy = -RR_PX(2);
+				if (rr_world_sx(e->x) < GAME_SCREEN_W - 40) game_sound_play(RR_SFX_PULSE);
+			}
+			else if (t == RR_JELLY_PUSH) {
+				// Opening out stops it, then it sinks
+				e->state = 0;
+				e->vy = 0;
+				// Now and then a sting, dropped straight down
+				if ((e->phase++ & 1) && rr_world_sx(e->x) < GAME_SCREEN_W - 40) {
+					rr_enemy_fire(e->x + RR_PX(40), e->y + RR_PX(60), -RR_SCROLL / 2, bullet_speed() / 2);
+				}
+			}
+			if (e->state == 0 && e->vy < RR_PX(1) / 2) e->vy += RR_JELLY_SINK;
+			// Drawn back towards where it came in, so a group stays spread out
+			if (e->state == 0) e->vy += game_clamp((e->base_y - e->y) >> 10, -2, 2);
+			e->x += e->vx;
+			e->y += e->vy;
+			// Kept off the top, and pushed up sooner near the bottom
+			if (e->y < RR_PX(RR_PLAY_TOP)) e->y = RR_PX(RR_PLAY_TOP);
+			if (e->y > RR_PX(RR_PLAY_BOTTOM - 110) && t > RR_JELLY_PUSH + 10) e->timer += RR_JELLY_CYCLE - t - 1;
+			break;
+		}
+		case RR_EN_MOSQUITO: {
+			const int32_t sx = rr_world_sx(e->x);
+			if (e->state == 0) {
+				// Hovering, jittering, until it is time to dart
+				e->x += RR_SCROLL - RR_PX(1) / 2;
+				e->y += ((int32_t)(game_rand() % 5) - 2) * RR_PX(1) / 2;
+				if (sx > GAME_SCREEN_W - 60) e->x -= RR_PX(2);
+				if (e->timer >= RR_MOSQUITO_HOVER && sx < GAME_SCREEN_W - 40) {
+					if (e->phase >= RR_MOSQUITO_DASHES || !rr_player_alive()) {
+						// Done, off it goes
+						e->state = 2;
+						e->vx = RR_SCROLL - RR_PX(6);
+						e->vy = 0;
+					}
+					else {
+						// Straight at where the ship is now
+						const float dx = (float)(RR_PX(rr_player_px() + RR_SHIP_W / 2) - e->x - RR_PX(48));
+						const float dy = (float)(RR_PX(rr_player_py() + RR_SHIP_H / 2) - e->y - RR_PX(24));
+						const float len = sqrtf(dx * dx + dy * dy) + 1.0f;
+						const float speed = (float)(RR_PX(5) + (int32_t)(_loop > 4 ? 4 : _loop) * RR_PX(1) / 2);
+						e->vx = RR_SCROLL + (int32_t)(dx * speed / len);
+						e->vy = (int32_t)(dy * speed / len);
+						e->state = 1;
+						++e->phase;
+						game_sound_play(RR_SFX_BUZZ);
+					}
+					e->timer = 0;
+				}
+			}
+			else {
+				e->x += e->vx;
+				e->y += e->vy;
+				if (e->state == 1 && e->timer >= RR_MOSQUITO_DASH) {
+					e->state = 0;
+					e->timer = 0;
+				}
+			}
+			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 48));
+			break;
+		}
+		case RR_EN_WASP: {
+			const int32_t sx = rr_world_sx(e->x);
+			const int32_t ship_sx = rr_player_px() - (rr_world_camera() >> RR_FP);
+			if (e->state == 0) {
+				// Overtaking, weaving
+				e->x += e->vx;
+				e->y = e->base_y + game_sin(e->phase + e->timer * 4) * RR_PX(40) / 127;
+				if (sx > ship_sx + RR_WASP_AHEAD || sx > GAME_SCREEN_W - 110) {
+					// Turns to face the ship, and stings
+					e->state = 1;
+					e->timer = 0;
+					e->vx = RR_SCROLL;
+				}
+			}
+			else if (e->state == 1) {
+				e->x += e->vx;
+				if (e->timer == 12) {
+					rr_enemy_fire_at(e->x + RR_PX(8), e->y + RR_PX(26), bullet_speed() + RR_PX(2));
+					game_sound_play(RR_SFX_STING);
+				}
+				if (e->timer >= RR_WASP_TURN) {
+					// Dives back past, towards the ship
+					e->state = 2;
+					e->vx = RR_SCROLL - RR_PX(6);
+					e->vy = rr_player_py() > (e->y >> RR_FP) ? RR_PX(3) / 2 : -RR_PX(3) / 2;
+				}
+			}
+			else {
+				e->x += e->vx;
+				e->y += e->vy;
+			}
+			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 48));
+			break;
+		}
 		default:
 			break;
 	}
@@ -447,7 +618,9 @@ void rr_enemy_update(uint32_t frame) {
 		update_enemy(e);
 		const int32_t x = e->x >> RR_FP, y = e->y >> RR_FP;
 		const int32_t w = width_of(e), h = height_of(e);
-		if (x - cam < -RR_OFF_LEFT || x - cam > GAME_SCREEN_W + 400 || y < RR_PLAY_TOP - 60 || y > RR_PLAY_BOTTOM + 40) {
+		// Wasps come from behind, so only go once they have turned
+		const int32_t off_left = e->type == RR_EN_WASP && e->state == 0 ? -400 : -RR_OFF_LEFT;
+		if (x - cam < off_left || x - cam > GAME_SCREEN_W + 400 || y < RR_PLAY_TOP - 60 || y > RR_PLAY_BOTTOM + 40) {
 			drop(e);
 			continue;
 		}

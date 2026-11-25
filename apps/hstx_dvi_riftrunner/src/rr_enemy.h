@@ -21,6 +21,10 @@ typedef enum {
 	RR_EN_FUEL,     // on the ground, fuel when hit
 	RR_EN_TURRET,   // on the ground, firing at the ship
 	RR_EN_TURRET_C, // on the ceiling
+	// The giants, from the second time round
+	RR_EN_JELLY,    // drifts, pushing itself up and sinking, dropping stings
+	RR_EN_MOSQUITO, // hovers, then darts at the ship, again and again
+	RR_EN_WASP,     // comes from behind, turns, stings, and dives back past
 	RR_EN_CAPSULE,  // picked up, lights the next power up on the bar
 	RR_EN_TYPES
 } RrEnemy_e;
@@ -41,6 +45,8 @@ bool rr_enemy_place(int32_t px, int32_t y, bool ceiling, uint32_t section);
 // Fliers, coming in from the right at screen y in pixels
 void rr_enemy_wave(uint32_t type, uint32_t count, int32_t y, uint32_t pattern);
 void rr_enemy_spawn(uint32_t type, int32_t px, int32_t y);
+// A group of giants, around screen y in pixels; wasps come from behind
+void rr_enemy_giants(uint32_t type, uint32_t count, int32_t y);
 
 void rr_enemy_update(uint32_t frame);
 void rr_enemy_draw(uint32_t frame);
