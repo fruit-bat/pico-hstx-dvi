@@ -250,8 +250,9 @@ static const char* const _fuel[] = {
 	"RWRRRWRWRWRRRWRRR",
 	"RWRRRWWWRWWWRWWWR",
 	"RRRRRRRRRRRRRRRRR",
-	".DDDDDDDDDDDDDDD.",
-	".GG...........GG.",
+	".GGWWWWWWWWWWWGG.",
+	"..WW.........WW..",
+	".WW...........WW.",
 };
 static const hstx_dvi_pixel_t _fuel_px[] = { RR_RGB(192, 192, 192), RR_RGB(255, 255, 255), RR_RGB(224, 0, 0), RR_RGB(96, 96, 96) };
 
