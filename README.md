@@ -46,6 +46,7 @@ Each app has a README saying what it shows, what it needs and how to use it:
 | [`hstx_dvi_sprite_test`](apps/hstx_dvi_sprite_test/README.md) | Invaders, with lots of sprites |
 | [`hstx_dvi_android_test`](apps/hstx_dvi_android_test/README.md) | An android's walk cycle, in sprites taller than 16 pixels |
 | [`hstx_dvi_defender`](apps/hstx_dvi_defender/README.md) | Guardian, a side scrolling shoot 'em up |
+| [`hstx_dvi_riftrunner`](apps/hstx_dvi_riftrunner/README.md) | Rift Runner, a side scrolling shooter through caverns and a city to a warship, with big, bold sprites |
 | [`hstx_dvi_wildwood`](apps/hstx_dvi_wildwood/README.md) | Wildwood, a flip screen maze adventure |
 | [`hstx_dvi_manor`](apps/hstx_dvi_manor/README.md) | Moonlit Manor, a scrolling platform game in a haunted house |
 | [`hstx_dvi_wireframe_test`](apps/hstx_dvi_wireframe_test/README.md) | Elite's ships in 3D, wireframe and filled, round a space station |

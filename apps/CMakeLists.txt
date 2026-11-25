@@ -83,6 +83,7 @@ add_subdirectory(hstx_dvi_tmt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_tmt_te
 add_subdirectory(hstx_dvi_vt_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_vt_test")
 add_subdirectory(hstx_dvi_sprite_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_sprite_test")
 add_subdirectory(hstx_dvi_defender  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_defender")
+add_subdirectory(hstx_dvi_riftrunner  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_riftrunner")
 add_subdirectory(hstx_dvi_wildwood  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_wildwood")
 add_subdirectory(hstx_dvi_manor  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_manor")
 add_subdirectory(hstx_dvi_lisp_test  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_lisp_test")
@@ -93,7 +94,7 @@ add_subdirectory(hstx_dvi_harmless  "${CMAKE_CURRENT_BINARY_DIR}/hstx_dvi_harmle
 
 # The games' serial port, moved off the USB port when it is a keyboard's host
 if (GAME_USBKBD)
-  foreach(game hstx_dvi_sprite_test hstx_dvi_defender hstx_dvi_wildwood hstx_dvi_manor
+  foreach(game hstx_dvi_sprite_test hstx_dvi_defender hstx_dvi_riftrunner hstx_dvi_wildwood hstx_dvi_manor
       hstx_dvi_android_test hstx_dvi_wireframe_test hstx_dvi_harmless hstx_dvi_cpm)
     pico_enable_stdio_usb(${game} 0)
     pico_enable_stdio_uart(${game} 1)
