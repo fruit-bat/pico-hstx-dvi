@@ -1,7 +1,7 @@
 // Copyright (c) 2024 fruit-bat.
 
-// Big, bold pictures: pixel art of any colours, drawn 1, 2 or 4 times the
-// size, from rows of characters as game_art does. Each row is kept as runs of
+// Big, bold pictures: pixel art of any colours, drawn a whole number of
+// times the size, from rows of characters as game_art does. Each row is kept as runs of
 // one colour, which the renderer draws as spans, so a picture costs about the
 // same however big it is drawn.
 #pragma once
@@ -24,18 +24,18 @@ typedef struct {
 
 typedef struct {
 	uint8_t w, h;  // in the picture's own pixels
-	uint8_t shift; // drawn 1 << shift times the size
+	uint8_t scale; // drawn this many times the size
 	const uint16_t* row; // the first run of each row, h + 1 of them
 	const RrRun_t* run;
 } RrArt_t;
 
 // The size on the screen
-static inline int32_t rr_art_w(const RrArt_t* a) { return a->w << a->shift; }
-static inline int32_t rr_art_h(const RrArt_t* a) { return a->h << a->shift; }
+static inline int32_t rr_art_w(const RrArt_t* a) { return a->w * a->scale; }
+static inline int32_t rr_art_h(const RrArt_t* a) { return a->h * a->scale; }
 
 // Makes a picture from h rows of characters. Each character in key is drawn
 // in the matching pixel; anything else is see through. Rows can be of
-// different lengths. scale is 1, 2 or 4, and flip turns it upside down.
+// different lengths. scale is 1 to 8, and flip turns it upside down.
 void rr_art_make(RrArt_t* a, const char* const* rows, uint32_t h, const char* key,
 	const hstx_dvi_pixel_t* pixels, uint32_t scale, bool flip);
 

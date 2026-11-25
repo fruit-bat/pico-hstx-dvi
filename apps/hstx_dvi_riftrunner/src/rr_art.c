@@ -22,7 +22,7 @@ static SpriteSpan_t _spans[RR_ART_MAX_RUNS];
 void rr_art_make(RrArt_t* a, const char* const* rows, uint32_t h, const char* key,
 	const hstx_dvi_pixel_t* pixels, uint32_t scale, bool flip) {
 	if (h > RR_ART_MAX_H) h = RR_ART_MAX_H;
-	a->shift = scale >= 4 ? 2 : scale >= 2 ? 1 : 0;
+	a->scale = scale < 1 ? 1 : scale > 8 ? 8 : scale;
 	a->h = h;
 	a->w = 0;
 	if (_rows_used + h + 1 > RR_ART_ROW_POOL) {
@@ -76,17 +76,17 @@ static void __not_in_flash_func(art_renderer)(
 	const SpriteId spriteId
 ) {
 	const RrArt_t* a = (const RrArt_t*)d1;
-	const uint32_t sr = (uint32_t)row >> a->shift;
+	const uint32_t sc = a->scale;
+	const uint32_t sr = (uint32_t)row / sc;
 	if (sr >= a->h) return;
 	const uint32_t i0 = a->row[sr], i1 = a->row[sr + 1];
 	if (i0 == i1) return;
-	const uint32_t sh = a->shift;
 	const uint32_t flash = (uint32_t)(uintptr_t)d2;
 	uint32_t n = 0;
 	for (uint32_t i = i0; i < i1; ++i) {
 		const RrRun_t* u = &a->run[i];
-		_spans[n].x0 = (int16_t)(x + (u->x0 << sh));
-		_spans[n].x1 = (int16_t)(x + (u->x1 << sh));
+		_spans[n].x0 = (int16_t)(x + u->x0 * sc);
+		_spans[n].x1 = (int16_t)(x + u->x1 * sc);
 		_spans[n].p = flash ? (hstx_dvi_pixel_t)(flash - 1) : u->p;
 		++n;
 	}

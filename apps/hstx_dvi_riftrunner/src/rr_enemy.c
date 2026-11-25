@@ -194,20 +194,20 @@ void rr_enemy_giants(uint32_t type, uint32_t count, int32_t y) {
 		int32_t px, py;
 		switch (type) {
 			case RR_EN_JELLY:
-				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 170;
+				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 140;
 				py = y + (int32_t)(game_rand() % 120) - 60;
 				break;
 			case RR_EN_WASP:
 				// From behind, one after the other
-				px = cam - 110 - (int32_t)i * 140;
+				px = cam - 90 - (int32_t)i * 120;
 				py = y + ((i & 1) ? 60 : -60);
 				break;
 			default:
-				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 70;
-				py = y + (int32_t)i * 50 - (int32_t)count * 25;
+				px = cam + GAME_SCREEN_W + 20 + (int32_t)i * 56;
+				py = y + (int32_t)i * 40 - (int32_t)count * 20;
 				break;
 		}
-		py = game_clamp(py, RR_PLAY_TOP + 8, RR_PLAY_BOTTOM - 100);
+		py = game_clamp(py, RR_PLAY_TOP + 8, RR_PLAY_BOTTOM - 80);
 		RrEnemy_t* e = add(type, px, py);
 		if (!e) break;
 		e->phase = game_rand();
@@ -516,7 +516,7 @@ static void update_enemy(RrEnemy_t* e) {
 				e->vy = 0;
 				// Now and then a sting, dropped straight down
 				if ((e->phase++ & 1) && rr_world_sx(e->x) < GAME_SCREEN_W - 40) {
-					rr_enemy_fire(e->x + RR_PX(40), e->y + RR_PX(60), -RR_SCROLL / 2, bullet_speed() / 2);
+					rr_enemy_fire(e->x + RR_PX(30), e->y + RR_PX(45), -RR_SCROLL / 2, bullet_speed() / 2);
 				}
 			}
 			if (e->state == 0 && e->vy < RR_PX(1) / 2) e->vy += RR_JELLY_SINK;
@@ -526,7 +526,7 @@ static void update_enemy(RrEnemy_t* e) {
 			e->y += e->vy;
 			// Kept off the top, and pushed up sooner near the bottom
 			if (e->y < RR_PX(RR_PLAY_TOP)) e->y = RR_PX(RR_PLAY_TOP);
-			if (e->y > RR_PX(RR_PLAY_BOTTOM - 110) && t > RR_JELLY_PUSH + 10) e->timer += RR_JELLY_CYCLE - t - 1;
+			if (e->y > RR_PX(RR_PLAY_BOTTOM - 90) && t > RR_JELLY_PUSH + 10) e->timer += RR_JELLY_CYCLE - t - 1;
 			break;
 		}
 		case RR_EN_MOSQUITO: {
@@ -545,8 +545,8 @@ static void update_enemy(RrEnemy_t* e) {
 					}
 					else {
 						// Straight at where the ship is now
-						const float dx = (float)(RR_PX(rr_player_px() + RR_SHIP_W / 2) - e->x - RR_PX(48));
-						const float dy = (float)(RR_PX(rr_player_py() + RR_SHIP_H / 2) - e->y - RR_PX(24));
+						const float dx = (float)(RR_PX(rr_player_px() + RR_SHIP_W / 2) - e->x - RR_PX(36));
+						const float dy = (float)(RR_PX(rr_player_py() + RR_SHIP_H / 2) - e->y - RR_PX(18));
 						const float len = sqrtf(dx * dx + dy * dy) + 1.0f;
 						const float speed = (float)(RR_PX(5) + (int32_t)(_loop > 4 ? 4 : _loop) * RR_PX(1) / 2);
 						e->vx = RR_SCROLL + (int32_t)(dx * speed / len);
@@ -566,7 +566,7 @@ static void update_enemy(RrEnemy_t* e) {
 					e->timer = 0;
 				}
 			}
-			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 48));
+			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 36));
 			break;
 		}
 		case RR_EN_WASP: {
@@ -576,7 +576,7 @@ static void update_enemy(RrEnemy_t* e) {
 				// Overtaking, weaving
 				e->x += e->vx;
 				e->y = e->base_y + game_sin(e->phase + e->timer * 4) * RR_PX(40) / 127;
-				if (sx > ship_sx + RR_WASP_AHEAD || sx > GAME_SCREEN_W - 110) {
+				if (sx > ship_sx + RR_WASP_AHEAD || sx > GAME_SCREEN_W - 90) {
 					// Turns to face the ship, and stings
 					e->state = 1;
 					e->timer = 0;
@@ -586,7 +586,7 @@ static void update_enemy(RrEnemy_t* e) {
 			else if (e->state == 1) {
 				e->x += e->vx;
 				if (e->timer == 12) {
-					rr_enemy_fire_at(e->x + RR_PX(8), e->y + RR_PX(26), bullet_speed() + RR_PX(2));
+					rr_enemy_fire_at(e->x + RR_PX(6), e->y + RR_PX(20), bullet_speed() + RR_PX(2));
 					game_sound_play(RR_SFX_STING);
 				}
 				if (e->timer >= RR_WASP_TURN) {
@@ -600,7 +600,7 @@ static void update_enemy(RrEnemy_t* e) {
 				e->x += e->vx;
 				e->y += e->vy;
 			}
-			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 48));
+			e->y = game_clamp(e->y, RR_PX(RR_PLAY_TOP), RR_PX(RR_PLAY_BOTTOM - 36));
 			break;
 		}
 		default:

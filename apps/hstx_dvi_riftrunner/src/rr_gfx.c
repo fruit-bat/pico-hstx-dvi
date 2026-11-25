@@ -412,7 +412,7 @@ static const char* const _wall[] = {
 static const hstx_dvi_pixel_t _wall_px[] = { RR_RGB(224, 224, 255), RR_RGB(128, 160, 224), RR_RGB(64, 80, 160) };
 
 // ----------------------------------------------------------------------------
-// The giants, from the second time round, drawn four times the size
+// The giants, from the second time round, drawn three times the size
 
 // A jellyfish, drifting with its bell wide, and squeezed to push up
 static const char* const _jelly[2][21] = {
@@ -588,11 +588,11 @@ void rr_gfx_init(void) {
 	for (uint32_t i = 0; i < 2; ++i) {
 		static char buf[12][33];
 		const char* rows[12];
-		// Giants: four times the size
-		rr_art_make(&g->jelly[i], _jelly[i], 21, "PLWDT", _jelly_px, 4, false);
-		rr_art_make(&g->mosquito[i], _mosquito[i], 12, "WHRNBSL", _mosquito_px, 4, false);
-		rr_art_make(&g->wasp_r[i], _wasp[i], 12, WASP_KEY, _wasp_px, 4, false);
+		// Giants: three times the size
+		rr_art_make(&g->jelly[i], _jelly[i], 21, "PLWDT", _jelly_px, 3, false);
+		rr_art_make(&g->mosquito[i], _mosquito[i], 12, "WHRNBSL", _mosquito_px, 3, false);
+		rr_art_make(&g->wasp_r[i], _wasp[i], 12, WASP_KEY, _wasp_px, 3, false);
 		mirror(_wasp[i], 12, buf, rows);
-		rr_art_make(&g->wasp_l[i], rows, 12, WASP_KEY, _wasp_px, 4, false);
+		rr_art_make(&g->wasp_l[i], rows, 12, WASP_KEY, _wasp_px, 3, false);
 	}
 }

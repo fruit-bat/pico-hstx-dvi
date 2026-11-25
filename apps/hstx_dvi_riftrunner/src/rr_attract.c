@@ -183,20 +183,20 @@ bool rr_attract_giants(void) {
 			const int32_t y = 118 + i * 98;
 			// Each moving as it does in the game, more or less
 			const RrArt_t* a;
-			int32_t ax = 40 + slide, ay = y;
+			int32_t ax = 52 + slide, ay = y;
 			if (i == 0) {
 				const uint32_t c = frame % 100;
 				a = &rr_gfx.jelly[c < 18 ? 1 : 0];
-				ay = y - 8 + (c < 18 ? -(int32_t)c : (int32_t)(c - 18) * 18 / 82 - 18) + 18;
+				ay = y + 2 + (c < 18 ? -(int32_t)c : (int32_t)(c - 18) * 18 / 82 - 18) + 18;
 			}
 			else if (i == 1) {
 				a = &rr_gfx.mosquito[(frame >> 1) & 1];
 				ax += (int32_t)(game_rand() % 5) - 2;
-				ay += 16 + (int32_t)(game_rand() % 5) - 2;
+				ay += 20 + (int32_t)(game_rand() % 5) - 2;
 			}
 			else {
 				a = &rr_gfx.wasp_r[(frame >> 1) & 1];
-				ay += 16 + game_sin(frame * 5) * 8 / 127;
+				ay += 20 + game_sin(frame * 5) * 8 / 127;
 			}
 			rr_art_draw(a, ax, ay);
 			game_spr_text(&_names[i], 176 + slide, y + 22, game_pallet(GAME_WHITE));

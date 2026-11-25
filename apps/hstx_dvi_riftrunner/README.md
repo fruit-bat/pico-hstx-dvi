@@ -67,7 +67,7 @@ They stay clear of GPIO 8, the MIDI synth's. The first button GPIO can be change
   Losing a ship loses them all.
 - The beam, charged by holding fire, goes through everything in its way, harder the longer it
   was charged.
-- From the second time round, giants join in, drawn four times the size: jellyfish that drift in
+- From the second time round, giants join in, drawn three times the size: jellyfish that drift in
   groups, squeezing to push themselves up and dropping stings; mosquitoes that hover then dart
   straight at the ship, three times; and wasps that come from behind, overtake, turn to sting and
   dive back past. A whole group shot leaves a capsule.
@@ -91,7 +91,7 @@ initials. Music can be turned off in the settings. They are in `src/rr_sound_dat
 ## How it is drawn
 
 - The pictures are pixel art kept as runs of one colour per row (`src/rr_art.c`), drawn as spans
-  twice the size, so a big sprite costs about the same as a small one.
+  twice the size (the giants three times), so a big sprite costs about the same as a small one.
 - The land is columns 16 pixels wide, sloping or stepping, with a bright rim, darker bands and, in
   the city, lit windows, with hills behind going by at half speed (`src/rr_world.c`). Each frame the
   game's core (core 0) works out the runs of colour on every row of the land and hills, side by side
