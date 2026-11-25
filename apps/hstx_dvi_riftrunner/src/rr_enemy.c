@@ -87,8 +87,15 @@ static const RrArt_t* art_of(const RrEnemy_t* e, uint32_t frame) {
 		case RR_EN_DART: return &rr_gfx.dart[(frame >> 3) & 1];
 		case RR_EN_CARRIER: return &rr_gfx.carrier[(frame >> 2) & 1];
 		case RR_EN_SAUCER: return &rr_gfx.saucer[(frame >> 3) & 1];
-		case RR_EN_METEOR: return &rr_gfx.meteor;
-		case RR_EN_ROCK: return &rr_gfx.rock;
+		// Spinning, one way or the other
+		case RR_EN_METEOR: {
+			const uint32_t f = (frame >> 2) % RR_METEOR_FRAMES;
+			return &rr_gfx.meteor[(e->phase & 1) ? RR_METEOR_FRAMES - 1 - f : f];
+		}
+		case RR_EN_ROCK: {
+			const uint32_t f = (frame >> 1) % RR_ROCK_FRAMES;
+			return &rr_gfx.rock[(e->phase & 1) ? RR_ROCK_FRAMES - 1 - f : f];
+		}
 		case RR_EN_ROCKET: return &rr_gfx.rocket;
 		case RR_EN_FUEL: return &rr_gfx.fuel;
 		case RR_EN_TURRET: return &rr_gfx.turret[e->phase % 3];
@@ -161,6 +168,7 @@ void rr_enemy_spawn(uint32_t type, int32_t px, int32_t y) {
 		case RR_EN_METEOR:
 			e->vx = RR_SCROLL - RR_PX(1) - (int32_t)(game_rand() % RR_PX(2));
 			e->vy = (int32_t)(game_rand() % 192) - 96;
+			e->phase = game_rand();
 			break;
 		case RR_EN_ROCKET:
 			// How close the ship gets before it goes
@@ -328,8 +336,9 @@ static void kill(RrEnemy_t* e, bool scored) {
 			break;
 		case RR_EN_METEOR:
 			for (int32_t i = -1; i <= 1; i += 2) {
-				RrEnemy_t* r = add(RR_EN_ROCK, (cx >> RR_FP) - 12, (cy >> RR_FP) - 7 + i * 10);
+				RrEnemy_t* r = add(RR_EN_ROCK, (cx >> RR_FP) - 12, (cy >> RR_FP) - 12 + i * 14);
 				if (r) {
+					r->phase = i > 0;
 					r->vx = e->vx - RR_PX(1) / 2;
 					r->vy = i * RR_PX(1);
 				}

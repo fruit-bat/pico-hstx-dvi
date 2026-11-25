@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 // Room for all the game's pictures
-#define RR_ART_RUN_POOL 2048
-#define RR_ART_ROW_POOL 640
+#define RR_ART_RUN_POOL 6144
+#define RR_ART_ROW_POOL 1024
 
 static RrRun_t _runs[RR_ART_RUN_POOL];
 static uint16_t _rows[RR_ART_ROW_POOL];

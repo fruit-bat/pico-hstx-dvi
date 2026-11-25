@@ -13,7 +13,6 @@ typedef enum {
 	RR_FLYING_WARSHIP,
 } RrFlying_e;
 
-static const char* const _on_off[] = { "ON", "OFF" };
 static const char* const _tune_names[] = { "RIFT RUNNER", "NIGHT ORBIT", "ATOMIC SURF", "CLOCKWORK" };
 static const uint8_t _tunes[] = { RR_TUNE_STAGE, RR_TUNE_NIGHT_ORBIT, RR_TUNE_ATOMIC_SURF, RR_TUNE_CLOCKWORK };
 #define RR_FLYING_TUNES (sizeof(_tunes) / sizeof(_tunes[0]))
@@ -21,7 +20,6 @@ static const uint8_t _tunes[] = { RR_TUNE_STAGE, RR_TUNE_NIGHT_ORBIT, RR_TUNE_AT
 static const char* const _rounds[] = { "1", "2", "3" };
 static const char* const _demo_sound[] = { "ON", "SILENT" };
 
-static uint8_t _flight_off = 0;
 static uint8_t _tune = 0;
 static uint8_t _start_round = 0;
 static uint8_t _demo_silent = 0;
@@ -29,12 +27,10 @@ static RrFlying_e _flying = RR_FLYING_NONE;
 
 static void play(void) {
 	if (_flying == RR_FLYING_NONE) return;
-	if (_flight_off) game_music_stop(GAME_FADE_QUICK);
-	else game_music_play(_flying == RR_FLYING_WARSHIP ? RR_TUNE_BOSS : _tunes[_tune % RR_FLYING_TUNES]);
+	game_music_play(_flying == RR_FLYING_WARSHIP ? RR_TUNE_BOSS : _tunes[_tune % RR_FLYING_TUNES]);
 }
 
 static const GameOption_t _options[] = {
-	{ "FLIGHT MUSIC", _on_off, 2, &_flight_off, play },
 	{ "FLYING TUNE", _tune_names, RR_FLYING_TUNES, &_tune, play },
 	{ "START ROUND", _rounds, sizeof(_rounds) / sizeof(_rounds[0]), &_start_round, NULL },
 	{ "DEMO SOUND", _demo_sound, 2, &_demo_silent, NULL },

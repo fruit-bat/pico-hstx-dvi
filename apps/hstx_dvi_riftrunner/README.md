@@ -21,11 +21,11 @@ NES or SNES gamepads (see the top README):
 | A (SNES B or A)    | Fire. Hold it to charge the beam, and let go to fire it |
 | B (SNES Y or X)    | Drop a bomb                                           |
 | Select, L or R     | Take the power up lit on the power bar                |
-| Start              | The settings: in a game, it pauses with them over it  |
+| Start              | The settings: in a game or the demo, it pauses with them |
 
-Fire or bomb starts a game. The settings are music on or off, music while flying on or off, the
-tune to fly to (Rift Runner's own, or Night Orbit, Atomic Surf or Clockwork from the songs the
-games share), the round a game starts at (1 to 3, for trying the giants without beating the
+Fire or bomb starts a game. The settings are music on or off (all the tunes), the tune to fly
+to (Rift Runner's own, or Night Orbit, Atomic Surf or Clockwork from the songs the games
+share), the round a game starts at (1 to 3, for trying the giants without beating the
 warship first), whether the demo game is heard, and a sound test.
 
 Built with `-DGAME_BUTTONS=ON`, buttons work as well, each connecting its GPIO to ground
@@ -48,7 +48,7 @@ They stay clear of GPIO 8, the MIDI synth's. The first button GPIO can be change
 
 - The land goes by on its own, made up as it comes. Hitting it, or anything flying, loses a ship.
 - Five sections, each its own land and enemies: the ridges (rockets that take off as you come),
-  the caverns (turrets on the floor and ceiling), the debris field (meteors that break up),
+  the caverns (turrets on the floor and ceiling), the debris field (spinning meteors that break up),
   the city (rockets on the roofs, saucers that come after you) and the fortress (narrow
   passages and a lot of turrets). Then the warship.
 - Fuel burns all the time. Shoot or bomb fuel tanks to fill up. With none left the ship drops.
@@ -123,8 +123,8 @@ The modes are `attract` (no buttons pressed), `play` (a game flown by the demo p
 play, jumping to the next section every 10 seconds), `boss` (as play, going straight to the
 warship), `manual` (charging and letting go of the beam, bombs and some flying) and `settings`
 (opens the settings on the title and tries a sound), `powers` (takes power ups in turn, firing)
-`pause` (opens the settings in a game and changes the music) and `giants` (as play, sending in
-each kind of giant). The score, lives, fuel and section are printed
-every 10 seconds of game time, and each ship lost as it happens.
+`pause` (opens the settings in a game and changes the music), `demoset` (opens the settings
+in the demo) and `giants` (as play, sending in each kind of giant). The score, lives, fuel and
+section are printed every 10 seconds of game time, and each ship lost as it happens.
 
 Each saved frame is about 1MB, so keep the gap between them large on long runs.

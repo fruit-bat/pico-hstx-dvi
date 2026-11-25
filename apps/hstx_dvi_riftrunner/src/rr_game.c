@@ -304,6 +304,12 @@ static void update_phase(uint32_t frame) {
 	rr_player_set_burning(_phase == RR_PHASE_FLY);
 }
 
+// Silent, if so set, until a player takes the demo over or it ends
+static void demo_volume(void) {
+	if (rr_settings_demo_silent()) game_seq_volume(0, 0);
+	else game_seq_volume(RR_VOLUME, RR_VOLUME);
+}
+
 // Runs a game until it is over. Returns true if the demo is taken over.
 static bool game_run(const bool demo) {
 	game_rand_seed(demo ? 0x5eed1234 : time_us_32());
@@ -332,7 +338,18 @@ static bool game_run(const bool demo) {
 
 		uint16_t input;
 		if (demo) {
-			if (is_rr_input_play(game_input_pressed())) return true;
+			const uint16_t pressed = game_input_pressed();
+			// Start shows the settings, as between games, and the demo goes on after
+			if (pressed & RR_INP_BIT_START) {
+				game_sound_hold(RR_SFX_CHARGE, false);
+				// Heard while choosing, even if the demo is silent
+				game_seq_volume(RR_VOLUME, RR_VOLUME);
+				rr_settings_run(paused_back);
+				demo_volume();
+				// Not leaving the settings taken as taking the demo over
+				game_input_pressed();
+			}
+			else if (is_rr_input_play(pressed)) return true;
 			if (frame >= RR_GAME_DEMO_FRAMES) return false;
 			input = rr_demo_input(frame);
 		}
@@ -388,8 +405,7 @@ void rr_game_play(void) {
 bool rr_game_demo(void) {
 	// The demo should not count against the last player's score
 	const uint32_t score = rr_hud_score();
-	// Silent, if so set, until a player takes it over or it ends
-	if (rr_settings_demo_silent()) game_seq_volume(0, 0);
+	demo_volume();
 	const bool taken_over = game_run(true);
 	rr_music_landed();
 	// Back to the title's tune, the demo's stopped while still silent

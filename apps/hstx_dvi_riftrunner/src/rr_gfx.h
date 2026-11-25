@@ -6,6 +6,10 @@
 
 #include "rr_art.h"
 
+// Frames in a turn of a spinning asteroid
+#define RR_METEOR_FRAMES 16
+#define RR_ROCK_FRAMES 8
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,7 +22,7 @@ typedef struct {
 	RrArt_t dart[2], carrier[2], saucer[2];
 	RrArt_t rocket, rocket_flame[2], fuel;
 	RrArt_t turret[3], turret_c[3]; // left, up and left, up; on the ceiling down
-	RrArt_t meteor, rock;
+	RrArt_t meteor[RR_METEOR_FRAMES], rock[RR_ROCK_FRAMES]; // a whole turn
 	RrArt_t bullet[2];
 	RrArt_t hull, core[3], wall;
 	// The giants, from the second time round

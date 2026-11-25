@@ -5,6 +5,7 @@
 #include "rr_gfx.h"
 #include "rr_world.h"
 #include <string.h>
+#include <math.h>
 
 RrGfx_t rr_gfx;
 
@@ -299,34 +300,118 @@ static const hstx_dvi_pixel_t _turret_px[] = {
 	RR_RGB(224, 224, 224), RR_RGB(128, 128, 192), RR_RGB(255, 255, 255), RR_RGB(255, 32, 32), RR_RGB(64, 64, 112),
 };
 
-static const char* const _meteor[] = {
-	"........KKKKKKK.........",
-	".....KKKGGGGGGGKK.......",
-	"...KKGGGGLLGGGGGGKK.....",
-	"..KGGGLLLLGGGGDDGGGK....",
-	".KGGGLLLGGGGGDDDDGGGKK..",
-	".KGGGGGGGGGGGGDDGGGGGGK.",
-	"KGGDDGGGGGGGGGGGGGGLLGGK",
-	"KGDDDDGGGGGLLGGGGGLLLGGK",
-	"KGGDDGGGGGLLLLGGGGGGGGGK",
-	"KGGGGGGGGGGLLGGGGGDDGGGK",
-	".KGGGGLLGGGGGGGGGDDDDGK.",
-	".KGGGLLLLGGGDDGGGGDDGGK.",
-	"..KGGGLLGGGDDDDGGGGGGK..",
-	"...KKGGGGGGGDDGGGGGKK...",
-	".....KKKGGGGGGGGKKK.....",
-	"........KKKKKKKK........",
+// The asteroids are made when the game starts, as a lumpy, cratered rock lit
+// from the top left and turned a little more in each frame, so it spins
+// while the light stays put. A lump is a bump on the outline, a crater a dent
+// in the surface, both in the rock's own turning coordinates.
+typedef struct { float amp, k, phase; } RrLump_t;
+typedef struct { float u, v, r; } RrCrater_t;
+typedef struct {
+	uint32_t size;          // pixels across
+	float radius;           // before the lumps
+	const RrLump_t* lump;
+	uint32_t lumps;
+	const RrCrater_t* crater;
+	uint32_t craters;
+} RrRock_t;
+
+static const RrLump_t _meteor_lumps[] = { { 0.10f, 2, 0.3f }, { 0.08f, 3, 1.9f }, { 0.05f, 5, 4.0f } };
+static const RrCrater_t _meteor_craters[] = {
+	{ -3.5f, -2.5f, 3.2f }, { 4.0f, 3.0f, 2.6f }, { 3.5f, -5.0f, 1.8f }, { -4.0f, 5.0f, 2.0f }, { 0.5f, 1.0f, 1.4f },
 };
-static const char* const _rock[] = {
-	"...KKKKKK...",
-	".KKGGLGGGKK.",
-	"KGGLLGGDDGGK",
-	"KGGGGGGDDGGK",
-	"KGDDGGGGGLGK",
-	".KKGDGGGLKK.",
-	"...KKKKKK...",
+static const RrRock_t _meteor = { 24, 10.6f, _meteor_lumps, 3, _meteor_craters, 5 };
+
+static const RrLump_t _rock_lumps[] = { { 0.13f, 2, 1.0f }, { 0.09f, 3, 3.1f } };
+static const RrCrater_t _rock_craters[] = { { -1.5f, -1.0f, 1.8f }, { 2.0f, 1.8f, 1.3f } };
+static const RrRock_t _rock = { 12, 5.3f, _rock_lumps, 2, _rock_craters, 2 };
+
+// Dark edge, shadows up to the highlight, the cold light of space round the
+// far side, and the floor of a crater in shadow
+#define ROCK_KEY "K12345BC"
+static const hstx_dvi_pixel_t _rock_px[] = {
+	RR_RGB(36, 36, 85), RR_RGB(73, 55, 85), RR_RGB(109, 73, 85), RR_RGB(146, 109, 85),
+	RR_RGB(196, 150, 85), RR_RGB(240, 205, 170), RR_RGB(73, 109, 170), RR_RGB(55, 36, 85),
 };
-static const hstx_dvi_pixel_t _meteor_px[] = { RR_RGB(96, 64, 32), RR_RGB(160, 128, 96), RR_RGB(224, 192, 160), RR_RGB(96, 80, 64) };
+
+#define RR_ROCK_MAX 24
+
+static float rock_edge(const RrRock_t* k, float phi) {
+	float r = 1.0f;
+	for (uint32_t i = 0; i < k->lumps; ++i) r += k->lump[i].amp * cosf(k->lump[i].k * phi + k->lump[i].phase);
+	return k->radius * r;
+}
+
+// One frame of a rock, turned by a, into buf
+static void rock_frame(const RrRock_t* k, float a, char buf[][RR_ROCK_MAX + 1]) {
+	const uint32_t n = k->size;
+	const float c = (n - 1) * 0.5f;
+	const float ca = cosf(a), sa = sinf(a);
+	// The light, from the top left and in front
+	const float lx = -0.55f, ly = -0.62f, lz = 0.56f;
+	bool in[RR_ROCK_MAX + 2][RR_ROCK_MAX + 2];
+	memset(in, 0, sizeof(in));
+	for (uint32_t y = 0; y < n; ++y) {
+		for (uint32_t x = 0; x < n; ++x) {
+			const float dx = x - c, dy = y - c;
+			const float r = sqrtf(dx * dx + dy * dy);
+			in[y + 1][x + 1] = r < rock_edge(k, atan2f(dy, dx) - a);
+		}
+	}
+	for (uint32_t y = 0; y < n; ++y) {
+		for (uint32_t x = 0; x < n; ++x) {
+			char* p = &buf[y][x];
+			*p = '.';
+			if (!in[y + 1][x + 1]) continue;
+			if (!in[y][x + 1] || !in[y + 2][x + 1] || !in[y + 1][x] || !in[y + 1][x + 2]) {
+				*p = 'K';
+				continue;
+			}
+			const float dx = x - c, dy = y - c;
+			const float r = sqrtf(dx * dx + dy * dy) + 0.001f;
+			const float s = fminf(r / rock_edge(k, atan2f(dy, dx) - a), 1.0f);
+			const float nx = dx / r * s, ny = dy / r * s, nz = sqrtf(1.0f - s * s);
+			float b = nx * lx + ny * ly + nz * lz;
+			// Round the far side, lit by the stars
+			if (s > 0.72f && (nx + ny) > 0.95f) {
+				*p = 'B';
+				continue;
+			}
+			bool floor = false;
+			for (uint32_t i = 0; i < k->craters; ++i) {
+				const RrCrater_t* m = &k->crater[i];
+				// Where the crater is now it has turned
+				const float mx = m->u * ca - m->v * sa, my = m->u * sa + m->v * ca;
+				const float ex = dx - mx, ey = dy - my;
+				const float d = sqrtf(ex * ex + ey * ey);
+				// Towards the light; the wall that side is in shadow, the far one lit
+				const float t = (ex * lx + ey * ly) / m->r;
+				if (d < m->r) {
+					b = b - 0.25f - 0.45f * t;
+					floor = d < m->r * 0.5f && t > -0.2f;
+				}
+				else if (d < m->r + 1.0f && t > 0.3f) b += 0.3f;
+			}
+			if (floor && b < 0.1f) *p = 'C';
+			else if (b < -0.05f) *p = '1';
+			else if (b < 0.25f) *p = '2';
+			else if (b < 0.6f) *p = '3';
+			else if (b < 0.9f) *p = '4';
+			else *p = '5';
+		}
+		buf[y][n] = 0;
+	}
+}
+
+// frames of a whole turn
+static void make_rock(RrArt_t* art, uint32_t frames, const RrRock_t* k) {
+	static char buf[RR_ROCK_MAX][RR_ROCK_MAX + 1];
+	const char* rows[RR_ROCK_MAX];
+	for (uint32_t i = 0; i < RR_ROCK_MAX; ++i) rows[i] = buf[i];
+	for (uint32_t f = 0; f < frames; ++f) {
+		rock_frame(k, f * 6.2831853f / frames, buf);
+		rr_art_make(&art[f], rows, k->size, ROCK_KEY, _rock_px, 2, false);
+	}
+}
 
 static const char* const _bullet[] = {
 	".PP.",
@@ -582,8 +667,8 @@ void rr_gfx_init(void) {
 		rr_art_make(&g->turret_c[i], _turret[i], 10, "BGWRD", _turret_px, 2, true);
 		rr_art_make(&g->core[i], _core, RR_ROWS(_core), "CW", _core_px[i], 2, false);
 	}
-	rr_art_make(&g->meteor, _meteor, RR_ROWS(_meteor), "KGLD", _meteor_px, 2, false);
-	rr_art_make(&g->rock, _rock, RR_ROWS(_rock), "KGLD", _meteor_px, 2, false);
+	make_rock(g->meteor, RR_METEOR_FRAMES, &_meteor);
+	make_rock(g->rock, RR_ROCK_FRAMES, &_rock);
 	rr_art_make(&g->hull, _hull, RR_ROWS(_hull), "KLHDRBO", _hull_px, 2, false);
 	rr_art_make(&g->wall, _wall, RR_ROWS(_wall), "LGD", _wall_px, 2, false);
 	for (uint32_t i = 0; i < 2; ++i) {

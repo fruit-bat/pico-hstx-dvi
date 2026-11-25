@@ -9,8 +9,9 @@
 // powers   - starts a game and takes power ups: twin twice, bomb twice, orb
 //            twice, speed, drone, firing all the while
 // giants   - as play, sending in jellyfish, then mosquitoes, then wasps
-// pause    - starts a game, opens the settings with start, turns flight music
-//            off and picks another tune
+// demoset  - as attract, opening the settings in the demo and leaving them
+// pause    - starts a game, opens the settings with start and picks another
+//            tune to fly to, twice
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -75,7 +76,11 @@ uint32_t host_input(uint32_t f) {
 	}
 	if (!strcmp(host_mode, "pause")) {
 		if (f > 100 && f < 104) return F;
-		static const uint16_t at[][2] = { { 300, START }, { 340, 8 }, { 360, 2 }, { 380, 8 }, { 400, 2 } };
+		static const uint16_t at[][2] = { { 300, START }, { 340, 8 }, { 360, 2 }, { 380, 2 } };
+		for (uint32_t i = 0; i < sizeof(at) / sizeof(at[0]); ++i) if (f == at[i][0]) return at[i][1];
+	}
+	if (!strcmp(host_mode, "demoset")) {
+		static const uint16_t at[][2] = { { 2200, START }, { 2240, 8 }, { 2300, START } };
 		for (uint32_t i = 0; i < sizeof(at) / sizeof(at[0]); ++i) if (f == at[i][0]) return at[i][1];
 	}
 	if (!strcmp(host_mode, "settings")) {
