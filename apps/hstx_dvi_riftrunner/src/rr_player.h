@@ -41,6 +41,11 @@ void rr_player_update(uint32_t frame, uint16_t input, uint16_t pressed);
 // The ship and what goes with it, then its shots, which go behind the enemies
 void rr_player_draw(uint32_t frame);
 void rr_player_draw_shots(uint32_t frame);
+// A beam len long and h high, its left end at x and middle at y on the screen
+void rr_player_draw_beam(int32_t x, int32_t y, int32_t len, int32_t h, uint32_t frame);
+// How far a beam goes in a frame, and how long it is
+#define RR_BEAM_SPEED 26
+#define RR_BEAM_LEN 200
 
 bool rr_player_alive(void);
 // Out of lives, and done blowing up

@@ -191,19 +191,26 @@ bool rr_attract_howto(void) {
 			game_spr_text(&_text[1 + i], 64, 130 + i * 30, game_pallet(i < 4 ? GAME_WHITE : GAME_CYAN));
 		}
 		if ((frame >> 5) & 1) game_spr_text_centre(&_text[12], 420, game_pallet(GAME_YELLOW));
-		// The ship, charging its beam and letting go
+		// The ship, charging its beam and letting go, as in the game
 		const uint32_t f = frame % 160;
-		const int32_t sy = 380;
+		const int32_t sx = 48, sy = 376;
+		const int32_t nx = sx + RR_SHIP_NOSE_X, ny = sy + RR_SHIP_NOSE_Y;
 		if (f < 100) {
-			if (f > 10) rr_fx_disc(500 + 64, sy + 16, 3 + (f - 10) * 12 / 90, 0, (frame & 4) ? RR_RGB(255, 255, 255) : RR_RGB(0, 224, 255));
+			if (f > 10) {
+				const uint32_t charge = (f - 10) * RR_BEAM_FULL / 90;
+				const bool full = charge >= RR_BEAM_FULL;
+				rr_fx_disc(nx + 4, ny, 3 + charge * 12 / RR_BEAM_FULL + (full && (frame & 2) ? 3 : 0), 0,
+					(frame & 4) ? RR_RGB(255, 255, 255) : full ? RR_RGB(255, 96, 255) : RR_RGB(0, 224, 255));
+			}
 		}
 		else {
-			const int32_t len = ((int32_t)f - 100) * 26;
-			rr_spr_rect(560, sy + 6, len, 20, RR_RGB(0, 255, 255));
-			rr_spr_rect(560, sy + 12, len, 8, RR_RGB(255, 255, 255));
+			// The head going on, the tail no further back than the nose
+			const int32_t head = nx + ((int32_t)f - 100) * RR_BEAM_SPEED;
+			const int32_t tail = head - RR_BEAM_LEN > nx ? head - RR_BEAM_LEN : nx;
+			rr_player_draw_beam(tail, ny, head - tail, 40, frame);
 		}
-		rr_art_draw(&rr_gfx.ship, 500, sy);
-		rr_art_draw(&rr_gfx.flame[(frame >> 1) & 1], 484, sy + 12);
+		rr_art_draw(&rr_gfx.ship, sx, sy);
+		rr_art_draw(&rr_gfx.flame[(frame >> 1) & 1], sx - 16, sy + 12);
 		rr_world_draw_stars(frame * 3);
 		game_spr_end();
 	}

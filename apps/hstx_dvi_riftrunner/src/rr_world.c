@@ -493,8 +493,10 @@ static uint32_t hill_row(int32_t y, uint32_t scroll, hstx_dvi_pixel_t p) {
 	if (y < _hill_min) return 0;
 	const uint32_t row = y - _hill_min;
 	const uint32_t r0 = _hill_row[row], r1 = _hill_row[row + 1];
-	// The runs, then again a hills' width on, as the screen can show the join
-	for (int32_t round = 0; round < 2 * RR_HILL_W; round += RR_HILL_W) {
+	// The runs a hills' width back, for the end of the one that goes on round
+	// to the start, then the runs, then again a hills' width on, as the screen
+	// can show the join
+	for (int32_t round = -RR_HILL_W; round < 2 * RR_HILL_W; round += RR_HILL_W) {
 		for (uint32_t i = r0; i < r1; ++i) {
 			int32_t s = _hill_run[i].x0 - (int32_t)scroll + round;
 			int32_t e = _hill_run[i].x1 - (int32_t)scroll + round;

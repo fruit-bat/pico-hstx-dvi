@@ -36,8 +36,6 @@
 // Held this long, fire starts charging the beam rather than having fired
 #define RR_HOLD_CHARGE 10
 #define RR_BEAM_FRAMES 24
-#define RR_BEAM_LEN 200
-#define RR_BEAM_SPEED 26
 
 // The drones follow where the ship has been
 #define RR_TRAIL 64
@@ -520,12 +518,14 @@ static void __not_in_flash_func(beam_renderer)(
 	sprite_render_span(r, x + in, x + len - in / 2, _beam_px[band > 2 ? 2 : band], spriteId);
 }
 
+void rr_player_draw_beam(int32_t x, int32_t y, int32_t len, int32_t h, uint32_t frame) {
+	if (len <= 0) return;
+	if (len > 0x3ff) len = 0x3ff;
+	game_spr_add(x, y - h / 2, len, h, (void*)(uintptr_t)(len | (h << 10) | ((frame * 32) & 0xff) << 16), NULL, beam_renderer);
+}
+
 void rr_player_draw_shots(uint32_t frame) {
-	if (_beam.frames) {
-		const int32_t x0 = _beam.x - RR_BEAM_LEN;
-		game_spr_add(x0, _beam.y - _beam.h / 2, RR_BEAM_LEN, _beam.h,
-			(void*)(uintptr_t)(RR_BEAM_LEN | (_beam.h << 10) | ((frame * 32) & 0xff) << 16), NULL, beam_renderer);
-	}
+	if (_beam.frames) rr_player_draw_beam(_beam.x - RR_BEAM_LEN, _beam.y, RR_BEAM_LEN, _beam.h, frame);
 	for (uint32_t i = 0; i < RR_SHOTS; ++i) {
 		const RrShot_t* s = &_shots[i];
 		const int32_t x = s->x >> RR_FP, y = s->y >> RR_FP;
