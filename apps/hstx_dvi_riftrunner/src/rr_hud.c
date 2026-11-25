@@ -38,7 +38,6 @@ static GameText_t _score_text, _hi_text, _fuel_text, _beam_text, _section_text;
 static GameText_t _slot_text[RR_POWERS];
 static bool _made = false;
 
-static const char* const _slot_names[RR_POWERS] = { "SPEED", "BOMB", "TWIN", "LASER", "DRONE", "ORB" };
 
 void rr_hud_reset(void) {
 	_score = 0;
@@ -78,7 +77,6 @@ bool rr_hud_take_life(void) {
 }
 
 static void make(void) {
-	for (uint32_t i = 0; i < RR_POWERS; ++i) game_text_set(&_slot_text[i], _slot_names[i], 1);
 	game_text_set(&_fuel_text, "FUEL", 1);
 	game_text_set(&_beam_text, "BEAM", 1);
 	_made = true;
@@ -88,10 +86,19 @@ static void make(void) {
 // it goes after the boxes it sits in
 // The boxes of the power bar and the beam gauge, as one sprite drawing runs
 // side by side, as drawing over what is already drawn costs twice as much.
-// d1 holds the lit box (7 for none), whether it is bright, the speed and
-// drone levels, how far the beam is charged and its colour.
-#define RR_BAR_NONE 7
-static const hstx_dvi_pixel_t _beam_px[4] = { RR_RGB(0, 96, 160), RR_RGB(0, 224, 255), RR_RGB(255, 255, 255), RR_RGB(0, 0, 64) };
+// It is given a copy of what to show, one copy filled in while the other is
+// shown.
+typedef struct {
+	int8_t lit;      // the lit box, or -1
+	uint8_t bright;  // the lit box flashing
+	uint8_t level[RR_POWERS];
+	uint8_t full[RR_POWERS];
+	uint8_t beam;    // how much of the gauge is filled
+	hstx_dvi_pixel_t beam_p;
+} RrBar_t;
+
+static RrBar_t _bar_state[2];
+static uint32_t _bar_i = 0;
 static SpriteSpan_t _bar[RR_POWERS * 12 + 8];
 
 static __force_inline uint32_t bar_add(uint32_t n, int32_t x0, int32_t x1, hstx_dvi_pixel_t p) {
@@ -109,31 +116,30 @@ static void __not_in_flash_func(bar_renderer)(
 	const int32_t row,
 	const SpriteId spriteId
 ) {
-	const uint32_t v = (uint32_t)(uintptr_t)d1;
-	const uint32_t lit = v & 7;
-	const bool bright = (v >> 3) & 1;
-	const uint32_t speed = (v >> 4) & 7, drones = (v >> 7) & 3;
-	const int32_t beam = (v >> 9) & 0xff;
-	const hstx_dvi_pixel_t beam_p = _beam_px[(v >> 17) & 3];
+	const RrBar_t* b = (const RrBar_t*)d1;
 	const bool edge = row < 2 || row >= RR_SLOT_H - 2;
 	uint32_t n = 0;
 	for (uint32_t i = 0; i < RR_POWERS; ++i) {
 		const int32_t sx = RR_SLOT_X + i * (RR_SLOT_W + RR_SLOT_GAP);
-		const hstx_dvi_pixel_t border = i == lit ? RR_RGB(255, 255, 255) : RR_RGB(64, 96, 255);
+		const bool lit = (int32_t)i == b->lit;
+		// Taken as far as it goes: dark
+		const hstx_dvi_pixel_t border = lit ? RR_RGB(255, 255, 255) : b->full[i] ? RR_RGB(80, 80, 96) : RR_RGB(64, 96, 255);
 		if (edge) {
 			n = bar_add(n, sx, sx + RR_SLOT_W, border);
 			continue;
 		}
 		n = bar_add(n, sx, sx + 2, border);
 		int32_t fx = sx + 2;
-		// Pips for the levels of those that go up more than once
-		const uint32_t pips = row >= 3 && row < 6 ? (i == RR_POW_SPEED ? speed : i == RR_POW_DRONE ? drones : 0) : 0;
-		const hstx_dvi_pixel_t fill = i == lit ? (bright ? RR_RGB(255, 160, 0) : RR_RGB(255, 224, 0)) : RR_RGB(0, 0, 112);
-		for (uint32_t k = 0; k < pips; ++k) {
-			const int32_t px = sx + 4 + k * 6;
-			n = bar_add(n, fx, px, fill);
-			n = bar_add(n, px, px + 4, RR_RGB(0, 255, 128));
-			fx = px + 4;
+		const hstx_dvi_pixel_t fill = lit ? (b->bright ? RR_RGB(255, 160, 0) : RR_RGB(255, 224, 0))
+			: b->full[i] ? RR_RGB(32, 32, 40) : RR_RGB(0, 0, 112);
+		// A pip for each level taken
+		if (row >= 3 && row < 6) {
+			for (uint32_t k = 0; k < b->level[i]; ++k) {
+				const int32_t px = sx + 4 + k * 6;
+				n = bar_add(n, fx, px, fill);
+				n = bar_add(n, px, px + 4, RR_RGB(0, 255, 128));
+				fx = px + 4;
+			}
 		}
 		n = bar_add(n, fx, sx + RR_SLOT_W - 2, fill);
 		n = bar_add(n, sx + RR_SLOT_W - 2, sx + RR_SLOT_W, border);
@@ -144,36 +150,48 @@ static void __not_in_flash_func(bar_renderer)(
 	}
 	else {
 		n = bar_add(n, RR_BEAM_X, RR_BEAM_X + 2, border);
-		n = bar_add(n, RR_BEAM_X + 2, RR_BEAM_X + 2 + beam, beam_p);
-		n = bar_add(n, RR_BEAM_X + 2 + beam, RR_BEAM_X + RR_BEAM_W - 2, _beam_px[3]);
+		n = bar_add(n, RR_BEAM_X + 2, RR_BEAM_X + 2 + b->beam, b->beam_p);
+		n = bar_add(n, RR_BEAM_X + 2 + b->beam, RR_BEAM_X + RR_BEAM_W - 2, RR_RGB(0, 0, 64));
 		n = bar_add(n, RR_BEAM_X + RR_BEAM_W - 2, RR_BEAM_X + RR_BEAM_W, border);
 	}
 	// Runs of nothing are left out by the renderer
 	sprite_render_spans(r, _bar, n, spriteId);
 }
 
+// What each box gives, by how far it has been taken
+static const char* slot_name(uint32_t i, uint32_t level) {
+	static const char* const names[RR_POWERS][2] = {
+		{ "SPEED", "SPEED" }, { "BOMB", "BIG BOMB" }, { "TWIN", "TRIPLE" },
+		{ "LASER", "BIG LASER" }, { "DRONE", "DRONE" }, { "ORB", "REAR ORB" },
+	};
+	return names[i][level >= 1 ? 1 : 0];
+}
+
 // Text draws straight into the row, over whatever was drawn before it, so
 // it goes after the boxes it sits in
 static void draw_power_bar(uint32_t frame) {
-	const int32_t cursor = rr_player_power_cursor();
+	_bar_i ^= 1;
+	RrBar_t* b = &_bar_state[_bar_i];
+	b->lit = rr_player_power_cursor();
+	b->bright = (frame >> 3) & 1;
+	for (uint32_t i = 0; i < RR_POWERS; ++i) {
+		b->level[i] = rr_player_power_level(i);
+		b->full[i] = rr_player_power_full(i);
+	}
 	const uint32_t beam = rr_player_beam();
-	const bool full = beam >= RR_BEAM_FULL;
-	const uint32_t w = (RR_BEAM_W - 4) * beam / RR_BEAM_FULL;
-	const uint32_t beam_c = full && (frame & 4) ? 2 : beam >= RR_BEAM_READY ? 1 : 0;
-	const uint32_t v = (cursor < 0 ? RR_BAR_NONE : (uint32_t)cursor) | (((frame >> 3) & 1) << 3)
-		| (rr_player_power_level(RR_POW_SPEED) << 4) | (rr_player_power_level(RR_POW_DRONE) << 7)
-		| (w << 9) | (beam_c << 17);
-	game_spr_add(0, RR_SLOT_Y, GAME_SCREEN_W, RR_SLOT_H, (void*)(uintptr_t)v, NULL, bar_renderer);
+	b->beam = (RR_BEAM_W - 4) * beam / RR_BEAM_FULL;
+	b->beam_p = beam >= RR_BEAM_FULL && (frame & 4) ? RR_RGB(255, 255, 255) : beam >= RR_BEAM_READY ? RR_RGB(0, 224, 255) : RR_RGB(0, 96, 160);
+	game_spr_add(0, RR_SLOT_Y, GAME_SCREEN_W, RR_SLOT_H, b, NULL, bar_renderer);
 
 	for (uint32_t i = 0; i < RR_POWERS; ++i) {
 		const int32_t x = RR_SLOT_X + i * (RR_SLOT_W + RR_SLOT_GAP);
-		const bool lit = (int32_t)i == cursor;
-		const bool full_power = rr_player_power_full(i);
+		const bool lit = (int32_t)i == b->lit;
+		game_text_set(&_slot_text[i], slot_name(i, b->level[i]), 1);
 		const int32_t tx = x + (RR_SLOT_W - game_text_width(&_slot_text[i])) / 2;
-		game_spr_text(&_slot_text[i], tx, RR_SLOT_Y + 8,
-			lit ? game_pallet(GAME_BLACK) : full_power ? game_pallet(GAME_GREY) : game_pallet(GAME_WHITE));
+		game_spr_text(&_slot_text[i], tx, RR_SLOT_Y + 9,
+			lit ? game_pallet(GAME_BLACK) : b->full[i] ? game_pallet(GAME_DARK_GREY) : game_pallet(GAME_WHITE));
 	}
-	game_spr_text(&_beam_text, RR_BEAM_X + (RR_BEAM_W - 32) / 2, RR_SLOT_Y + 8,
+	game_spr_text(&_beam_text, RR_BEAM_X + (RR_BEAM_W - 32) / 2, RR_SLOT_Y + 9,
 		beam > RR_BEAM_FULL / 2 ? game_pallet(GAME_BLACK) : game_pallet(GAME_CYAN));
 }
 

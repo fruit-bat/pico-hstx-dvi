@@ -6,6 +6,7 @@
 
 #include "rr_sound.h"
 #include "game_seq_steps.h"
+#include "game_songs.h"
 
 // ----------------------------------------------------------------------------
 // Sounds
@@ -383,4 +384,7 @@ const SeqTune_t rr_tune_data[RR_TUNES] = {
 	[RR_TUNE_CLEAR] = { _clear, 4, false },
 	[RR_TUNE_GAME_OVER] = { _over, 3, false },
 	[RR_TUNE_HISCORE] = { _hiscore, 3, true },
+	[RR_TUNE_NIGHT_ORBIT] = GAME_SONG_NIGHT_ORBIT,
+	[RR_TUNE_ATOMIC_SURF] = GAME_SONG_ATOMIC_SURF,
+	[RR_TUNE_CLOCKWORK] = GAME_SONG_CLOCKWORK_INVENTION,
 };

@@ -46,6 +46,10 @@ typedef enum {
 	RR_TUNE_CLEAR,      // the warship beaten
 	RR_TUNE_GAME_OVER,
 	RR_TUNE_HISCORE,    // putting in initials
+	// Others to fly to, from the songs all the games share, see rr_settings
+	RR_TUNE_NIGHT_ORBIT,
+	RR_TUNE_ATOMIC_SURF,
+	RR_TUNE_CLOCKWORK,
 	RR_TUNES
 } RrTune_e;
 

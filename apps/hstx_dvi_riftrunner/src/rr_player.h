@@ -69,8 +69,9 @@ void rr_player_set_burning(bool burning);
 int32_t rr_player_fuel(void);
 // The power lit on the bar, or -1
 int32_t rr_player_power_cursor(void);
-// Whether a power can be taken any more
+// Whether a power can be taken any more, and how far it goes
 bool rr_player_power_full(uint32_t power);
+uint32_t rr_player_power_max(uint32_t power);
 uint32_t rr_player_power_level(uint32_t power);
 // How far the beam is charged, 0 to RR_BEAM_FULL
 uint32_t rr_player_beam(void);

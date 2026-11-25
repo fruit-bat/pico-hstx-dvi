@@ -11,6 +11,7 @@ add_executable(hstx_dvi_riftrunner
   ${CMAKE_CURRENT_LIST_DIR}/src/rr_demo.c
   ${CMAKE_CURRENT_LIST_DIR}/src/rr_game.c
   ${CMAKE_CURRENT_LIST_DIR}/src/rr_attract.c
+  ${CMAKE_CURRENT_LIST_DIR}/src/rr_settings.c
   ${CMAKE_CURRENT_LIST_DIR}/src/rr_sound.c
   ${CMAKE_CURRENT_LIST_DIR}/src/rr_sound_data.c
 )

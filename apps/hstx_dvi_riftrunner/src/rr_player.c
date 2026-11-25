@@ -33,6 +33,8 @@
 #define RR_BOMB_GRAVITY 40
 #define RR_BOMB_MAX_VY RR_PX(5)
 #define RR_BOMB_BLAST 30
+// BIG BOMB, the second level
+#define RR_BIG_BOMB_BLAST 46
 // Held this long, fire starts charging the beam rather than having fired
 #define RR_HOLD_CHARGE 10
 #define RR_BEAM_FRAMES 24
@@ -44,6 +46,9 @@
 #define RR_ORB_SIZE 24
 // How often the orb hurts what it touches
 #define RR_ORB_BITE 6
+// Where the orbs sit, from the ship's left: on the nose, and REAR ORB behind
+#define RR_ORB_FRONT (RR_SHIP_W - 2)
+#define RR_ORB_REAR (-26)
 
 #define RR_MAX_SPEED 4
 
@@ -51,6 +56,7 @@ typedef enum {
 	RR_SHOT_NONE = 0,
 	RR_SHOT_NORMAL,
 	RR_SHOT_TWIN,
+	RR_SHOT_TRIPLE, // the third shot of TRIPLE, down and forward
 	RR_SHOT_LASER,
 	RR_SHOT_BOMB,
 	RR_SHOT_BOMB_UP,
@@ -180,6 +186,9 @@ static bool fire_from(int32_t nx, int32_t ny, uint32_t owner) {
 	if (_level[RR_POW_TWIN] && shots_of(owner, RR_SHOT_TWIN) < 2) {
 		fired |= add_shot(RR_SHOT_TWIN, owner, RR_PX(nx - 8), RR_PX(ny - 12), RR_TWIN_VX, RR_TWIN_VY, 0);
 	}
+	if (_level[RR_POW_TWIN] >= 2 && shots_of(owner, RR_SHOT_TRIPLE) < 2) {
+		fired |= add_shot(RR_SHOT_TRIPLE, owner, RR_PX(nx - 8), RR_PX(ny), RR_TWIN_VX, -RR_TWIN_VY, 0);
+	}
 	return fired;
 }
 
@@ -237,8 +246,9 @@ static bool in_land(int32_t sx, int32_t sy) {
 
 static void blow_bomb(RrShot_t* s) {
 	const int32_t x = (s->x >> RR_FP) + 6, y = (s->y >> RR_FP) + 4;
-	rr_fx_explode(rr_world_camera() + RR_PX(x), RR_PX(y), RR_BOOM_SMALL);
-	rr_enemy_blast(cam_px() + x, y, RR_BOMB_BLAST, 3);
+	const bool big = _level[RR_POW_BOMB] >= 2;
+	rr_fx_explode(rr_world_camera() + RR_PX(x), RR_PX(y), big ? RR_BOOM_MEDIUM : RR_BOOM_SMALL);
+	rr_enemy_blast(cam_px() + x, y, big ? RR_BIG_BOMB_BLAST : RR_BOMB_BLAST, big ? 5 : 3);
 	game_sound_play(RR_SFX_BLAST);
 	s->type = RR_SHOT_NONE;
 }
@@ -266,9 +276,13 @@ static void update_shots(void) {
 			case RR_SHOT_TWIN:
 				if (in_land(x + 10, y + 2) || rr_enemy_shot(cam + x, y, 12, 12, 1, 0)) s->type = RR_SHOT_NONE;
 				break;
+			case RR_SHOT_TRIPLE:
+				if (in_land(x + 10, y + 10) || rr_enemy_shot(cam + x, y, 12, 12, 1, 0)) s->type = RR_SHOT_NONE;
+				break;
 			case RR_SHOT_LASER:
+				// BIG LASER, the second level, is thicker and hits twice as hard
 				if (in_land(x + 70, y + 2)) s->type = RR_SHOT_NONE;
-				else rr_enemy_shot(cam + x, y, 76, 4, 1, s->pierce);
+				else rr_enemy_shot(cam + x, y - 2, 76, 8, _level[RR_POW_LASER] >= 2 ? 2 : 1, s->pierce);
 				break;
 			default:
 				if (in_land(x + 6, s->type == RR_SHOT_BOMB ? y + 8 : y) || rr_enemy_shot(cam + x, y, 12, 8, 3, 0)) blow_bomb(s);
@@ -287,12 +301,13 @@ static void update_shots(void) {
 static void take_power(void) {
 	if (_cursor < 0 || rr_player_power_full(_cursor)) return;
 	switch (_cursor) {
+		// TWIN and LASER replace each other
 		case RR_POW_TWIN:
-			_level[RR_POW_TWIN] = 1;
+			++_level[RR_POW_TWIN];
 			_level[RR_POW_LASER] = 0;
 			break;
 		case RR_POW_LASER:
-			_level[RR_POW_LASER] = 1;
+			++_level[RR_POW_LASER];
 			_level[RR_POW_TWIN] = 0;
 			break;
 		case RR_POW_DRONE:
@@ -352,9 +367,12 @@ static void fly(uint32_t frame, uint16_t input, uint16_t pressed) {
 		if (_fuel < RR_FUEL_LOW && (_fuel % 60) == 0) game_sound_play(RR_SFX_FUEL_LOW);
 	}
 
-	// The orb bites what it touches
+	// The orbs bite what they touch
 	if (_level[RR_POW_ORB] && (frame % RR_ORB_BITE) == 0) {
-		rr_enemy_shot(cam_px() + (_x >> RR_FP) + RR_SHIP_W - 2, (_y >> RR_FP) + 2, RR_ORB_SIZE, RR_ORB_SIZE, 1, next_pierce());
+		rr_enemy_shot(cam_px() + (_x >> RR_FP) + RR_ORB_FRONT, (_y >> RR_FP) + 2, RR_ORB_SIZE, RR_ORB_SIZE, 1, next_pierce());
+		if (_level[RR_POW_ORB] >= 2) {
+			rr_enemy_shot(cam_px() + (_x >> RR_FP) + RR_ORB_REAR, (_y >> RR_FP) + 2, RR_ORB_SIZE, RR_ORB_SIZE, 1, next_pierce());
+		}
 	}
 
 	if (!_safe) {
@@ -452,7 +470,8 @@ bool rr_player_hit(int32_t x, int32_t y, int32_t w, int32_t h) {
 
 bool rr_player_orb(int32_t x, int32_t y, int32_t w, int32_t h) {
 	if (_state != RR_PLAYER_ALIVE || !_level[RR_POW_ORB]) return false;
-	return overlap(x, y, w, h, rr_player_px() + RR_SHIP_W - 2, rr_player_py() + 2, RR_ORB_SIZE, RR_ORB_SIZE);
+	if (overlap(x, y, w, h, rr_player_px() + RR_ORB_FRONT, rr_player_py() + 2, RR_ORB_SIZE, RR_ORB_SIZE)) return true;
+	return _level[RR_POW_ORB] >= 2 && overlap(x, y, w, h, rr_player_px() + RR_ORB_REAR, rr_player_py() + 2, RR_ORB_SIZE, RR_ORB_SIZE);
 }
 
 void rr_player_add_capsule(void) {
@@ -477,11 +496,11 @@ int32_t rr_player_power_cursor(void) {
 }
 
 bool rr_player_power_full(uint32_t power) {
-	switch (power) {
-		case RR_POW_SPEED: return _level[power] >= RR_MAX_SPEED;
-		case RR_POW_DRONE: return _level[power] >= 2;
-		default: return _level[power] >= 1;
-	}
+	return power >= RR_POWERS || _level[power] >= rr_player_power_max(power);
+}
+
+uint32_t rr_player_power_max(uint32_t power) {
+	return power == RR_POW_SPEED ? RR_MAX_SPEED : 2;
 }
 
 uint32_t rr_player_power_level(uint32_t power) {
@@ -532,7 +551,8 @@ void rr_player_draw_shots(uint32_t frame) {
 		switch (s->type) {
 			case RR_SHOT_NORMAL: rr_art_draw(&rr_gfx.shot, x, y); break;
 			case RR_SHOT_TWIN: rr_art_draw(&rr_gfx.twin, x, y); break;
-			case RR_SHOT_LASER: rr_art_draw(&rr_gfx.laser, x, y); break;
+			case RR_SHOT_TRIPLE: rr_art_draw(&rr_gfx.triple, x, y); break;
+			case RR_SHOT_LASER: rr_art_draw(_level[RR_POW_LASER] >= 2 ? &rr_gfx.big_laser : &rr_gfx.laser, x, y - (_level[RR_POW_LASER] >= 2 ? 2 : 0)); break;
 			case RR_SHOT_BOMB:
 			case RR_SHOT_BOMB_UP: rr_art_draw(&rr_gfx.bomb, x, y); break;
 			default: break;
@@ -550,7 +570,8 @@ void rr_player_draw(uint32_t frame) {
 		rr_fx_disc(x + RR_SHIP_NOSE_X + 4, y + RR_SHIP_NOSE_Y, r + (full && (frame & 2) ? 3 : 0), 0,
 			(frame & 4) ? RR_RGB(255, 255, 255) : full ? RR_RGB(255, 96, 255) : RR_RGB(0, 224, 255));
 	}
-	if (_level[RR_POW_ORB]) rr_art_draw(&rr_gfx.orb[(frame >> 3) & 1], x + RR_SHIP_W - 2, y + 2);
+	if (_level[RR_POW_ORB]) rr_art_draw(&rr_gfx.orb[(frame >> 3) & 1], x + RR_ORB_FRONT, y + 2);
+	if (_level[RR_POW_ORB] >= 2) rr_art_draw(&rr_gfx.orb[((frame >> 3) + 1) & 1], x + RR_ORB_REAR, y + 2);
 	// Blinks while safe after coming back
 	if (!_safe || (frame & 4)) {
 		rr_art_draw(&rr_gfx.ship, x, y);

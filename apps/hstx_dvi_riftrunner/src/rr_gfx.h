@@ -13,7 +13,7 @@ extern "C" {
 typedef struct {
 	RrArt_t ship, ship_small, flame[2];
 	RrArt_t drone[2], orb[2];
-	RrArt_t shot, twin, laser, bomb;
+	RrArt_t shot, twin, triple, laser, big_laser, bomb;
 	RrArt_t capsule[2];
 	RrArt_t dart[2], carrier[2], saucer[2];
 	RrArt_t rocket, rocket_flame[2], fuel;

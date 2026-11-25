@@ -122,6 +122,15 @@ static const char* const _laser[] = {
 };
 static const hstx_dvi_pixel_t _laser_px[] = { RR_RGB(0, 160, 255), RR_RGB(192, 255, 255) };
 
+// BIG LASER: thicker, hotter
+static const char* const _big_laser[] = {
+	"..PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP..",
+	"PPPPPPWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWPP",
+	"PPPPPPWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWPP",
+	"..PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP..",
+};
+static const hstx_dvi_pixel_t _big_laser_px[] = { RR_RGB(255, 64, 224), RR_RGB(255, 224, 255) };
+
 static const char* const _bomb[] = {
 	".KOOO.",
 	"KOWWOO",
@@ -421,6 +430,8 @@ void rr_gfx_init(void) {
 	}
 	rr_art_make(&g->shot, _shot, RR_ROWS(_shot), "YW", _shot_px, 2, false);
 	rr_art_make(&g->twin, _twin, RR_ROWS(_twin), "YW", _shot_px, 2, false);
+	rr_art_make(&g->triple, _twin, RR_ROWS(_twin), "YW", _shot_px, 2, true);
+	rr_art_make(&g->big_laser, _big_laser, RR_ROWS(_big_laser), "PW", _big_laser_px, 2, false);
 	rr_art_make(&g->laser, _laser, RR_ROWS(_laser), "CW", _laser_px, 2, false);
 	rr_art_make(&g->bomb, _bomb, RR_ROWS(_bomb), "KOW", _bomb_px, 2, false);
 	rr_art_make(&g->rocket, _rocket, RR_ROWS(_rocket), "RWBG", _rocket_px, 2, false);

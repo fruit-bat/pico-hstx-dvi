@@ -15,6 +15,8 @@
 #include "rr_fx.h"
 #include "rr_gfx.h"
 #include "rr_demo.h"
+#include "rr_settings.h"
+#include "rr_art.h"
 #include "game_render.h"
 #include "game_pallet.h"
 #include "game_fx.h"
@@ -183,8 +185,8 @@ static void start_loop(void) {
 	_carrier_timer = 400;
 }
 
-static void draw_scene(uint32_t frame) {
-	game_spr_begin();
+// The play area and the score, power bar and so on, without messages
+static void draw_play(uint32_t frame) {
 	game_fx_draw_flash(frame);
 	rr_player_draw(frame);
 	rr_enemy_draw_bullets(frame);
@@ -197,9 +199,25 @@ static void draw_scene(uint32_t frame) {
 	rr_world_draw_back();
 	// Text draws straight into the row, so goes on top only if added last
 	rr_hud_draw(frame, true);
+}
+
+static void draw_scene(uint32_t frame) {
+	game_spr_begin();
+	draw_play(frame);
 	game_fx_draw_popups();
 	draw_messages(frame);
 	game_spr_end();
+}
+
+// The game, still, behind the settings, with panels where their text goes
+static uint32_t _paused_frame = 0;
+
+static void paused_back(uint32_t frame) {
+	static const int16_t panels[][2] = { { 44, 36 }, { 112, 4 * 36 + 8 }, { 388, 52 } };
+	for (uint32_t i = 0; i < sizeof(panels) / sizeof(panels[0]); ++i) {
+		rr_spr_rect(24, panels[i][0], GAME_SCREEN_W - 48, panels[i][1], RR_RGB(0, 0, 64));
+	}
+	draw_play(_paused_frame);
 }
 
 // The ship passing into a section, the warship coming, and beating it
@@ -227,7 +245,7 @@ static void update_phase(uint32_t frame) {
 				set_message(1, "WARSHIP APPROACHING");
 				_message_timer = RR_GAME_MESSAGE_FRAMES;
 				game_sound_play(RR_SFX_ALARM);
-				game_music_play(RR_TUNE_BOSS);
+				rr_music_warship();
 			}
 			else {
 				spawn(rr_world_section(cam + GAME_SCREEN_W));
@@ -241,6 +259,7 @@ static void update_phase(uint32_t frame) {
 				_bonus_shown = 0;
 				clear_messages();
 				set_message(0, "WARSHIP DOWN");
+				rr_music_landed();
 				game_music_play(RR_TUNE_CLEAR);
 			}
 			break;
@@ -262,7 +281,7 @@ static void update_phase(uint32_t frame) {
 				rr_world_release_boss();
 				clear_messages();
 				start_loop();
-				game_music_play(RR_TUNE_STAGE);
+				rr_music_flying();
 			}
 			break;
 		}
@@ -288,12 +307,11 @@ static bool game_run(const bool demo) {
 	_section = RR_SEC_RIDGES;
 	start_loop();
 	show_section(_section);
-	game_music_play(RR_TUNE_STAGE);
+	rr_music_flying();
 	if (demo) game_input_pressed();
 
 	uint16_t last = 0;
 	uint32_t over = 0;
-	bool paused = false;
 	for (uint32_t frame = 0; ; ++frame) {
 		rr_wait_for_frame();
 
@@ -305,17 +323,14 @@ static bool game_run(const bool demo) {
 		}
 		else {
 			const uint16_t pressed = game_input_pressed();
+			// Start pauses, with the settings over the game
 			if (pressed & RR_INP_BIT_START) {
-				paused = !paused;
-				clear_messages();
-				if (paused) set_message(0, "PAUSED");
 				game_sound_hold(RR_SFX_CHARGE, false);
+				_paused_frame = frame;
+				rr_settings_run(paused_back);
+				last = game_input_get();
 			}
 			input = game_input_get();
-		}
-		if (paused) {
-			draw_scene(frame);
-			continue;
 		}
 		const uint16_t pressed = input & ~last;
 		last = input;
@@ -332,6 +347,7 @@ static bool game_run(const bool demo) {
 			if (over == 0) {
 				clear_messages();
 				set_message(0, "GAME OVER");
+				rr_music_landed();
 				game_music_play(RR_TUNE_GAME_OVER);
 			}
 			if (++over >= RR_GAME_OVER_FRAMES) return false;
@@ -351,6 +367,7 @@ static bool game_run(const bool demo) {
 
 void rr_game_play(void) {
 	game_run(false);
+	rr_music_landed();
 	game_sound_hold(RR_SFX_CHARGE, false);
 }
 
@@ -358,6 +375,7 @@ bool rr_game_demo(void) {
 	// The demo should not count against the last player's score
 	const uint32_t score = rr_hud_score();
 	const bool taken_over = game_run(true);
+	rr_music_landed();
 	rr_hud_set_score(score);
 	game_sound_hold(RR_SFX_CHARGE, false);
 	return taken_over;

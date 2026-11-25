@@ -36,6 +36,9 @@ static const char* const _names[RR_SFX_SOUNDS + RR_TUNES] = {
 	[RR_SFX_SOUNDS + RR_TUNE_CLEAR] = "VICTORY TUNE",
 	[RR_SFX_SOUNDS + RR_TUNE_GAME_OVER] = "GAME OVER TUNE",
 	[RR_SFX_SOUNDS + RR_TUNE_HISCORE] = "HIGH SCORE TUNE",
+	[RR_SFX_SOUNDS + RR_TUNE_NIGHT_ORBIT] = "NIGHT ORBIT",
+	[RR_SFX_SOUNDS + RR_TUNE_ATOMIC_SURF] = "ATOMIC SURF",
+	[RR_SFX_SOUNDS + RR_TUNE_CLOCKWORK] = "CLOCKWORK",
 };
 
 const GameSounds_t game_sounds = { rr_sound_data, RR_SFX_SOUNDS, rr_tune_data, RR_TUNES, _names };

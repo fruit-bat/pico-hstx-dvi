@@ -15,7 +15,7 @@
 #include "game_pallet.h"
 #include "game_hiscore.h"
 #include "game_initials.h"
-#include "game_options.h"
+#include "rr_settings.h"
 #include "game_fx.h"
 #include "game_util.h"
 #include <stdio.h>
@@ -60,11 +60,7 @@ static void settings_back(uint32_t frame) {
 
 // Start shows the settings, and the screen goes on after
 static void settings(void) {
-	static const GameOptions_t o = {
-		RR_INP_BIT_U, RR_INP_BIT_D, RR_INP_BIT_L, RR_INP_BIT_R, RR_INP_BIT_F, RR_INP_BIT_B, RR_INP_BIT_START,
-		rr_wait_for_frame, settings_back
-	};
-	game_options_run(&o);
+	rr_settings_run(settings_back);
 }
 
 // Waits for the next frame. Returns true if the player wants to play.

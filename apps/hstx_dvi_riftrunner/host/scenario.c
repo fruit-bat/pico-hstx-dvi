@@ -6,6 +6,10 @@
 // boss     - as play, going straight to the warship
 // manual   - starts a game, charges the beam and lets it go, bombs, takes a power up
 // settings - opens the settings on the title, plays a sound and goes back
+// powers   - starts a game and takes power ups: twin twice, bomb twice, orb
+//            twice, speed, drone, firing all the while
+// pause    - starts a game, opens the settings with start, turns flight music
+//            off and picks another tune
 #include <stdio.h>
 #include <string.h>
 #include "host.h"
@@ -23,6 +27,8 @@ uint32_t rr_world_loop(void);
 void rr_world_jump(uint32_t section);
 bool rr_boss_active(void);
 bool rr_player_alive(void);
+void rr_player_add_capsule(void);
+int32_t rr_player_power_cursor(void);
 
 #define F 16
 #define START 64
@@ -45,6 +51,22 @@ uint32_t host_input(uint32_t f) {
 		if (f > 460 && f < 500) return 4;
 		if (f > 520 && f < 560) return 8 | 2;
 		if ((f > 600 && f < 900) && (f & 8)) return F;
+	}
+	if (!strcmp(host_mode, "powers")) {
+		if (f > 100 && f < 104) return F;
+		// Lights each power up in turn, and takes it
+		static const int32_t take[] = { 2, 2, 1, 1, 5, 5, 0, 4 };
+		const uint32_t n = sizeof(take) / sizeof(take[0]);
+		if (f >= 200 && f < 200 + 40 * n && (f - 200) % 40 == 0) {
+			while (rr_player_power_cursor() != take[(f - 200) / 40]) rr_player_add_capsule();
+			return 128;
+		}
+		if (f > 200) return (f & 8) ? F : 0;
+	}
+	if (!strcmp(host_mode, "pause")) {
+		if (f > 100 && f < 104) return F;
+		static const uint16_t at[][2] = { { 300, START }, { 340, 8 }, { 360, 2 }, { 380, 8 }, { 400, 2 } };
+		for (uint32_t i = 0; i < sizeof(at) / sizeof(at[0]); ++i) if (f == at[i][0]) return at[i][1];
 	}
 	if (!strcmp(host_mode, "settings")) {
 		// One frame each: start, down to the sounds, right twice, fire, start
